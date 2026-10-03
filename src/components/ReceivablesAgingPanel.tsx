@@ -41,7 +41,7 @@ export function ReceivablesAgingPanel({ items, onOpenProject }: {
         : item.kind === 'down-payment'
           ? 'Contract down payment'
           : `Billing #${item.billingNumber}`}</strong><small>{item.clientName}</small></span>
-      <span className="aging-due"><strong>{dueLabel(item)}</strong><small>Due {formatDate(item.dueAt)}</small></span>
+      <span className="aging-due"><strong className={item.daysUntilDue === 0 ? 'aging-due-today' : undefined}>{dueLabel(item)}</strong><small>Due {formatDate(item.dueAt)}</small></span>
       <strong className="aging-amount">{money.format(item.outstandingAmount)}</strong>
       <ArrowRight className="aging-row-arrow" size={15} />
     </button>)}</div> : <div className="aging-empty"><Clock3 size={16} /><span>No open receivables to age.</span></div>}
