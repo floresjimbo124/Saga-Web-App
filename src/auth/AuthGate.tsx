@@ -184,7 +184,7 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
     } catch {
       setError(clientSignIn && clientMagicLink
         ? 'Could not send a sign-in link. Check the email address and try again.'
-        : 'The email or password is incorrect. Check your details and try again.')
+        : 'Account does not exist, or the email or password is incorrect. Check your details and try again.')
     } finally {
       setIsSubmitting(false)
     }
