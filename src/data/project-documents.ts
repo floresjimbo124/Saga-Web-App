@@ -55,7 +55,6 @@ export async function uploadProjectDocument(input: {
   projectId: string
   file: File
   documentType: string
-  clientVisible: boolean
 }) {
   validateProjectDocumentFile(input.file)
   const client = requireSupabase()
@@ -77,7 +76,7 @@ export async function uploadProjectDocument(input: {
     storage_path: storagePath,
     file_name: input.file.name,
     document_type: input.documentType,
-    client_visible: input.clientVisible,
+    client_visible: true,
   })
   if (insertError) {
     await client.storage.from(bucketName).remove([storagePath])

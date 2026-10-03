@@ -2,6 +2,7 @@ import { SAGACT_ORGANIZATION_ID } from '../lib/supabase'
 import { supabase } from '../lib/supabase'
 import { calculateProjectFinance } from '../finance/project-finance'
 import { calculateReceivablesAging } from '../finance/receivables-aging'
+import { getRetentionDueDate, isRetentionDue } from '../finance/retention-due'
 
 export type ProjectStatus = 'planning' | 'active' | 'on_hold' | 'completed' | 'closed'
 export type ProjectHealthStatus = 'on_track' | 'needs_attention'
@@ -33,6 +34,7 @@ export type PortfolioProject = {
   approvedChangeOrders: { amount: number; approved: boolean; retentionRatePercent?: number }[]
   billed: number
   collected: number
+  retentionPaid: number
   expenses: PortfolioExpense[]
   outflow: number
   retention: number
@@ -42,6 +44,9 @@ export type PortfolioProject = {
   retentionMethod: 'final-schedule' | 'per-billing'
   status: ProjectStatus
   healthStatus: ProjectHealthStatus
+  deadline: string | null
+  completedAt: string | null
+  createdAt: string
   updatedAt: string
   milestone: string
 }
@@ -69,6 +74,7 @@ export type CreateProjectInput = {
   downPaymentPercent: number
   retentionRatePercent: number
   retentionMethod: 'final_schedule' | 'per_billing'
+  deadline?: string | null
 }
 
 export type RecordProjectExpenseInput = {
@@ -106,7 +112,7 @@ export async function loadPortfolio() {
   const client = requireSupabase()
   const [projectResult, clientResult, termResult, billingResult, paymentResult, allocationResult, expenseResult, retentionResult, milestoneResult, changeOrderResult, forecastResult] = await Promise.all([
     client.from('projects')
-      .select('id, name, prefix, location, status, health_status, progress_percent, client_id, updated_at')
+      .select('id, name, prefix, location, deadline, status, health_status, progress_percent, client_id, completed_at, created_at, updated_at')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
       .order('created_at', { ascending: true }),
     client.from('clients')
@@ -172,8 +178,12 @@ export async function loadPortfolio() {
   }
 
   const collectedByProject = new Map<string, number>()
+  const retentionPaidByProject = new Map<string, number>()
   const payments: PortfolioPayment[] = (paymentResult.data ?? []).map((payment) => {
     collectedByProject.set(payment.project_id, (collectedByProject.get(payment.project_id) ?? 0) + Number(payment.amount))
+    if (payment.payment_type === 'retention_release') {
+      retentionPaidByProject.set(payment.project_id, (retentionPaidByProject.get(payment.project_id) ?? 0) + Number(payment.amount))
+    }
     return {
       id: payment.id,
       projectId: payment.project_id,
@@ -250,11 +260,13 @@ export async function loadPortfolio() {
       retentionHeld: ledgerHeld,
       retentionReleased: released,
     }).retentionCap
-    const effectiveRetention = ledgerHeld > 0 || released > 0
+    const heldRetention = ledgerHeld > 0 || released > 0
       ? Math.max(0, ledgerHeld)
       : contract > 0
         ? retentionCap
         : 0
+    const retentionPaid = retentionPaidByProject.get(project.id) ?? 0
+    const effectiveRetention = Math.max(0, heldRetention - Math.max(0, retentionPaid - released))
     return {
       id: project.id,
       name: project.name,
@@ -271,6 +283,7 @@ export async function loadPortfolio() {
       approvedChangeOrders: changeOrdersByProject.get(project.id) ?? [],
       billed: (billedByProject.get(project.id) ?? 0) + downPaymentBilled,
       collected: collectedByProject.get(project.id) ?? 0,
+      retentionPaid,
       expenses: expensesByProject.get(project.id) ?? [],
       outflow: outflowByProject.get(project.id) ?? 0,
       retention: effectiveRetention,
@@ -280,6 +293,9 @@ export async function loadPortfolio() {
       retentionRate,
       retentionMethod: retentionMethod(terms?.retention_method),
       status: projectStatus(project.status),
+      deadline: project.deadline,
+      completedAt: project.completed_at,
+      createdAt: project.created_at,
       updatedAt: project.updated_at,
       milestone: milestoneByProject.get(project.id)
         ?? (milestoneCountByProject.has(project.id) ? 'All milestones complete' : 'No milestones scheduled'),
@@ -287,8 +303,26 @@ export async function loadPortfolio() {
   })
 
   const projectsById = new Map(projects.map((project) => [project.id, project]))
+  const receivableInputs = projects.flatMap((project) => {
+    const downPaymentAmount = Math.round(Math.max(0, project.contract - project.specialDiscount)
+      * project.downPaymentPercent / 100)
+    return downPaymentAmount > 0 ? [{
+      id: `down-payment:${project.id}`,
+      projectId: project.id,
+      projectName: project.name,
+      clientName: project.client,
+      billingNumber: 0,
+      amount: downPaymentAmount,
+      issuedAt: project.createdAt,
+      createdAt: project.createdAt,
+      dueAt: null,
+      kind: 'down-payment' as const,
+    }] : []
+  })
   const receivables = calculateReceivablesAging(
-    (billingResult.data ?? []).flatMap((billing) => {
+    [
+      ...receivableInputs,
+      ...(billingResult.data ?? []).flatMap((billing) => {
       const project = projectsById.get(billing.project_id)
       return project ? [{
         id: billing.id,
@@ -301,7 +335,8 @@ export async function loadPortfolio() {
         createdAt: billing.created_at,
         dueAt: billing.due_at,
       }] : []
-    }),
+      }),
+    ],
     (paymentResult.data ?? []).map((payment) => ({
       id: payment.id,
       projectId: payment.project_id,
@@ -315,6 +350,25 @@ export async function loadPortfolio() {
       amount: Number(allocation.amount),
     })),
   )
+  const today = new Date()
+  const asOfDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  for (const project of projects) {
+    const dueAt = getRetentionDueDate(project.completedAt)
+    if (!dueAt || (project.status !== 'completed' && project.status !== 'closed')
+      || !isRetentionDue(project.completedAt, asOfDate) || project.retention <= 0) continue
+    receivables.push(...calculateReceivablesAging([{
+      id: `retention:${project.id}`,
+      projectId: project.id,
+      projectName: project.name,
+      clientName: project.client,
+      billingNumber: 0,
+      amount: project.retention,
+      issuedAt: dueAt,
+      createdAt: dueAt,
+      dueAt,
+      kind: 'retention',
+    }], [], [], asOfDate))
+  }
 
   return { projects, payments, receivables }
 }
@@ -332,6 +386,14 @@ export async function updateProjectState(input: {
   throwIfError(error)
 }
 
+export async function updateProjectDeadline(projectId: string, deadline: string | null) {
+  const { error } = await requireSupabase().rpc('update_project_deadline', {
+    p_project_id: projectId,
+    p_deadline: deadline,
+  })
+  throwIfError(error)
+}
+
 export async function createProject(input: CreateProjectInput) {
   const client = requireSupabase()
   const { data, error } = await client.rpc('create_project_with_terms', {
@@ -344,6 +406,7 @@ export async function createProject(input: CreateProjectInput) {
     p_down_payment_percent: input.downPaymentPercent,
     p_retention_rate_percent: input.retentionRatePercent,
     p_retention_method: input.retentionMethod,
+    p_deadline: input.deadline ?? null,
   })
   throwIfError(error)
   if (!data) throw new Error('Project was created without returning its ID.')

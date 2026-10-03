@@ -26,7 +26,6 @@ function formatDate(value: string) {
 export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
   const [documents, setDocuments] = useState<ProjectDocument[]>([])
   const [documentType, setDocumentType] = useState('other')
-  const [clientVisible, setClientVisible] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [workingDocumentId, setWorkingDocumentId] = useState('')
@@ -62,10 +61,9 @@ export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
     setMessage('')
     setIsUploading(true)
     try {
-      await uploadProjectDocument({ projectId, file, documentType, clientVisible })
+      await uploadProjectDocument({ projectId, file, documentType })
       setDocumentType('other')
-      setClientVisible(false)
-      setMessage('Document uploaded.')
+      setMessage('Document uploaded and shared with the client.')
       await refreshDocuments()
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Could not upload this document.')
@@ -137,10 +135,9 @@ export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
     <div className="document-upload-form">
       <input ref={fileInput} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.dwg,.dxf" aria-label="Select a document to upload" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadFile(file) }} />
       <label className="form-field">Document type<select value={documentType} onChange={(event) => setDocumentType(event.target.value)}>{documentTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-      <label className="document-share-option"><input type="checkbox" checked={clientVisible} onChange={(event) => setClientVisible(event.target.checked)} /><span>Share with client</span></label>
       <button className="button button-primary document-upload-button" type="button" disabled={isUploading} onClick={() => fileInput.current?.click()}>{isUploading ? <RefreshCw size={15} /> : <Upload size={15} />}{isUploading ? 'Uploading' : 'Upload document'}</button>
     </div>
-    <p className="document-upload-note">PDF, images, Office files, or CAD drawings · 50 MB max</p>
+    <p className="document-upload-note">PDF, images, Office files, or CAD drawings · 50 MB max · uploaded files are shared with the client</p>
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="document-success" role="status">{message}</p>}
     {isLoading ? <div className="empty-state">Loading documents…</div> : documents.length ? <div className="document-list">{documents.map((document) => {

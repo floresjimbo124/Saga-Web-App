@@ -1,11 +1,14 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ArrowRight, CircleAlert, LockKeyhole, LogOut } from 'lucide-react'
+import { ArrowRight, CircleAlert, LockKeyhole, LogOut, Mail } from 'lucide-react'
 import { isSupabaseConfigured, SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
 import { ClientPortalApp } from '../components/ClientPortalApp'
+import { resolveWorkspaceAccessRoute } from './workspace-access'
+import { clearPasswordSetupCallback, hasPendingInvitePasswordSetup } from './invite-password-setup'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
+  const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(hasPendingInvitePasswordSetup)
   const [sessionReady, setSessionReady] = useState(!isSupabaseConfigured)
   const [sessionError, setSessionError] = useState('')
   const [accessResult, setAccessResult] = useState<{
@@ -56,14 +59,42 @@ export function AuthGate({ children }: { children: ReactNode }) {
         setAccessResult({ userId: session.user.id, status: 'error', error: 'Could not verify your workspace access. Try again.' })
         return
       }
-      if (membership?.role === 'owner') {
-        setAccessResult({ userId: session.user.id, status: 'owner' })
+      const organizationRole = membership?.role ?? null
+      const requestedClientProjectId = new URLSearchParams(window.location.search).get('projectId')
+      let hasRequestedClientAccess = false
+      if (organizationRole === 'owner' && requestedClientProjectId) {
+        const { data: requestedAccess, error: requestedAccessError } = await client
+          .from('client_user_access')
+          .select('project_id')
+          .eq('organization_id', SAGACT_ORGANIZATION_ID)
+          .eq('user_id', session.user.id)
+          .eq('project_id', requestedClientProjectId)
+          .maybeSingle()
+        if (!active) return
+        if (requestedAccessError) {
+          setAccessResult({ userId: session.user.id, status: 'error', error: 'Could not verify your client project access. Try again.' })
+          return
+        }
+        hasRequestedClientAccess = Boolean(requestedAccess)
+      }
+
+      const membershipRoute = resolveWorkspaceAccessRoute(
+        organizationRole,
+        hasRequestedClientAccess,
+        organizationRole === 'owner' && Boolean(requestedClientProjectId),
+      )
+      if (organizationRole !== null) {
+        setAccessResult({
+          userId: session.user.id,
+          status: membershipRoute,
+          error: membershipRoute === 'denied' ? 'Staff workspace access is not enabled in this app yet.' : undefined,
+        })
         return
       }
 
       const { data: clientAccess, error: clientAccessError } = await client
         .from('client_user_access')
-        .select('client_id')
+        .select('project_id')
         .eq('organization_id', SAGACT_ORGANIZATION_ID)
         .eq('user_id', session.user.id)
         .limit(1)
@@ -71,7 +102,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       if (!active) return
       setAccessResult({
         userId: session.user.id,
-        status: clientAccessError ? 'error' : clientAccess?.length ? 'client' : 'denied',
+        status: clientAccessError ? 'error' : resolveWorkspaceAccessRoute(null, Boolean(clientAccess?.length)),
         error: clientAccessError ? 'Could not verify your client access. Try again.' : undefined,
       })
     }
@@ -103,7 +134,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (currentAccess.status !== 'owner') {
-    if (currentAccess.status === 'client') return <ClientPortalApp />
+    if (currentAccess.status === 'client') {
+      if (requiresPasswordSetup) {
+        return <PasswordSetupScreen onComplete={() => {
+          window.history.replaceState(null, '', clearPasswordSetupCallback())
+          setRequiresPasswordSetup(false)
+        }} />
+      }
+      const firstName = session.user.user_metadata.first_name
+      return <ClientPortalApp userId={session.user.id} firstName={typeof firstName === 'string' ? firstName : ''} />
+    }
     return <AccessDenied error={currentAccess.error ?? ''} />
   }
 
@@ -114,6 +154,9 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(initialError)
+  const [message, setMessage] = useState('')
+  const [clientSignIn, setClientSignIn] = useState(false)
+  const [clientMagicLink, setClientMagicLink] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -121,31 +164,133 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
     if (!supabase || configurationMissing) return
 
     setError('')
+    setMessage('')
     setIsSubmitting(true)
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-    if (signInError) setError('The email or password is incorrect. Check your details and try again.')
-    setIsSubmitting(false)
+    try {
+      if (clientSignIn && clientMagicLink) {
+        const { error: signInError } = await supabase.auth.signInWithOtp({
+          email: email.trim(),
+          options: {
+            emailRedirectTo: window.location.origin,
+            shouldCreateUser: false,
+          },
+        })
+        if (signInError) throw signInError
+        setMessage(`Sign-in link sent to ${email.trim()}. Check your inbox.`)
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        if (signInError) throw signInError
+      }
+    } catch {
+      setError(clientSignIn && clientMagicLink
+        ? 'Could not send a sign-in link. Check the email address and try again.'
+        : 'The email or password is incorrect. Check your details and try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return <AuthLayout>
     <section className="auth-panel" aria-labelledby="auth-title">
       <AuthCardBrand />
       <div className="auth-heading">
-        <h1 id="auth-title">Welcome back</h1>
-        <p>Sign in to your SAGACT workspace</p>
+        <h1 id="auth-title">{clientSignIn ? 'Client sign in' : 'Welcome back'}</h1>
+        <p>{clientSignIn ? 'Access your shared project information' : 'Sign in to your SAGACT workspace'}</p>
       </div>
 
       {configurationMissing ? <div className="auth-notice" role="status"><CircleAlert size={17} /><span>Supabase isn’t configured. Add the project URL and public key to <code>.env.local</code>, then restart the dev server.</span></div> : <>
         <form className="auth-form" onSubmit={handleSubmit}>
-          <label className="auth-field">Email address<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" required /></label>
-          <label className="auth-field">Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>
+          <label className="auth-field">Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" required /></label>
+          {(!clientSignIn || !clientMagicLink) && <label className="auth-field">Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>}
           {error && <p className="auth-error" role="alert">{error}</p>}
+          {message && <p className="auth-success" role="status">{message}</p>}
           <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Signing in…' : 'Sign in'}{!isSubmitting && <ArrowRight size={16} />}
+            {isSubmitting ? clientSignIn && clientMagicLink ? 'Sending link…' : 'Signing in…' : clientSignIn && clientMagicLink ? 'Email me a sign-in link' : 'Sign in'}
+            {!isSubmitting && (clientSignIn && clientMagicLink ? <Mail size={16} /> : <ArrowRight size={16} />)}
           </button>
         </form>
+        {clientSignIn && <button className="auth-mode-toggle" type="button" onClick={() => {
+          setClientMagicLink((current) => !current)
+          setError('')
+          setMessage('')
+        }}>
+          {clientMagicLink ? 'Sign in with your password' : 'Forgot your password? Email a sign-in link'}
+        </button>}
+        <button className="auth-mode-toggle" type="button" onClick={() => {
+          setClientSignIn((current) => !current)
+          setClientMagicLink(false)
+          setError('')
+          setMessage('')
+        }}>
+          {clientSignIn ? 'Workspace owner? Sign in here' : 'Client? Sign in to your project'}
+        </button>
       </>}
       {configurationMissing && <div className="auth-dev-mode">Development mode</div>}
+    </section>
+  </AuthLayout>
+}
+
+function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!supabase) return
+    if (password.length < 8) {
+      setError('Choose a password with at least 8 characters.')
+      return
+    }
+
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Enter your first and last name.')
+      return
+    }
+    if (password !== confirmation) {
+      setError('The passwords do not match.')
+      return
+    }
+
+    setError('')
+    setIsSubmitting(true)
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+        data: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+        },
+      })
+      if (updateError) throw updateError
+      onComplete()
+    } catch {
+      setError('Could not save your password. The invitation link may have expired; ask your project contact to resend it.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return <AuthLayout>
+    <section className="auth-panel" aria-labelledby="password-setup-title">
+      <AuthCardBrand />
+      <div className="auth-heading">
+        <h1 id="password-setup-title">Create your password</h1>
+        <p>Set a password to access your shared project dashboard whenever you sign in.</p>
+      </div>
+      <form className="auth-form" onSubmit={(event) => { void handleSubmit(event) }}>
+        <label className="auth-field">First name<input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required /></label>
+        <label className="auth-field">Last name<input type="text" autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} required /></label>
+        <label className="auth-field">Password<input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+        <label className="auth-field">Confirm password<input type="password" autoComplete="new-password" minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required /></label>
+        {error && <p className="auth-error" role="alert">{error}</p>}
+        <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving password…' : 'Create password'}{!isSubmitting && <ArrowRight size={16} />}
+        </button>
+      </form>
     </section>
   </AuthLayout>
 }
@@ -174,5 +319,5 @@ function AuthLoading({ message }: { message: string }) {
 }
 
 function AccessDenied({ error }: { error: string }) {
-  return <AuthLayout><section className="auth-panel access-panel"><AuthCardBrand /><div className="auth-heading"><h1>Workspace access required</h1><p>{error || 'This account does not have owner access to the SAGACT workspace yet.'}</p></div><button className="button button-secondary auth-submit" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={15} />Sign out</button></section></AuthLayout>
+  return <AuthLayout><section className="auth-panel access-panel"><AuthCardBrand /><div className="auth-heading"><h1>Project access required</h1><p>{error || 'This account is not linked to a shared client project. Ask your project contact to restore access or send a new invitation.'}</p></div><button className="button button-secondary auth-submit" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={15} />Sign out</button></section></AuthLayout>
 }

@@ -106,14 +106,20 @@ export async function createBillingPdf(details: BillingPdfDetails) {
 
 export async function openBillingPdf(details: BillingPdfDetails) {
   if (typeof window === 'undefined') return
-  const pdf = await createBillingPdf(details)
-  const blob = pdf.output('blob')
-  const url = URL.createObjectURL(blob)
-  const preview = window.open(url, '_blank', 'noopener,noreferrer')
-  if (preview) {
+  const preview = window.open('', '_blank')
+  if (!preview) throw new Error('Allow pop-ups to view the billing PDF.')
+
+  try {
+    const pdf = await createBillingPdf(details)
+    const blob = pdf.output('blob')
+    const url = URL.createObjectURL(blob)
+    preview.location.href = url
     preview.opener = null
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (error) {
+    preview.close()
+    throw error
   }
-  setTimeout(() => URL.revokeObjectURL(url), 60000)
 }
 
 export async function downloadBillingPdf(details: BillingPdfDetails) {

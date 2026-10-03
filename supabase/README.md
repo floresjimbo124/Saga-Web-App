@@ -62,13 +62,18 @@ The SQL test simulates the existing owner claim, exercises the setup RPC, verifi
 
 ## Client portal access
 
-From a project detail page, choose **Invite client** and enter the client's email. New addresses receive a Supabase Auth invitation; existing accounts are linked to the project's client record. Since access is client-scoped, that account can view every project associated with the same client record, subject to the existing row-level security policies.
+From a project detail page, choose **Invite client** and enter the client's email. New addresses receive a Supabase Auth invitation; when they follow it, they create a password and are given access only to the project that sent the invitation. Existing accounts receive a sign-in link and are granted access to that project only. The same email can be granted access to multiple projects independently: revoking access removes it only from the selected project, and the existing account can still be invited to another project. Pending accounts have a **Resend** action; active accounts can receive a **Send sign-in link** email. Links carry the designated project, which opens first in the client portal after sign-in. Clients can sign in with their password from the client sign-in screen and see project status, billing, payment receipts, and shared documents. Documents uploaded by workspace staff are shared with the client automatically; the client portal is read-only and provides view and download actions. Project-level row-level security enforces the same restriction for direct data requests. Existing client accounts retain access to every project that was linked to them before the project-level migration; new invitations grant access only to their selected project.
+
+Retention becomes receivable one calendar month after a project is marked **Completed**. The completion date is stored by the `update_project_state` RPC; apply the matching Supabase migration before using this behavior.
+
+The client portal includes the contractual down payment in the remaining balance before progress billings are issued. Its amount is provided through the client-authorized `get_client_project_down_payment` RPC.
+The client project summary shows the contract price including approved change orders and excluding the special discount.
 
 Deploy the owner-verified invitation function to the linked project:
 
 ```powershell
 npx supabase functions deploy invite-client --project-ref your-project-ref
-npx supabase secrets set CLIENT_PORTAL_URL=https://your-client-portal-url --project-ref your-project-ref
+npx supabase config push --project-ref your-project-ref
 ```
 
-The function requires Supabase's `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` runtime secrets. Supabase supplies these project secrets to Edge Functions; never expose the service-role key to the browser. Add the configured `CLIENT_PORTAL_URL` to the Auth redirect URL allowlist in the Supabase dashboard so invite links return to the app.
+The function requires Supabase's `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` runtime secrets. Supabase supplies these project secrets to Edge Functions; never expose the service-role key to the browser. Email links use the origin that sent the request, falling back to `CLIENT_PORTAL_URL` if there is no origin. Configure the app's deployed URL under **Authentication → URL Configuration → Redirect URLs** before inviting clients. The localhost entries in `config.toml` are only for local development; clients cannot use a localhost link from their own devices.

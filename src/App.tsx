@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import {
-  ArrowDownLeft, ArrowLeft, ArrowRight, Bell, BriefcaseBusiness, Download, Eye,
+  ArrowDownLeft, ArrowLeft, ArrowRight, BriefcaseBusiness, Download, Eye,
   CalendarDays, ChevronRight, CircleAlert, CircleDollarSign,
   FileText, LayoutDashboard, LogOut, Plus, RefreshCw, UserPlus, Users, WalletCards, X,
 } from 'lucide-react'
 import { calculateProjectFinance } from './finance/project-finance'
 import { calculateProfitRisk } from './finance/profit-risk'
+import { isRetentionDue } from './finance/retention-due'
 import type { ReceivableAgingItem } from './finance/receivables-aging'
 import { createProject as createProjectRecord, loadPortfolio, updateProjectSetup as saveProjectSetupRecord, updateProjectState, type PortfolioPayment, type PortfolioProject, type ProjectHealthStatus, type ProjectStatus } from './data/portfolio'
 import { supabase } from './lib/supabase'
@@ -16,6 +17,8 @@ import { ExpenseEntryDialog } from './components/ExpenseEntryDialog'
 import { ProjectDocumentPanel } from './components/ProjectDocumentPanel'
 import { InviteClientDialog } from './components/InviteClientDialog'
 import { ProjectForecastPanel } from './components/ProjectForecastPanel'
+import { ProjectDeadlinePanel } from './components/ProjectDeadlinePanel'
+import { NotificationCenter } from './components/NotificationCenter'
 import { downloadPaymentReceiptPdf, openPaymentReceiptPdf } from './lib/payment-receipt-pdf'
 import { PortfolioOverview } from './components/PortfolioOverview'
 import { Metric } from './components/ProjectStatusBadges'
@@ -46,9 +49,18 @@ const financeForProject = (project: Project) => calculateProjectFinance({
   retentionRatePercent: project.retentionRate,
   retentionMethod: project.retentionMethod,
   billedToDate: project.billed,
-  paymentsReceived: project.collected,
+  paymentsReceived: Math.max(0, project.collected - project.retentionPaid),
   retentionHeld: project.retention,
 })
+const todayLocal = () => {
+  const date = new Date()
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+const retentionDueForProject = (project: Project) =>
+  (project.status === 'completed' || project.status === 'closed')
+    && isRetentionDue(project.completedAt, todayLocal())
+    ? project.retention
+    : 0
 
 function App() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -90,8 +102,8 @@ function App() {
   const billed = projects.reduce((sum, project) => sum + project.billed, 0)
   const collected = projects.reduce((sum, project) => sum + project.collected, 0)
   const totalExpenses = projects.reduce((sum, project) => sum + project.outflow, 0)
-  const receivable = projects.reduce((sum, project) => sum + financeForProject(project).receivablesDue, 0)
-  const retention = projects.reduce((sum, project) => sum + project.retention, 0)
+  const receivable = projects.reduce((sum, project) => sum + financeForProject(project).receivablesDue + retentionDueForProject(project), 0)
+  const retention = projects.reduce((sum, project) => sum + Math.max(0, project.retention - retentionDueForProject(project)), 0)
   const attentionCount = projects.filter((project) => project.healthStatus === 'needs_attention').length
   const currentDate = appLoadedDate
   const monthStart = Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), 1)
@@ -242,7 +254,6 @@ function App() {
     {isLoading && <div className="workspace-loading" role="status" aria-live="polite" aria-label="Loading SAGACT workspace"><span className="loading-brand">SAGACT<span>.</span></span><span className="loading-spinner"><RefreshCw size={25} /></span><strong>Loading your workspace</strong><span className="loading-caption">Preparing your project overview</span><span className="loading-progress"><span /></span></div>}
     <aside className="sidebar">
       <div className="brand-lockup"><span className="brand-mark"><img src="/sagact-mark.svg" alt="" /></span><span>SAGACT<span className="brand-period">.</span></span></div>
-      <div className="side-label">Owner workspace</div>
       <nav className="primary-nav" aria-label="Main navigation">
         <button className={`nav-item ${view === 'portfolio' ? 'is-active' : ''}`} onClick={() => { setView('portfolio'); setSelectedId(null) }}><LayoutDashboard size={17} /><span>Portfolio</span></button>
         <button className={`nav-item ${view === 'portal' ? 'is-active' : ''}`} onClick={() => { setView('portal'); setSelectedId(null) }}><Users size={17} /><span>Client portal</span></button>
@@ -253,7 +264,7 @@ function App() {
     <div className="app-main">
       <header className="topbar">
         <div className="breadcrumbs"><span>SAGACT</span><ChevronRight size={13} /><strong>{view === 'portal' ? 'Client portal' : selected?.name ?? 'Portfolio'}</strong></div>
-        <div className="topbar-right"><span className="owner-view"><span className="owner-view-dot" />Owner view</span><span className="topbar-date"><CalendarDays size={14} />{new Intl.DateTimeFormat('en-PH', { weekday: 'short', month: 'short', day: 'numeric' }).format(currentDate)}</span><button className={`icon-button refresh-button ${isLoading ? 'is-loading' : ''}`} aria-label={isLoading ? 'Refreshing workspace' : 'Refresh workspace'} title={isLoading ? 'Refreshing workspace' : 'Refresh workspace'} onClick={refreshWorkspace} disabled={isLoading}><RefreshCw className="refresh-glyph" size={16} /><span className="sr-only" role="status" aria-live="polite">{isLoading ? 'Refreshing workspace' : 'Workspace ready'}</span></button><button className="icon-button notification-button" aria-label="Notifications" title="Notifications"><Bell size={17} /><span className="notification-dot" /></button></div>
+        <div className="topbar-right"><span className="owner-view"><span className="owner-view-dot" />Owner view</span><span className="topbar-date"><CalendarDays size={14} />{new Intl.DateTimeFormat('en-PH', { weekday: 'short', month: 'short', day: 'numeric' }).format(currentDate)}</span><button className={`icon-button refresh-button ${isLoading ? 'is-loading' : ''}`} aria-label={isLoading ? 'Refreshing workspace' : 'Refresh workspace'} title={isLoading ? 'Refreshing workspace' : 'Workspace ready'} onClick={refreshWorkspace} disabled={isLoading}><RefreshCw className="refresh-glyph" size={16} /><span className="sr-only" role="status" aria-live="polite">{isLoading ? 'Refreshing workspace' : 'Workspace ready'}</span></button><NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} /></div>
       </header>
 
       <main className="page-content">
@@ -306,7 +317,9 @@ function ProjectDetail({ project, payments, onBack, onSetup, onChanged }: { proj
     costBudget: project.costBudget,
     estimatedCostToComplete: project.estimatedCostToComplete,
   })
-  const due = finance.receivablesDue
+  const retentionDue = retentionDueForProject(project)
+  const retentionHeld = Math.max(0, project.retention - retentionDue)
+  const due = finance.receivablesDue + retentionDue
   const saveProjectState = async (status: ProjectStatus, healthStatus: ProjectHealthStatus) => {
     setIsSavingProjectState(true)
     setProjectStateError('')
@@ -324,7 +337,6 @@ function ProjectDetail({ project, payments, onBack, onSetup, onChanged }: { proj
     payerName: payment.payer,
     receiptNumber: payment.receiptNumber ?? '',
     amount: payment.amount,
-    receivedDate: payment.date.slice(0, 10),
     paymentType: payment.paymentType,
     paymentMode: payment.paymentMode,
     reference: payment.paymentReference,
@@ -351,9 +363,9 @@ function ProjectDetail({ project, payments, onBack, onSetup, onChanged }: { proj
   </section>
     {projectStateError && <p className="form-error" role="alert">{projectStateError}</p>}
     <div className="detail-tabs" role="tablist" aria-label="Project sections">{['Overview', 'Billings', 'Payments', 'Expenses', 'Forecast', 'Documents'].map((item) => <button key={item} className={tab === item ? 'tab is-selected' : 'tab'} onClick={() => setTab(item)} role="tab" aria-selected={tab === item}>{item}</button>)}</div>
-    <div className="detail-metrics"><Metric icon={<BriefcaseBusiness size={16} />} label="Contract value" value={money.format(project.contract)} foot={`${project.downPaymentPercent}% down payment · ${project.retentionRate}% retention`} tone="green" /><Metric icon={<FileText size={16} />} label="Billed to date" value={money.format(project.billed)} foot={`${project.contract ? Math.round(project.billed / project.contract * 100) : 0}% of contract incl. down payment`} tone="blue" /><Metric icon={<CircleDollarSign size={16} />} label="Collected" value={money.format(project.collected)} foot={`${money.format(due)} receivable`} tone="gold" /><Metric icon={<WalletCards size={16} />} label="Retention held" value={money.format(project.retention)} foot="Release conditions pending" tone="neutral" /><Metric icon={<CircleAlert size={16} />} label="Profit risk" value={profitRisk.label} foot={profitRisk.detail} tone={profitRisk.tone} /></div>
+    <div className="detail-metrics"><Metric icon={<BriefcaseBusiness size={16} />} label="Contract value" value={money.format(project.contract)} foot={`${project.downPaymentPercent}% down payment · ${project.retentionRate}% retention`} tone="green" /><Metric icon={<FileText size={16} />} label="Billed to date" value={money.format(project.billed)} foot={`${project.contract ? Math.round(project.billed / project.contract * 100) : 0}% of contract incl. down payment`} tone="blue" /><Metric icon={<CircleDollarSign size={16} />} label="Collected" value={money.format(project.collected)} foot={`${money.format(due)} receivable`} tone="gold" /><Metric icon={<WalletCards size={16} />} label="Retention held" value={money.format(retentionHeld)} foot="Release conditions pending" tone="neutral" /><Metric icon={<CircleAlert size={16} />} label="Profit risk" value={profitRisk.label} foot={profitRisk.detail} tone={profitRisk.tone} /></div>
     {tab === 'Overview' && <div className="detail-content-grid"><section className="surface-card detail-progress-card"><div className="card-heading-row"><div><div className="section-kicker">Work progress</div><h2>Project health</h2></div><span className="large-progress">{project.progress}<small>%</small></span></div><div className="detail-progress-track"><span style={{ width: `${project.progress}%` }} /></div><div className="progress-caption"><span>Work accomplished</span><strong>{money.format(finance.earnedToDate)} earned</strong></div><div className="milestone-callout"><span className="milestone-icon"><CalendarDays size={16} /></span><span><small>Next milestone</small><strong>{project.milestone}</strong></span><ChevronRight size={16} /></div></section>
-      <section className="surface-card receivable-card"><div className="section-kicker">Receivables</div><h2>Balance to follow up</h2><strong className="receivable-total">{money.format(due)}</strong><div className="receivable-divider" /><div className="receivable-line"><span><span className="small-status-dot overdue-dot" />Overdue</span><strong>{money.format(due)}</strong></div><div className="receivable-line"><span><span className="small-status-dot retention-dot" />Retention held</span><strong>{money.format(project.retention)}</strong></div><small className="retention-explainer">Held retention is shown separately and excluded from overdue amounts.</small></section>
+      <section className="surface-card receivable-card"><div className="section-kicker">Receivables</div><h2>Balance to follow up</h2><strong className="receivable-total">{money.format(due)}</strong><div className="receivable-divider" /><div className="receivable-line"><span><span className="small-status-dot overdue-dot" />Billing receivable</span><strong>{money.format(finance.receivablesDue)}</strong></div><div className="receivable-line"><span><span className="small-status-dot retention-dot" />Retention release due</span><strong>{money.format(retentionDue)}</strong></div><div className="receivable-line"><span><span className="small-status-dot retention-dot" />Retention held</span><strong>{money.format(retentionHeld)}</strong></div><small className="retention-explainer">Retention becomes receivable one month after project completion.</small></section>
       <section className="surface-card detail-activity-card"><div className="card-heading-row"><div><div className="section-kicker">Latest movement</div><h2>Payments received</h2></div><button className="text-button compact-button" onClick={() => setTab('Payments')}>All payments <ArrowRight size={13} /></button></div>{payments.length ? <div className="detail-recent-payments-list">{payments.map((payment) => <div className="payment-detail-row" key={payment.id}><span className="activity-icon"><ArrowDownLeft size={15} /></span><span className="activity-copy"><strong>{payment.payer}</strong><small>{shortDate(payment.date)} · {payment.mode} · {payment.reference}</small></span><strong className="activity-amount">{money.format(payment.amount)}</strong></div>)}</div> : <div className="empty-state">No payments recorded yet.</div>}</section></div>}
     {tab === 'Billings' && <BillingPanel projectId={project.id} projectName={project.name} clientName={project.client} location={project.location} progress={project.progress} earned={finance.earnedToDate} ceiling={finance.billableCeiling} isSetupComplete={project.isSetupComplete} onChanged={onChanged} />}
     {tab === 'Payments' && <section className="surface-card tab-content">
@@ -370,6 +382,7 @@ function ProjectDetail({ project, payments, onBack, onSetup, onChanged }: { proj
     </section>}
     {tab === 'Expenses' && <ExpensePanel projectId={project.id} projectName={project.name} expenses={project.expenses} inflow={project.collected} onChanged={onChanged} />}
     {tab === 'Forecast' && <ProjectForecastPanel projectId={project.id} contractValue={finance.contractValue} recordedCosts={project.outflow} costBudget={project.costBudget} estimatedCostToComplete={project.estimatedCostToComplete} onChanged={onChanged} />}
+    {tab === 'Overview' && <ProjectDeadlinePanel key={project.deadline ?? 'no-deadline'} projectId={project.id} deadline={project.deadline} status={project.status} onChanged={onChanged} />}
     {tab === 'Documents' && <ProjectDocumentPanel projectId={project.id} />}
   </div>
 }

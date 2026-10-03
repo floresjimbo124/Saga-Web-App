@@ -15,7 +15,8 @@ import type { PortfolioPayment, PortfolioProject, ProjectHealthStatus, ProjectSt
 import type { ReceivableAgingItem } from '../finance/receivables-aging'
 import { calculateProjectFinance } from '../finance/project-finance'
 import { calculateProfitRisk } from '../finance/profit-risk'
-import { HealthBadge, Metric, ProfitRiskBadge, StatusBadge } from './ProjectStatusBadges'
+import { getProjectDeadlineStatus } from '../finance/project-deadline'
+import { HealthBadge, Metric, ProjectDeadlineBadge, ProfitRiskBadge, StatusBadge } from './ProjectStatusBadges'
 import { ReceivablesAgingPanel } from './ReceivablesAgingPanel'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
@@ -113,7 +114,7 @@ export function PortfolioOverview({
         <label className="select-wrap"><span className="sr-only">Filter by health</span><select value={healthFilter} onChange={(event) => setHealthFilter(event.target.value)}><option>All health</option>{projectHealthOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown size={13} /></label>
         <label className="select-wrap"><span className="sr-only">Filter by profit risk</span><select value={profitRiskFilter} onChange={(event) => setProfitRiskFilter(event.target.value)}><option>All profit risks</option><option>High</option><option>Medium</option><option>Low</option><option>Not rated</option></select><ChevronDown size={13} /></label>
         <label className="select-wrap date-filter"><span className="sr-only">Filter by date range</span><select value={dateFilter} onChange={(event) => setDateFilter(event.target.value)}><option>Any time</option><option>Last 30 days</option><option>This quarter</option></select><ChevronDown size={13} /></label></div>
-      <div className="project-table"><div className="project-table-head"><span>Project / client</span><span>Contract</span><span>Progress</span><span>Billed</span><span>Collected</span><span>Net cash</span><span>Status</span><span>Health</span><span>Profit risk</span><span /></div>
+      <div className="project-table"><div className="project-table-head"><span>Project / client</span><span>Contract</span><span>Progress</span><span>Billed</span><span>Collected</span><span>Net cash</span><span>Status</span><span>Health</span><span>Profit risk</span><span>Deadline</span><span /></div>
         {filtered.length ? filtered.map((project) => {
           const netCash = project.collected - project.outflow
           const finance = calculateProjectFinance({
@@ -133,7 +134,8 @@ export function PortfolioOverview({
             costBudget: project.costBudget,
             estimatedCostToComplete: project.estimatedCostToComplete,
           })
-          return <button className="project-row" key={project.id} onClick={() => openProject(project.id)}><span className="project-name-cell"><span className={`project-avatar avatar-${project.prefix.toLowerCase()}`}>{project.name.slice(0, 1)}</span><span className="project-title-stack"><strong>{project.name}</strong><small>{project.client}</small></span></span><span className="money-cell">{money.format(project.contract)}</span><span className="progress-cell"><span className="progress-value">{project.progress}%</span><span className="progress-track"><span style={{ width: `${project.progress}%` }} /></span></span><span className="money-cell">{money.format(project.billed)}</span><span className="money-cell">{money.format(project.collected)}</span><span className={`money-cell net-cash-cell ${netCash < 0 ? 'net-cash-negative' : 'net-cash-positive'}`}>{money.format(netCash)}</span><span><StatusBadge status={project.status} /></span><span><HealthBadge status={project.healthStatus} /></span><span><ProfitRiskBadge risk={profitRisk} /></span><span className="row-arrow"><ChevronRight size={16} /></span></button>
+          const deadlineStatus = getProjectDeadlineStatus(project.deadline, project.status)
+          return <button className="project-row" key={project.id} onClick={() => openProject(project.id)}><span className="project-name-cell"><span className={`project-avatar avatar-${project.prefix.toLowerCase()}`}>{project.name.slice(0, 1)}</span><span className="project-title-stack"><strong>{project.name}</strong><small>{project.client}</small></span></span><span className="money-cell">{money.format(project.contract)}</span><span className="progress-cell"><span className="progress-value">{project.progress}%</span><span className="progress-track"><span style={{ width: `${project.progress}%` }} /></span></span><span className="money-cell">{money.format(project.billed)}</span><span className="money-cell">{money.format(project.collected)}</span><span className={`money-cell net-cash-cell ${netCash < 0 ? 'net-cash-negative' : 'net-cash-positive'}`}>{money.format(netCash)}</span><span><StatusBadge status={project.status} /></span><span><HealthBadge status={project.healthStatus} /></span><span><ProfitRiskBadge risk={profitRisk} /></span><span><ProjectDeadlineBadge deadline={deadlineStatus} /></span><span className="row-arrow"><ChevronRight size={16} /></span></button>
         }) : <div className="empty-state">{projects.length ? 'No projects match those filters.' : 'No projects in this workspace yet. Create one to get started.'}</div>}
         <div className="table-footer"><span>Showing {filtered.length} of {projects.length} projects</span><span>Amounts in PHP</span></div></div>
     </section>

@@ -1,14 +1,20 @@
-import { describe, expect, it } from 'vitest'
-import { createPaymentReceiptPdf } from './payment-receipt-pdf'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createPaymentReceiptPdf, getCurrentReceiptDate } from './payment-receipt-pdf'
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('createPaymentReceiptPdf', () => {
-  it('creates an acknowledgement receipt with the payment details', async () => {
+  it('uses the current local date on the acknowledgement receipt', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-03T08:00:00'))
+    expect(getCurrentReceiptDate()).toBe('2026-10-03')
     const pdf = await createPaymentReceiptPdf({
       projectName: 'Harbor Office',
       payerName: 'Northwind Builders',
       receiptNumber: 'SAL-0002',
       amount: 125000,
-      receivedDate: '2026-10-01',
       paymentType: 'down_payment',
       paymentMode: 'bank_transfer',
       reference: 'BANK-REF-12',

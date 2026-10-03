@@ -86,32 +86,7 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
       }
       setProgressInput(null)
       const result = await issueProjectBilling(projectId, dueDate || null)
-      let pdfStatus = 'PDF opened and downloaded.'
-      try {
-        await openBillingPdf({
-          projectName,
-          clientName,
-          location,
-          billingNumber: result.billingNumber,
-          amount: result.amount,
-          progressPercent: pending ?? progress,
-          issuedAt: new Date().toISOString(),
-          dueAt: dueDate || null,
-        })
-        await downloadBillingPdf({
-          projectName,
-          clientName,
-          location,
-          billingNumber: result.billingNumber,
-          amount: result.amount,
-          progressPercent: pending ?? progress,
-          issuedAt: new Date().toISOString(),
-          dueAt: dueDate || null,
-        })
-      } catch {
-        pdfStatus = 'Use the buttons below if the PDF did not open or download.'
-      }
-      return `Billing #${result.billingNumber} issued for ${money.format(result.amount)}. ${pdfStatus}`
+      return `Billing #${result.billingNumber} issued for ${money.format(result.amount)}.`
     })
   }
 
@@ -150,6 +125,7 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
     {isSetupComplete
       ? <p className="calculation-note">Earned at {progress}%: <strong>{money.format(earned)}</strong> · Billable ceiling: <strong>{money.format(ceiling)}</strong></p>
       : <p className="calculation-note">Set up the contract amount before issuing a billing.</p>}
+    <p className="billing-current-progress">Current project progress: <strong>{progress}%</strong></p>
     <div className="form-row">
       <label className="form-field">Work completed (%)<input type="number" min="0" max="100" step="0.01" value={progressInput ?? String(progress)} onChange={(event) => setProgressInput(event.target.value)} /></label>
       <label className="form-field">Due date (optional)<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>

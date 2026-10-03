@@ -39,14 +39,13 @@ describe('project document storage', () => {
     expect(() => validateProjectDocumentFile(new File([new Uint8Array(50 * 1024 * 1024 + 1)], 'large.pdf'))).toThrow('50 MB or smaller')
   })
 
-  it('uploads to a private project path and records client visibility', async () => {
+  it('uploads to a private storage bucket path and shares document metadata with the client', async () => {
     const file = new File(['pdf'], 'Contract File.PDF', { type: 'application/pdf' })
 
     await uploadProjectDocument({
       projectId: 'project-123',
       file,
       documentType: 'contract',
-      clientVisible: false,
     })
 
     const [path, uploadedFile, options] = mocks.upload.mock.calls[0]
@@ -61,7 +60,7 @@ describe('project document storage', () => {
       storage_path: path,
       file_name: 'Contract File.PDF',
       document_type: 'contract',
-      client_visible: false,
+      client_visible: true,
     }))
   })
 
@@ -73,7 +72,6 @@ describe('project document storage', () => {
       projectId: 'project-123',
       file,
       documentType: 'contract',
-      clientVisible: true,
     })).rejects.toThrow('metadata rejected')
 
     expect(mocks.remove).toHaveBeenCalledWith([mocks.upload.mock.calls[0][0]])

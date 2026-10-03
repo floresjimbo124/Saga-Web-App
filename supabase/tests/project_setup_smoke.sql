@@ -37,6 +37,11 @@ select public.update_project_state(
   'needs_attention'
 );
 
+select public.update_project_deadline(
+  '20000000-0000-4000-8000-000000000001'::uuid,
+  '2026-12-31'::date
+);
+
 do $$
 begin
   if not exists (
@@ -45,6 +50,7 @@ begin
     where p.id = '20000000-0000-4000-8000-000000000001'::uuid
       and p.status = 'active'
       and p.health_status = 'needs_attention'
+      and p.deadline = '2026-12-31'::date
   ) then
     raise exception 'Project state RPC did not save lifecycle and health separately.';
   end if;

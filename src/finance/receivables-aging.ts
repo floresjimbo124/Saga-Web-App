@@ -10,6 +10,7 @@ export type ReceivableBillingInput = {
   issuedAt: string | null
   createdAt: string
   dueAt: string | null
+  kind?: 'billing' | 'down-payment' | 'retention'
 }
 
 export type ReceivablePaymentInput = {

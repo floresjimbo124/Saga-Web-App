@@ -10,7 +10,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: { from: mocks.from, rpc: mocks.rpc },
 }))
 
-import { createProject, loadPortfolio, recordProjectExpense, recordProjectExpenses, recordProjectPayment, updateProjectCostForecast, updateProjectSetup, updateProjectState } from './portfolio'
+import { createProject, loadPortfolio, recordProjectExpense, recordProjectExpenses, recordProjectPayment, updateProjectCostForecast, updateProjectDeadline, updateProjectSetup, updateProjectState } from './portfolio'
 
 type QueryResult = { data: unknown; error: { message: string } | null }
 
@@ -31,11 +31,13 @@ const portfolioRows: Record<string, unknown[]> = {
   projects: [
     {
       id: 'project-salo', name: 'Salo Spot', prefix: 'SAL', location: 'Makati', status: 'planning',
-      progress_percent: 0, health_status: 'on_track', client_id: 'client-salo', updated_at: '2026-09-24T00:00:00Z',
+      deadline: '2026-11-02', progress_percent: 0, health_status: 'on_track', client_id: 'client-salo',
+      created_at: '2026-09-24T00:00:00Z', updated_at: '2026-09-24T00:00:00Z',
     },
     {
       id: 'project-dapitan', name: 'Dapitan Cafe', prefix: 'DAP', location: null, status: 'completed',
-      progress_percent: 0, health_status: 'needs_attention', client_id: null, updated_at: '2026-09-25T00:00:00Z',
+      deadline: null, progress_percent: 0, health_status: 'needs_attention', client_id: null,
+      created_at: '2026-09-25T00:00:00Z', updated_at: '2026-09-25T00:00:00Z',
     },
   ],
   clients: [{ id: 'client-salo', name: 'Salo Hospitality', email: 'client@salo.example' }],
@@ -100,6 +102,7 @@ describe('portfolio data access', () => {
       clientEmail: 'client@salo.example',
       status: 'planning',
       healthStatus: 'on_track',
+      deadline: '2026-11-02',
       contract: 0,
       costBudget: 800_000,
       estimatedCostToComplete: 620_000,
@@ -168,6 +171,10 @@ describe('portfolio data access', () => {
     const salo = portfolio.projects.find((project) => project.id === 'project-salo')
 
     expect(salo?.billed).toBe(520_000)
+    expect(portfolio.receivables).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'down-payment:project-salo', outstandingAmount: 350_000, kind: 'down-payment' }),
+      expect.objectContaining({ id: 'billing-salo-1', outstandingAmount: 120_000 }),
+    ]))
   })
 
   it('shows the contract retention amount even before the ledger has any held entries', async () => {
@@ -186,6 +193,67 @@ describe('portfolio data access', () => {
     const salo = portfolio.projects.find((project) => project.id === 'project-salo')
 
     expect(salo?.retention).toBe(50_000)
+  })
+
+  it('does not deduct a retention release payment twice when the ledger already records the release', async () => {
+    const retentionPayment = {
+      id: 'retention-payment-salo',
+      project_id: 'project-salo',
+      payer_name: 'Salo Hospitality',
+      received_at: '2026-10-03T10:00:00Z',
+      created_at: '2026-10-03T10:00:00Z',
+      amount: '1000.00',
+      payment_type: 'retention_release',
+      payment_mode: 'bank_transfer',
+      reference: null,
+      receipt_number: 'SAL-0002',
+    }
+    mocks.from.mockImplementation((table: string) => queryFor(
+      table === 'payments'
+        ? [...portfolioRows.payments, retentionPayment]
+        : portfolioRows[table] ?? [],
+    ))
+
+    const portfolio = await loadPortfolio()
+    const salo = portfolio.projects.find((project) => project.id === 'project-salo')
+
+    expect(salo?.retention).toBe(5_000)
+  })
+
+  it('adds retention to receivables only after a completed project reaches its release date', async () => {
+    const projects = portfolioRows.projects.map((project) => ({
+      ...(project as Record<string, unknown>),
+      completed_at: '2026-08-01',
+    }))
+    const terms = [
+      ...portfolioRows.project_financial_terms,
+      {
+        project_id: 'project-dapitan',
+        contract_amount: '100000.00',
+        special_discount: '0.00',
+        down_payment_percent: '0.00',
+        retention_rate_percent: '5.00',
+        retention_method: 'final_schedule',
+      },
+    ]
+    mocks.from.mockImplementation((table: string) => queryFor(
+      table === 'projects'
+        ? projects
+        : table === 'project_financial_terms'
+          ? terms
+          : portfolioRows[table] ?? [],
+    ))
+
+    const portfolio = await loadPortfolio()
+
+    expect(portfolio.receivables).toContainEqual(expect.objectContaining({
+      id: 'retention:project-dapitan',
+      kind: 'retention',
+      amount: 5_000,
+    }))
+    expect(portfolio.receivables).not.toContainEqual(expect.objectContaining({
+      id: 'retention:project-salo',
+    }))
   })
 
   it('distinguishes unscheduled milestones from milestones that are all complete', async () => {
@@ -265,6 +333,17 @@ describe('portfolio data access', () => {
       p_project_id: 'project-salo',
       p_status: 'active',
       p_health_status: 'needs_attention',
+    })
+  })
+
+  it('updates a project deadline through the owner RPC', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: null })
+
+    await updateProjectDeadline('project-salo', '2026-12-31')
+
+    expect(mocks.rpc).toHaveBeenCalledWith('update_project_deadline', {
+      p_project_id: 'project-salo',
+      p_deadline: '2026-12-31',
     })
   })
 

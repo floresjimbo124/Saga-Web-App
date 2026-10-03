@@ -1,5 +1,6 @@
 import type { ProjectHealthStatus, ProjectStatus } from '../data/portfolio'
 import type { ProfitRiskSummary } from '../finance/profit-risk'
+import type { ProjectDeadlineStatus } from '../finance/project-deadline'
 
 const projectStatusOptions: { value: ProjectStatus; label: string }[] = [
   { value: 'planning', label: 'Planning' },
@@ -25,4 +26,8 @@ export function HealthBadge({ status }: { status: ProjectHealthStatus }) {
 
 export function ProfitRiskBadge({ risk }: { risk: ProfitRiskSummary }) {
   return <span className={`status-badge profit-risk-${risk.level}`} title={risk.detail}><span />{risk.label}</span>
+}
+
+export function ProjectDeadlineBadge({ deadline }: { deadline: ProjectDeadlineStatus }) {
+  return <span className={`status-badge deadline-${deadline.level}`} title={deadline.detail}><span />{deadline.label}</span>
 }
