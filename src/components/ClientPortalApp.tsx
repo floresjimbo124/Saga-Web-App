@@ -209,6 +209,20 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
   const notifications = [...billingNotifications, ...downPaymentNotifications, ...retentionNotifications]
   const notificationCount = notifications.filter((notification) => !readNotificationState.ids.has(notification.id)).length
 
+  const markAllNotificationsRead = () => {
+    const readIds = new Set(readNotificationState.ids)
+    for (const notification of notifications) readIds.add(notification.id)
+    setReadNotificationState({ ids: readIds, error: '' })
+    try {
+      saveReadClientBillingNotificationIds(userId, [...readIds])
+    } catch (saveError) {
+      setReadNotificationState({
+        ids: readIds,
+        error: saveError instanceof Error ? `Could not save notification read status: ${saveError.message}` : 'Could not save notification read status.',
+      })
+    }
+  }
+
   const openBillingNotification = async (notification: ClientBillingNotification) => {
     const readIds = new Set(readNotificationState.ids)
     readIds.add(notification.id)
@@ -305,7 +319,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
             {notificationCount > 0 && <span className="notification-count">{notificationCount > 99 ? '99+' : notificationCount}</span>}
           </button>
           {isNotificationsOpen && <section className="notification-panel" id="client-billing-notifications" aria-label="Notifications">
-            <div className="notification-panel-heading"><h2>Notifications</h2><button type="button" className="icon-button" aria-label="Close notifications" onClick={() => setIsNotificationsOpen(false)}><X size={16} /></button></div>
+            <div className="notification-panel-heading"><h2>Notifications</h2><div className="notification-panel-actions">{notificationCount > 0 && <button type="button" className="text-button notification-mark-all" onClick={markAllNotificationsRead}>Mark all as read</button>}<button type="button" className="icon-button" aria-label="Close notifications" onClick={() => setIsNotificationsOpen(false)}><X size={16} /></button></div></div>
             {readNotificationState.error && <p className="form-error" role="alert">{readNotificationState.error}</p>}
             {notifications.length ? <div className="notification-list">
               {notifications.map((billing) => {

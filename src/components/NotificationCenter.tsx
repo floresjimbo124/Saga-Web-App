@@ -59,9 +59,23 @@ export function NotificationCenter({ projects, receivables, onOpenProject }: {
     onOpenProject(projectId)
   }
 
+  const markAllAsRead = () => {
+    const readIds = new Set(readState.ids)
+    for (const notification of notifications) readIds.add(notification.id)
+    setReadState({ ids: readIds, error: '' })
+    try {
+      saveReadNotificationIds('owner', [...readIds])
+    } catch (error) {
+      setReadState({
+        ids: readIds,
+        error: error instanceof Error ? `Could not save notification read status: ${error.message}` : 'Could not save notification read status.',
+      })
+    }
+  }
+
   return <div className="notification-center" ref={container}>
     <button
-      className={`icon-button notification-button ${notifications.length ? 'has-notifications' : ''}`}
+      className={`icon-button notification-button ${unreadCount ? 'has-notifications' : ''}`}
       type="button"
       aria-label={`Notifications, ${countLabel}`}
       aria-expanded={isOpen}
@@ -73,7 +87,7 @@ export function NotificationCenter({ projects, receivables, onOpenProject }: {
       {unreadCount > 0 && <span className="notification-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
     </button>
     {isOpen && <section className="notification-panel" id="dashboard-notifications" aria-label="Project notifications">
-      <div className="notification-panel-heading"><div><div className="section-kicker">Project alerts</div><h2>Notifications</h2></div><button type="button" className="icon-button" aria-label="Close notifications" onClick={() => setIsOpen(false)}><X size={16} /></button></div>
+      <div className="notification-panel-heading"><div><div className="section-kicker">Project alerts</div><h2>Notifications</h2></div><div className="notification-panel-actions">{unreadCount > 0 && <button type="button" className="text-button notification-mark-all" onClick={markAllAsRead}>Mark all as read</button>}<button type="button" className="icon-button" aria-label="Close notifications" onClick={() => setIsOpen(false)}><X size={16} /></button></div></div>
       {readState.error && <p className="form-error" role="alert">{readState.error}</p>}
       {notifications.length ? <div className="notification-list">{notifications.map((notification) => {
         const isRead = readState.ids.has(notification.id)
