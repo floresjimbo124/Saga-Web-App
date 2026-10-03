@@ -1976,7 +1976,7 @@ p {
 .document-confirm-copy strong { color: #344b3b; }
 .document-confirm-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; }
 .document-confirm-actions .button { display: inline-flex; align-items: center; gap: 7px; }
-.receivables-aging-panel { container-type: inline-size; display: grid; min-width: 0; gap: 15px; margin-top: 28px; padding: 18px; }
+.receivables-aging-panel { display: grid; min-width: 0; gap: 15px; margin-top: 28px; padding: 18px; }
 .aging-totals { display: flex; gap: 22px; }
 .aging-totals > span { display: grid; gap: 3px; text-align: right; }
 .aging-totals small { color: #768578; font-size: 10px; }
@@ -2058,27 +2058,28 @@ p {
   .forecast-summary > div { border-bottom: 1px solid #e2e5df; }
 }
 
-@container (max-width: 700px) {
+@media (max-width: 900px) {
   .receivables-aging-panel { padding: 15px; }
   .aging-buckets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .aging-bucket { border-bottom: 1px solid #e2e5df; }
-  .aging-row { grid-template-columns: minmax(0, 1fr) auto 16px; gap: 6px 8px; }
-  .aging-project { grid-column: 1; grid-row: 1; }
-  .aging-due { grid-column: 1; grid-row: 2; }
-  .aging-amount { grid-column: 2; grid-row: 1; }
-  .aging-row-arrow { grid-column: 3; grid-row: 1 / span 2; }
+  .aging-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "project amount" "due arrow";
+    gap: 8px 10px;
+  }
+  .aging-project { grid-area: project; }
+  .aging-due { grid-area: due; }
+  .aging-amount { grid-area: amount; }
+  .aging-row-arrow { grid-area: arrow; justify-self: end; }
   .aging-totals { gap: 12px; }
 }
 
-@container (max-width: 360px) {
+@media (max-width: 540px) {
   .receivables-aging-panel { padding: 12px; }
   .receivables-aging-panel > .card-heading-row { align-items: flex-start; flex-direction: column; gap: 10px; }
   .aging-totals { width: 100%; justify-content: flex-start; }
   .aging-totals > span { text-align: left; }
   .aging-bucket { padding: 9px 8px; }
-}
-
-@media (max-width: 540px) {
   .client-access-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
   .client-access-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
