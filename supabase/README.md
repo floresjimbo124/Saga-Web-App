@@ -59,3 +59,16 @@ The SQL test simulates the existing owner claim, exercises the setup RPC, verifi
 - Receipt numbers are assigned under a transaction lock and the project prefix locks after the first receipt.
 - Store private files in `project-documents` using `<organization-uuid>/<project-uuid>/<filename>` paths. Client downloads additionally require a matching `project_documents` row with `client_visible = true`.
 - Never put a Supabase service-role key in the browser or commit it to this repository.
+
+## Client portal access
+
+From a project detail page, choose **Invite client** and enter the client's email. New addresses receive a Supabase Auth invitation; existing accounts are linked to the project's client record. Since access is client-scoped, that account can view every project associated with the same client record, subject to the existing row-level security policies.
+
+Deploy the owner-verified invitation function to the linked project:
+
+```powershell
+npx supabase functions deploy invite-client --project-ref your-project-ref
+npx supabase secrets set CLIENT_PORTAL_URL=https://your-client-portal-url --project-ref your-project-ref
+```
+
+The function requires Supabase's `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` runtime secrets. Supabase supplies these project secrets to Edge Functions; never expose the service-role key to the browser. Add the configured `CLIENT_PORTAL_URL` to the Auth redirect URL allowlist in the Supabase dashboard so invite links return to the app.

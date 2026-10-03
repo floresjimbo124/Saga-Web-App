@@ -84,4 +84,15 @@ describe('calculateProjectFinance', () => {
   it('does not release more retention than is currently held', () => {
     expect(() => calculate({ retentionHeld: 10_000, retentionReleased: 15_000 })).toThrow(RangeError)
   })
+
+  it('caps over-held retention to the current cap so stale ledger values cannot distort receivables', () => {
+    const result = calculate({
+      retentionMethod: 'per-billing',
+      billedToDate: 500_000,
+      paymentsReceived: 300_000,
+      retentionHeld: 60_000,
+    })
+
+    expect(result.receivablesDue).toBe(150_000)
+  })
 })

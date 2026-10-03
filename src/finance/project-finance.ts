@@ -87,6 +87,7 @@ export function calculateProjectFinance(input: ProjectFinanceInput): ProjectFina
     throw new RangeError('Retention released cannot exceed retention currently held.')
   }
 
+  const normalizedRetentionHeld = Math.min(Math.max(input.retentionHeld, 0), retentionCap)
   const retentionRemaining = retentionCap - released
   const billableCeiling = contractValue - retentionRemaining
   const earnedToDate = Math.round(contractValue * input.progressPercent / 100)
@@ -94,7 +95,7 @@ export function calculateProjectFinance(input: ProjectFinanceInput): ProjectFina
   const amountForBilling = Math.max(0, billableEarnedToDate - input.paymentsReceived)
   const unpaidBilledAmount = Math.max(0, input.billedToDate - input.paymentsReceived)
   const retentionDeduction = input.retentionMethod === 'per-billing'
-    ? Math.min(unpaidBilledAmount, input.retentionHeld)
+    ? Math.min(unpaidBilledAmount, normalizedRetentionHeld)
     : 0
 
   return {

@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ArrowRight, BriefcaseBusiness, CircleAlert, LockKeyhole, LogOut } from 'lucide-react'
+import { ArrowRight, CircleAlert, LockKeyhole, LogOut } from 'lucide-react'
 import { isSupabaseConfigured, SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
+import { ClientPortalApp } from '../components/ClientPortalApp'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -9,7 +10,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [sessionError, setSessionError] = useState('')
   const [accessResult, setAccessResult] = useState<{
     userId: string
-    status: 'owner' | 'denied' | 'error'
+    status: 'owner' | 'client' | 'denied' | 'error'
     error?: string
   } | null>(null)
 
@@ -40,21 +41,44 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (!session || !supabase) return
 
     let active = true
+    const client = supabase
 
-    void supabase
-      .from('organization_memberships')
-      .select('role')
-      .eq('organization_id', SAGACT_ORGANIZATION_ID)
-      .eq('user_id', session.user.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (!active) return
-        setAccessResult({
-          userId: session.user.id,
-          status: error ? 'error' : data?.role === 'owner' ? 'owner' : 'denied',
-          error: error ? 'Could not verify your workspace access. Try again.' : undefined,
-        })
+    const verifyAccess = async () => {
+      const { data: membership, error: membershipError } = await client
+        .from('organization_memberships')
+        .select('role')
+        .eq('organization_id', SAGACT_ORGANIZATION_ID)
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+
+      if (!active) return
+      if (membershipError) {
+        setAccessResult({ userId: session.user.id, status: 'error', error: 'Could not verify your workspace access. Try again.' })
+        return
+      }
+      if (membership?.role === 'owner') {
+        setAccessResult({ userId: session.user.id, status: 'owner' })
+        return
+      }
+
+      const { data: clientAccess, error: clientAccessError } = await client
+        .from('client_user_access')
+        .select('client_id')
+        .eq('organization_id', SAGACT_ORGANIZATION_ID)
+        .eq('user_id', session.user.id)
+        .limit(1)
+
+      if (!active) return
+      setAccessResult({
+        userId: session.user.id,
+        status: clientAccessError ? 'error' : clientAccess?.length ? 'client' : 'denied',
+        error: clientAccessError ? 'Could not verify your client access. Try again.' : undefined,
       })
+    }
+
+    void verifyAccess().catch(() => {
+      if (active) setAccessResult({ userId: session.user.id, status: 'error', error: 'Could not verify your workspace access. Try again.' })
+    })
 
     return () => {
       active = false
@@ -79,6 +103,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (currentAccess.status !== 'owner') {
+    if (currentAccess.status === 'client') return <ClientPortalApp />
     return <AccessDenied error={currentAccess.error ?? ''} />
   }
 
@@ -102,28 +127,46 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
     setIsSubmitting(false)
   }
 
-  return <main className="auth-screen">
+  return <AuthLayout>
     <section className="auth-panel" aria-labelledby="auth-title">
-      <div className="auth-brand"><span className="auth-brand-mark"><BriefcaseBusiness size={20} /></span><span>SAGACT<span>.</span></span></div>
+      <AuthCardBrand />
       <div className="auth-heading">
-        <div className="section-kicker">Owner workspace</div>
-        <h1 id="auth-title">Welcome back.</h1>
-        <p>Sign in to continue to your project portfolio.</p>
+        <h1 id="auth-title">Welcome back</h1>
+        <p>Sign in to your SAGACT workspace</p>
       </div>
 
-      {configurationMissing ? <div className="auth-notice" role="status"><CircleAlert size={17} /><span>Supabase isn’t configured. Add the project URL and public key to <code>.env.local</code>, then restart the dev server.</span></div> : <form className="auth-form" onSubmit={handleSubmit}>
-        <label className="auth-field">Email address<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" required /></label>
-        <label className="auth-field">Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>
-        {error && <p className="auth-error" role="alert">{error}</p>}
-        <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Signing in…' : 'Sign in'}{!isSubmitting && <ArrowRight size={16} />}
-        </button>
-      </form>}
-
-      <div className="auth-security"><LockKeyhole size={14} /><span>Secure sign-in protected by Supabase Auth</span></div>
+      {configurationMissing ? <div className="auth-notice" role="status"><CircleAlert size={17} /><span>Supabase isn’t configured. Add the project URL and public key to <code>.env.local</code>, then restart the dev server.</span></div> : <>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label className="auth-field">Email address<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" required /></label>
+          <label className="auth-field">Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>
+          {error && <p className="auth-error" role="alert">{error}</p>}
+          <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Signing in…' : 'Sign in'}{!isSubmitting && <ArrowRight size={16} />}
+          </button>
+        </form>
+      </>}
+      {configurationMissing && <div className="auth-dev-mode">Development mode</div>}
     </section>
-    <footer className="auth-footer">SAGACT <span>·</span> Project workspace</footer>
+  </AuthLayout>
+}
+
+function AuthLayout({ children }: { children: ReactNode }) {
+  return <main className="auth-screen">
+    <aside className="auth-story">
+      <div className="auth-story-copy">
+        <h2>Accessible Architecture for every Juan</h2>
+        <span className="auth-story-rule" />
+      </div>
+    </aside>
+    <section className="auth-content">
+      {children}
+      <footer className="auth-footer">SAGACT <span>·</span> Project workspace</footer>
+    </section>
   </main>
+}
+
+function AuthCardBrand() {
+  return <div className="auth-brand auth-card-brand"><span className="auth-brand-mark"><img src="/sagact-mark.svg" alt="" /></span><span>SAGACT<span>.</span></span></div>
 }
 
 function AuthLoading({ message }: { message: string }) {
@@ -131,5 +174,5 @@ function AuthLoading({ message }: { message: string }) {
 }
 
 function AccessDenied({ error }: { error: string }) {
-  return <main className="auth-screen"><section className="auth-panel access-panel"><div className="auth-brand"><span className="auth-brand-mark"><BriefcaseBusiness size={20} /></span><span>SAGACT<span>.</span></span></div><div className="auth-heading"><div className="section-kicker">Access needed</div><h1>Workspace access required.</h1><p>{error || 'This account does not have owner access to the SAGACT workspace yet.'}</p></div><button className="button button-secondary auth-submit" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={15} />Sign out</button></section><footer className="auth-footer">SAGACT <span>·</span> Project workspace</footer></main>
+  return <AuthLayout><section className="auth-panel access-panel"><AuthCardBrand /><div className="auth-heading"><h1>Workspace access required</h1><p>{error || 'This account does not have owner access to the SAGACT workspace yet.'}</p></div><button className="button button-secondary auth-submit" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={15} />Sign out</button></section></AuthLayout>
 }
