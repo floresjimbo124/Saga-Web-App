@@ -9,7 +9,7 @@ max_rows = 1000
 
 [db]
 port = 54322
-major_version = 15
+major_version = 17
 
 [db.seed]
 enabled = true
@@ -21,8 +21,8 @@ port = 54323
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:5173/**", "http://127.0.0.1:5173/**"]
+site_url = "https://saga-web-app.vercel.app"
+additional_redirect_urls = ["https://saga-web-app.vercel.app/**", "http://localhost:5173/**", "http://127.0.0.1:5173/**"]
 
 [functions.invite-client]
 verify_jwt = true
