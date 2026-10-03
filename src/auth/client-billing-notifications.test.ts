@@ -20,6 +20,7 @@ describe('client billing notification read state', () => {
 
     expect(loadReadClientBillingNotificationIds('client-a')).toEqual(['billing-1'])
     expect(loadReadClientBillingNotificationIds('client-b')).toEqual(['billing-2'])
+    expect([...values.keys()]).toContain('sagact:notifications:read:client:client-a')
   })
 
   it('rejects malformed saved state', () => {

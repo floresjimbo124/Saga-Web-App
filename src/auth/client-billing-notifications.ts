@@ -1,16 +1,9 @@
-const storagePrefix = 'sagact:client-billing-notifications:read:'
+import { loadReadNotificationIds, saveReadNotificationIds } from './notification-read-state'
 
 export function loadReadClientBillingNotificationIds(userId: string): string[] {
-  const stored = window.localStorage.getItem(`${storagePrefix}${userId}`)
-  if (stored === null) return []
-
-  const parsed: unknown = JSON.parse(stored)
-  if (!Array.isArray(parsed) || parsed.some((id) => typeof id !== 'string')) {
-    throw new Error('Saved notification state is invalid.')
-  }
-  return parsed
+  return loadReadNotificationIds(`client:${userId}`)
 }
 
 export function saveReadClientBillingNotificationIds(userId: string, notificationIds: readonly string[]) {
-  window.localStorage.setItem(`${storagePrefix}${userId}`, JSON.stringify([...new Set(notificationIds)]))
+  saveReadNotificationIds(`client:${userId}`, notificationIds)
 }
