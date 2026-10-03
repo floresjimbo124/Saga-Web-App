@@ -179,12 +179,23 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
         setMessage(`Sign-in link sent to ${email.trim()}. Check your inbox.`)
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-        if (signInError) throw signInError
+        if (signInError) {
+          const { data, error: accountLookupError } = await supabase.functions.invoke('check-account-exists', {
+            body: { email: email.trim() },
+          })
+          if (accountLookupError || typeof data?.exists !== 'boolean') {
+            setError('Could not verify account status. Please try again.')
+          } else if (!data.exists) {
+            setError('Account does not exist.')
+          } else {
+            setError('The email or password is incorrect. Check your details and try again.')
+          }
+        }
       }
     } catch {
       setError(clientSignIn && clientMagicLink
         ? 'Could not send a sign-in link. Check the email address and try again.'
-        : 'Account does not exist, or the email or password is incorrect. Check your details and try again.')
+        : 'Could not complete sign in. Please check your connection and try again.')
     } finally {
       setIsSubmitting(false)
     }

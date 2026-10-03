@@ -26,3 +26,6 @@ additional_redirect_urls = ["https://saga-web-app.vercel.app/**", "http://localh
 
 [functions.invite-client]
 verify_jwt = true
+
+[functions.check-account-exists]
+verify_jwt = false
