@@ -101,7 +101,6 @@ export function NotificationCenter({ projects, receivables, onOpenProject }: {
         <span className="notification-copy"><strong>{notification.projectName} · {notification.title}</strong><small>{notification.detail}</small></span>
       </button>
       })}</div> : <div className="notification-empty"><Bell size={16} /><span>No overdue bills or approaching deadlines.</span></div>}
-      <p className="notification-footnote">Alerts update with your project deadlines and unpaid issued billings.</p>
     </section>}
   </div>
 }
