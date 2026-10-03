@@ -87,7 +87,7 @@ export function NotificationCenter({ projects, receivables, onOpenProject }: {
       {unreadCount > 0 && <span className="notification-count">{unreadCount > 99 ? '99+' : unreadCount}</span>}
     </button>
     {isOpen && <section className="notification-panel" id="dashboard-notifications" aria-label="Project notifications">
-      <div className="notification-panel-heading"><div><div className="section-kicker">Project alerts</div><h2>Notifications</h2></div><div className="notification-panel-actions">{unreadCount > 0 && <button type="button" className="text-button notification-mark-all" onClick={markAllAsRead}>Mark all as read</button>}<button type="button" className="icon-button" aria-label="Close notifications" onClick={() => setIsOpen(false)}><X size={16} /></button></div></div>
+      <div className="notification-panel-heading"><h2>Notifications</h2><div className="notification-panel-actions">{unreadCount > 0 && <button type="button" className="text-button notification-mark-all" onClick={markAllAsRead}>Mark all as read</button>}<button type="button" className="icon-button" aria-label="Close notifications" onClick={() => setIsOpen(false)}><X size={16} /></button></div></div>
       {readState.error && <p className="form-error" role="alert">{readState.error}</p>}
       {notifications.length ? <div className="notification-list">{notifications.map((notification) => {
         const isRead = readState.ids.has(notification.id)
