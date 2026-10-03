@@ -1993,6 +1993,7 @@ p {
 .aging-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(150px, 0.8fr) auto 16px; gap: 12px; align-items: center; width: 100%; padding: 12px 8px; border: 0; border-bottom: 1px solid #e6e8e2; background: transparent; text-align: left; cursor: pointer; }
 .aging-row:hover { background: #f8f8f3; }
 .aging-project, .aging-due { display: grid; gap: 4px; min-width: 0; }
+.aging-due { justify-self: start; justify-items: start; align-self: center; text-align: left; }
 .aging-project strong, .aging-due strong { overflow-wrap: anywhere; color: #405345; font-size: 12px; }
 .aging-project small, .aging-due small { color: #818a80; font-size: 10px; }
 .aging-due strong { color: #68806a; }
