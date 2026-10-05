@@ -1966,6 +1966,12 @@ p {
   color: #a34242;
 }
 
+.expense-edit-button {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+}
+
 .document-placeholder {
   display: flex;
   align-items: center;

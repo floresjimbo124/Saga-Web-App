@@ -10,7 +10,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: { from: mocks.from, rpc: mocks.rpc },
 }))
 
-import { createProject, loadPortfolio, recordProjectExpense, recordProjectExpenses, recordProjectPayment, updateProjectCostForecast, updateProjectDeadline, updateProjectSetup, updateProjectState } from './portfolio'
+import { createProject, loadPortfolio, recordProjectExpense, recordProjectExpenses, recordProjectPayment, updateProjectCostForecast, updateProjectDeadline, updateProjectExpense, updateProjectSetup, updateProjectState } from './portfolio'
 
 type QueryResult = { data: unknown; error: { message: string } | null }
 
@@ -440,6 +440,28 @@ describe('portfolio data access', () => {
         { project_id: 'project-salo', expense_date: '2026-10-01', category: 'materials', description: 'Concrete', vendor: 'BuildCo', amount: 12_500.5 },
         { project_id: 'project-dapitan', expense_date: '2026-09-30', category: 'transport', description: 'Delivery', vendor: null, amount: 3_000 },
       ],
+    })
+  })
+
+  it('updates an existing project expense through the project-scoped RPC', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: null })
+
+    await updateProjectExpense({
+      id: 'expense-salo',
+      date: '2026-10-02',
+      category: 'materials',
+      description: ' Corrected supplies ',
+      vendor: ' BuildCo ',
+      amount: 12_750,
+    })
+
+    expect(mocks.rpc).toHaveBeenCalledWith('update_project_expense', {
+      p_expense_id: 'expense-salo',
+      p_expense_date: '2026-10-02',
+      p_category: 'materials',
+      p_description: 'Corrected supplies',
+      p_vendor: 'BuildCo',
+      p_amount: 12_750,
     })
   })
 })

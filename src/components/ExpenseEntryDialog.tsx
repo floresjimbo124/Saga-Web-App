@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Plus, RefreshCw, X } from 'lucide-react'
-import { recordProjectExpenses, type ProjectExpenseCategory } from '../data/portfolio'
+import { recordProjectExpenses, updateProjectExpense, type PortfolioExpense, type ProjectExpenseCategory } from '../data/portfolio'
 import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
 
@@ -31,20 +31,30 @@ const categories: { value: ProjectExpenseCategory; label: string }[] = [
 const now = new Date()
 const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
-function createExpenseDraft(id: number, projectId: string): ExpenseDraft {
-  return { id, projectId, date: localToday, category: 'materials', amount: '', description: '', vendor: '' }
+function createExpenseDraft(id: number, projectId: string, expense?: PortfolioExpense): ExpenseDraft {
+  return {
+    id,
+    projectId,
+    date: expense?.date ?? localToday,
+    category: expense?.category ?? 'materials',
+    amount: expense ? String(expense.amount) : '',
+    description: expense?.description ?? '',
+    vendor: expense?.vendor ?? '',
+  }
 }
 
-export function ExpenseEntryDialog({ projects, initialProjectId, onClose, onSaved }: {
+export function ExpenseEntryDialog({ projects, initialProjectId, editingExpense, onClose, onSaved }: {
   projects: ExpenseProjectOption[]
   initialProjectId?: string
+  editingExpense?: PortfolioExpense
   onClose: () => void
   onSaved: () => void
 }) {
-  const [rows, setRows] = useState<ExpenseDraft[]>([createExpenseDraft(1, initialProjectId ?? '')])
+  const [rows, setRows] = useState<ExpenseDraft[]>([createExpenseDraft(1, initialProjectId ?? '', editingExpense)])
   const [error, setError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const canChooseProject = initialProjectId === undefined
+  const isEditing = editingExpense !== undefined
 
   const updateRow = (id: number, updates: Partial<ExpenseDraft>) => {
     setRows((current) => current.map((row) => row.id === id ? { ...row, ...updates } : row))
@@ -77,14 +87,20 @@ export function ExpenseEntryDialog({ projects, initialProjectId, onClose, onSave
     setError('')
     setIsSaving(true)
     try {
-      await recordProjectExpenses(rows.map((row) => ({
+      const expenseInputs = rows.map((row) => ({
         projectId: row.projectId,
         date: row.date,
         category: row.category,
         description: row.description,
         vendor: row.vendor,
         amount: parseMoneyInput(row.amount),
-      })))
+      }))
+      if (editingExpense) {
+        const [expense] = expenseInputs
+        await updateProjectExpense({ ...expense, id: editingExpense.id })
+      } else {
+        await recordProjectExpenses(expenseInputs)
+      }
       onSaved()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not record these expenses.')
@@ -100,13 +116,13 @@ export function ExpenseEntryDialog({ projects, initialProjectId, onClose, onSave
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDialog() }}>
     <section className="project-modal expense-batch-modal" role="dialog" aria-modal="true" aria-labelledby="expense-dialog-title">
       <div className="modal-heading">
-        <div><div className="section-kicker">Project expenses</div><h2 id="expense-dialog-title">{canChooseProject ? 'Add expenses' : `Add expenses · ${projects[0]?.name ?? ''}`}</h2></div>
+        <div><div className="section-kicker">Project expenses</div><h2 id="expense-dialog-title">{isEditing ? `Edit expense · ${projects[0]?.name ?? ''}` : canChooseProject ? 'Add expenses' : `Add expenses · ${projects[0]?.name ?? ''}`}</h2></div>
         <button className="icon-button" type="button" onClick={closeDialog} aria-label="Close" disabled={isSaving}><X size={18} /></button>
       </div>
       <form onSubmit={(event) => { void submitExpense(event) }}>
         <div className="expense-entry-list">
           {rows.map((row, index) => <section className="expense-entry-row" key={row.id}>
-            <div className="expense-entry-row-heading"><strong>Expense {index + 1}</strong>{rows.length > 1 && <button type="button" className="icon-button" aria-label={`Remove expense ${index + 1}`} title="Remove row" onClick={() => removeRow(row.id)} disabled={isSaving}><X size={16} /></button>}</div>
+            <div className="expense-entry-row-heading"><strong>{isEditing ? 'Expense details' : `Expense ${index + 1}`}</strong>{rows.length > 1 && <button type="button" className="icon-button" aria-label={`Remove expense ${index + 1}`} title="Remove row" onClick={() => removeRow(row.id)} disabled={isSaving}><X size={16} /></button>}</div>
             <div className={`expense-entry-fields ${canChooseProject ? 'has-project-select' : 'project-fixed'}`}>
               {canChooseProject && <label className="form-field expense-field-project">Project<select value={row.projectId} onChange={(event) => updateRow(row.id, { projectId: event.target.value })} required><option value="">Choose a project</option>{projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
               <label className="form-field">Expense date<input type="date" value={row.date} onChange={(event) => updateRow(row.id, { date: event.target.value })} required /></label>
@@ -117,9 +133,9 @@ export function ExpenseEntryDialog({ projects, initialProjectId, onClose, onSave
             </div>
           </section>)}
         </div>
-        <button type="button" className="button button-secondary expense-add-row" onClick={addRow} disabled={isSaving}><Plus size={15} />Add another row</button>
+        {!isEditing && <button type="button" className="button button-secondary expense-add-row" onClick={addRow} disabled={isSaving}><Plus size={15} />Add another row</button>}
         {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="modal-actions"><button type="button" className="button button-secondary" onClick={closeDialog} disabled={isSaving}>Cancel</button><button type="submit" className="button button-primary" disabled={isSaving}>{isSaving ? <><RefreshCw size={15} />Saving…</> : <><Plus size={15} />Save {rows.length} expense{rows.length === 1 ? '' : 's'}</>}</button></div>
+        <div className="modal-actions"><button type="button" className="button button-secondary" onClick={closeDialog} disabled={isSaving}>Cancel</button><button type="submit" className="button button-primary" disabled={isSaving}>{isSaving ? <><RefreshCw size={15} />Saving…</> : isEditing ? 'Save changes' : <><Plus size={15} />Save {rows.length} expense{rows.length === 1 ? '' : 's'}</>}</button></div>
       </form>
     </section>
   </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowDownLeft, ArrowUpRight, Plus, WalletCards } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Pencil, Plus, WalletCards } from 'lucide-react'
 import { type PortfolioExpense, type ProjectExpenseCategory } from '../data/portfolio'
 import { ExpenseEntryDialog } from './ExpenseEntryDialog'
 
@@ -23,12 +23,13 @@ function formatExpenseDate(value: string) {
   return Number.isNaN(date.getTime()) ? value : dateFormat.format(date)
 }
 
-function ExpenseRow({ expense }: { expense: PortfolioExpense }) {
+function ExpenseRow({ expense, onEdit }: { expense: PortfolioExpense; onEdit: (expense: PortfolioExpense) => void }) {
   const category = categories.find((item) => item.value === expense.category)?.label ?? 'Other'
   return <div className="payment-detail-row expense-row">
     <span className="activity-icon"><WalletCards size={15} /></span>
     <span className="activity-copy"><strong>{expense.description}</strong><small>{formatExpenseDate(expense.date)} · {category}{expense.vendor ? ` · ${expense.vendor}` : ''}</small></span>
     <strong className="activity-amount expense-amount">− {money.format(expense.amount)}</strong>
+    <button type="button" className="icon-button expense-edit-button" onClick={() => onEdit(expense)} aria-label={`Edit expense: ${expense.description}`} title="Edit expense"><Pencil size={14} /></button>
   </div>
 }
 
@@ -40,6 +41,7 @@ export function ExpensePanel({ projectId, projectName, expenses, inflow, onChang
   onChanged: () => void
 }) {
   const [showForm, setShowForm] = useState(false)
+  const [editingExpense, setEditingExpense] = useState<PortfolioExpense | undefined>()
   const totalOutflow = expenses.reduce((total, expense) => total + expense.amount, 0)
   const net = inflow - totalOutflow
   const categoryTotals = categories.map((category) => ({
@@ -64,8 +66,8 @@ export function ExpensePanel({ projectId, projectName, expenses, inflow, onChang
       </div>
 
       <div className="section-kicker expense-register-heading">Expense register</div>
-      {expenses.length ? <div className="expense-register-list">{expenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} />)}</div> : <div className="empty-state">No expenses recorded for this project yet.</div>}
+      {expenses.length ? <div className="expense-register-list">{expenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} onEdit={(item) => { setEditingExpense(item); setShowForm(true) }} />)}</div> : <div className="empty-state">No expenses recorded for this project yet.</div>}
     </section>
-    {showForm && <ExpenseEntryDialog projects={[{ id: projectId, name: projectName }]} initialProjectId={projectId} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); onChanged() }} />}
+    {showForm && <ExpenseEntryDialog projects={[{ id: projectId, name: projectName }]} initialProjectId={projectId} editingExpense={editingExpense} onClose={() => { setShowForm(false); setEditingExpense(undefined) }} onSaved={() => { setShowForm(false); setEditingExpense(undefined); onChanged() }} />}
   </>
 }

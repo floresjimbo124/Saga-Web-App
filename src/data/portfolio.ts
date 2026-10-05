@@ -88,6 +88,10 @@ export type RecordProjectExpenseInput = {
   amount: number
 }
 
+export type UpdateProjectExpenseInput = Omit<RecordProjectExpenseInput, 'projectId'> & {
+  id: string
+}
+
 function requireSupabase() {
   if (!supabase) throw new Error('Supabase is not configured.')
   return supabase
@@ -510,6 +514,18 @@ export async function recordProjectExpenses(inputs: RecordProjectExpenseInput[])
   const savedCount = Number(data)
   if (savedCount !== inputs.length) throw new Error('Not all expense rows were recorded.')
   return savedCount
+}
+
+export async function updateProjectExpense(input: UpdateProjectExpenseInput) {
+  const { error } = await requireSupabase().rpc('update_project_expense', {
+    p_expense_id: input.id,
+    p_expense_date: input.date,
+    p_category: input.category,
+    p_description: input.description.trim(),
+    p_vendor: input.vendor?.trim() || null,
+    p_amount: input.amount,
+  })
+  throwIfError(error)
 }
 
 export async function updateProjectCostForecast(input: {
