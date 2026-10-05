@@ -1,5 +1,6 @@
 import { ArrowRight, Clock3 } from 'lucide-react'
 import type { ReceivableAgingBucket, ReceivableAgingItem } from '../finance/receivables-aging'
+import { formatBillingNumber } from '../lib/billing-number'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
 const dateFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -40,7 +41,7 @@ export function ReceivablesAgingPanel({ items, onOpenProject }: {
         ? 'Retention release'
         : item.kind === 'down-payment'
           ? 'Contract down payment'
-          : `Billing #${item.billingNumber}`}</strong><small>{item.clientName}</small></span>
+          : `Billing #${formatBillingNumber(item.billingNumber)}`}</strong><small>{item.clientName}</small></span>
       <span className="aging-due"><strong className={item.daysUntilDue === 0 ? 'aging-due-today' : undefined}>{dueLabel(item)}</strong><small>Due {formatDate(item.dueAt)}</small></span>
       <strong className="aging-amount">{money.format(item.outstandingAmount)}</strong>
       <ArrowRight className="aging-row-arrow" size={15} />

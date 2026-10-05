@@ -5,10 +5,16 @@ import { isSupabaseConfigured, SAGACT_ORGANIZATION_ID, supabase } from '../lib/s
 import { ClientPortalApp } from '../components/ClientPortalApp'
 import { resolveWorkspaceAccessRoute } from './workspace-access'
 import { clearPasswordSetupCallback, hasPendingInvitePasswordSetup } from './invite-password-setup'
+import { clearPasswordRecoveryCallback, hasFailedPasswordRecovery, hasPendingPasswordRecovery } from './password-recovery'
+
+const ownerLoginEmail = 'cathreenjune@gmail.com'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(hasPendingInvitePasswordSetup)
+  const [requiresPasswordRecovery, setRequiresPasswordRecovery] = useState(hasPendingPasswordRecovery)
+  const [passwordRecoveryFailed, setPasswordRecoveryFailed] = useState(hasFailedPasswordRecovery)
+  const [showClientSignIn, setShowClientSignIn] = useState(false)
   const [sessionReady, setSessionReady] = useState(!isSupabaseConfigured)
   const [sessionError, setSessionError] = useState('')
   const [accessResult, setAccessResult] = useState<{
@@ -21,10 +27,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (!supabase) return
 
     let active = true
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession)
       setSessionReady(true)
       setSessionError('')
+      if (event === 'PASSWORD_RECOVERY') setRequiresPasswordRecovery(true)
     })
 
     void supabase.auth.getSession().then(({ data, error }) => {
@@ -124,8 +131,29 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return <AuthLoading message={session ? 'Verifying workspace access' : 'Checking your session'} />
   }
 
+  if (passwordRecoveryFailed) {
+    return <PasswordRecoveryScreen
+      sessionAvailable={false}
+      onCancel={() => {
+        window.history.replaceState(null, '', clearPasswordRecoveryCallback())
+        setPasswordRecoveryFailed(false)
+        setShowClientSignIn(true)
+      }}
+    />
+  }
+
   if (!session) {
-    return <SignInScreen initialError={sessionError} />
+    if (requiresPasswordRecovery) {
+      return <PasswordRecoveryScreen
+        sessionAvailable={false}
+        onCancel={() => {
+          window.history.replaceState(null, '', clearPasswordRecoveryCallback())
+          setRequiresPasswordRecovery(false)
+          setShowClientSignIn(true)
+        }}
+      />
+    }
+    return <SignInScreen initialError={sessionError} initialClientSignIn={showClientSignIn} />
   }
 
   const currentAccess = accessResult?.userId === session.user.id ? accessResult : null
@@ -135,6 +163,20 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (currentAccess.status !== 'owner') {
     if (currentAccess.status === 'client') {
+      if (requiresPasswordRecovery) {
+        return <PasswordRecoveryScreen
+          sessionAvailable
+          onComplete={() => {
+            window.history.replaceState(null, '', clearPasswordRecoveryCallback())
+            setRequiresPasswordRecovery(false)
+          }}
+          onCancel={() => {
+            window.history.replaceState(null, '', clearPasswordRecoveryCallback())
+            setRequiresPasswordRecovery(false)
+            setShowClientSignIn(true)
+          }}
+        />
+      }
       if (requiresPasswordSetup) {
         return <PasswordSetupScreen onComplete={() => {
           window.history.replaceState(null, '', clearPasswordSetupCallback())
@@ -150,13 +192,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
   return children
 }
 
-function SignInScreen({ configurationMissing = false, initialError = '' }: { configurationMissing?: boolean; initialError?: string }) {
-  const [email, setEmail] = useState('')
+function SignInScreen({ configurationMissing = false, initialError = '', initialClientSignIn = false }: { configurationMissing?: boolean; initialError?: string; initialClientSignIn?: boolean }) {
+  const [email, setEmail] = useState(initialClientSignIn ? '' : ownerLoginEmail)
   const [password, setPassword] = useState('')
   const [error, setError] = useState(initialError)
   const [message, setMessage] = useState('')
-  const [clientSignIn, setClientSignIn] = useState(false)
+  const [clientSignIn, setClientSignIn] = useState(initialClientSignIn)
   const [clientMagicLink, setClientMagicLink] = useState(false)
+  const [forgotPassword, setForgotPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -167,7 +210,19 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
     setMessage('')
     setIsSubmitting(true)
     try {
-      if (clientSignIn && clientMagicLink) {
+      if (clientSignIn && forgotPassword) {
+        const trimmedEmail = email.trim()
+        if (!trimmedEmail) {
+          setError('Enter your email address to receive a password reset link.')
+          return
+        }
+
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+          redirectTo: `${window.location.origin}/`,
+        })
+        if (resetError) throw resetError
+        setMessage(`Password reset link sent to ${trimmedEmail}. Check your inbox.`)
+      } else if (clientSignIn && clientMagicLink) {
         const { error: signInError } = await supabase.auth.signInWithOtp({
           email: email.trim(),
           options: {
@@ -182,9 +237,11 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
         if (signInError) throw signInError
       }
     } catch {
-      setError(clientSignIn && clientMagicLink
-        ? 'Could not send a sign-in link. Check the email address and try again.'
-        : 'The email or password is incorrect. Check your details and try again.')
+      setError(clientSignIn && forgotPassword
+        ? 'Could not send a password reset link. Check the email address and try again.'
+        : clientSignIn && clientMagicLink
+          ? 'Could not send a sign-in link. Check the email address and try again.'
+          : 'The email or password is incorrect. Check your details and try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -195,30 +252,52 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
       <AuthCardBrand />
       <div className="auth-heading">
         <h1 id="auth-title">{clientSignIn ? 'Client sign in' : 'Welcome back'}</h1>
-        <p>{clientSignIn ? 'Access your shared project information' : 'Sign in to your SAGACT workspace'}</p>
+        <p>{clientSignIn ? (forgotPassword ? 'Reset your client password' : 'Access your shared project information') : 'Login to your account.'}</p>
       </div>
 
       {configurationMissing ? <div className="auth-notice" role="status"><CircleAlert size={17} /><span>Supabase isn’t configured. Add the project URL and public key to <code>.env.local</code>, then restart the dev server.</span></div> : <>
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="auth-field">Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" required /></label>
-          {(!clientSignIn || !clientMagicLink) && <label className="auth-field">Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>}
+          {(!clientSignIn || (!clientMagicLink && !forgotPassword)) && <label className="auth-field">Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>}
           {error && <p className="auth-error" role="alert">{error}</p>}
           {message && <p className="auth-success" role="status">{message}</p>}
           <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? clientSignIn && clientMagicLink ? 'Sending link…' : 'Signing in…' : clientSignIn && clientMagicLink ? 'Email me a sign-in link' : 'Sign in'}
-            {!isSubmitting && (clientSignIn && clientMagicLink ? <Mail size={16} /> : <ArrowRight size={16} />)}
+            {isSubmitting
+              ? clientSignIn && forgotPassword
+                ? 'Sending reset link…'
+                : clientSignIn && clientMagicLink
+                  ? 'Sending link…'
+                  : 'Signing in…'
+              : clientSignIn && forgotPassword
+                ? 'Send reset link'
+                : clientSignIn && clientMagicLink
+                  ? 'Email me a sign-in link'
+                  : 'Sign in'}
+            {!isSubmitting && (clientSignIn && (forgotPassword || clientMagicLink) ? <Mail size={16} /> : <ArrowRight size={16} />)}
           </button>
         </form>
         {clientSignIn && <button className="auth-mode-toggle" type="button" onClick={() => {
+          setForgotPassword(false)
           setClientMagicLink((current) => !current)
           setError('')
           setMessage('')
         }}>
           {clientMagicLink ? 'Sign in with your password' : 'Forgot your password? Email a sign-in link'}
         </button>}
-        <button className="auth-mode-toggle" type="button" onClick={() => {
-          setClientSignIn((current) => !current)
+        {clientSignIn && <button className="auth-mode-toggle" type="button" onClick={() => {
+          setForgotPassword((current) => !current)
           setClientMagicLink(false)
+          setError('')
+          setMessage('')
+        }}>
+          {forgotPassword ? 'Back to sign in' : 'Forgot your password? Send a reset link'}
+        </button>}
+        <button className="auth-mode-toggle" type="button" onClick={() => {
+          const nextClientSignIn = !clientSignIn
+          setClientSignIn(nextClientSignIn)
+          setEmail(nextClientSignIn ? '' : ownerLoginEmail)
+          setClientMagicLink(false)
+          setForgotPassword(false)
           setError('')
           setMessage('')
         }}>
@@ -291,6 +370,63 @@ function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
           {isSubmitting ? 'Saving password…' : 'Create password'}{!isSubmitting && <ArrowRight size={16} />}
         </button>
       </form>
+    </section>
+  </AuthLayout>
+}
+
+function PasswordRecoveryScreen({ sessionAvailable, onComplete, onCancel }: {
+  sessionAvailable: boolean
+  onComplete?: () => void
+  onCancel: () => void
+}) {
+  const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!supabase || !sessionAvailable) return
+    if (password.length < 8) {
+      setError('Choose a password with at least 8 characters.')
+      return
+    }
+    if (password !== confirmation) {
+      setError('The passwords do not match.')
+      return
+    }
+
+    setError('')
+    setIsSubmitting(true)
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password })
+      if (updateError) throw updateError
+      onComplete?.()
+    } catch {
+      setError('Could not reset your password. The reset link may have expired or already been used. Request a new link and try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return <AuthLayout>
+    <section className="auth-panel" aria-labelledby="password-recovery-title">
+      <AuthCardBrand />
+      <div className="auth-heading">
+        <h1 id="password-recovery-title">{sessionAvailable ? 'Reset your password' : 'Password reset link unavailable'}</h1>
+        <p>{sessionAvailable
+          ? 'Choose a new password for your client account.'
+          : 'This password reset link is invalid, expired, or already used. Request a new link to continue.'}</p>
+      </div>
+      {sessionAvailable ? <form className="auth-form" onSubmit={(event) => { void handleSubmit(event) }}>
+        <label className="auth-field">New password<input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+        <label className="auth-field">Confirm new password<input type="password" autoComplete="new-password" minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required /></label>
+        {error && <p className="auth-error" role="alert">{error}</p>}
+        <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving password…' : 'Set new password'}{!isSubmitting && <ArrowRight size={16} />}
+        </button>
+        <button className="auth-mode-toggle" type="button" onClick={onCancel}>Cancel password reset</button>
+      </form> : <button className="button button-secondary auth-submit" type="button" onClick={onCancel}>Return to client sign in</button>}
     </section>
   </AuthLayout>
 }

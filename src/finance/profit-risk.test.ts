@@ -28,6 +28,12 @@ describe('calculateProfitRisk', () => {
     })
   })
 
+  it('marks a negative projected margin as critical or loss', () => {
+    expect(calculateProfitRisk({ ...baseline, estimatedCostToComplete: 1_100_000 })).toMatchObject({
+      level: 'critical', label: 'Critical / Loss', projectedMarginPercent: -40,
+    })
+  })
+
   it('raises risk when forecast cost overruns the budget', () => {
     expect(calculateProfitRisk({ ...baseline, costBudget: 500_000 })).toMatchObject({
       level: 'high', budgetVariance: 100_000,

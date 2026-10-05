@@ -55,6 +55,8 @@ Deno.serve(async (request) => {
 
   const authorization = request.headers.get('Authorization')
   if (!authorization) return respond({ error: 'Sign in before inviting a client.' }, 401)
+  const [, accessToken] = authorization.match(/^Bearer\s+(.+)$/i) ?? []
+  if (!accessToken) return respond({ error: 'Sign in before inviting a client.' }, 401)
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -68,7 +70,7 @@ Deno.serve(async (request) => {
       global: { headers: { Authorization: authorization } },
       auth: { persistSession: false, autoRefreshToken: false },
     })
-    const { data: { user }, error: userError } = await caller.auth.getUser()
+    const { data: { user }, error: userError } = await caller.auth.getUser(accessToken)
     if (userError || !user) return respond({ error: 'Your session is invalid. Sign in again.' }, 401)
 
     const body = await request.json() as { action?: unknown; projectId?: unknown; email?: unknown; userId?: unknown }

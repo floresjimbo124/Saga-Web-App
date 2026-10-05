@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDownLeft, Bell, CircleAlert, Download, Eye, FileText, LogOut, MapPin, RefreshCw, X } from 'lucide-react'
+import { ArrowDownLeft, Bell, Check, Circle, CircleAlert, Clock3, Download, Eye, FileText, LogOut, MapPin, RefreshCw, X } from 'lucide-react'
 import { loadClientPortalProjects, type ClientPortalProject } from '../data/client-portal'
 import { downloadBillingPdf, openBillingPdf } from '../lib/billing-pdf'
 import { downloadPaymentReceiptPdf, openPaymentReceiptPdf } from '../lib/payment-receipt-pdf'
@@ -9,6 +9,7 @@ import { calculateClientProjectReceivables } from '../finance/client-project-rec
 import { calculateReceivablesAging } from '../finance/receivables-aging'
 import { loadReadClientBillingNotificationIds, saveReadClientBillingNotificationIds } from '../auth/client-billing-notifications'
 import { getRetentionDueDate, isRetentionDue } from '../finance/retention-due'
+import { formatBillingNumber } from '../lib/billing-number'
 
 type PortalTab = 'Billing & payments' | 'Documents'
 type ClientBillingNotification = {
@@ -37,6 +38,24 @@ function formatDate(value: string | null) {
 function todayLocal() {
   const date = new Date()
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function milestoneStatusLabel(status: ClientPortalProject['milestones'][number]['status']) {
+  if (status === 'in_progress') return 'In progress'
+  return status === 'complete' ? 'Complete' : status === 'blocked' ? 'Blocked' : 'Upcoming'
+}
+
+function isMilestoneOverdue(milestone: ClientPortalProject['milestones'][number]) {
+  return milestone.status !== 'complete'
+    && milestone.status !== 'blocked'
+    && Boolean(milestone.plannedDate && milestone.plannedDate < todayLocal())
+}
+
+function MilestoneStatusIcon({ status }: { status: ClientPortalProject['milestones'][number]['status'] }) {
+  if (status === 'complete') return <Check size={15} aria-hidden="true" />
+  if (status === 'in_progress') return <Clock3 size={15} aria-hidden="true" />
+  if (status === 'blocked') return <CircleAlert size={15} aria-hidden="true" />
+  return <Circle size={15} aria-hidden="true" />
 }
 
 export function ClientPortalApp({ userId, firstName }: { userId: string; firstName: string }) {
@@ -336,7 +355,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
                     ? `${billing.projectName} · Retention release due`
                     : billing.kind === 'down-payment'
                       ? `${billing.projectName} · Contract down payment due`
-                      : `${billing.projectName} · Progress billing #${billing.billingNumber} issued`}</strong>
+                      : `${billing.projectName} · Progress billing${billing.billingNumber === undefined ? '' : ` #${formatBillingNumber(billing.billingNumber)}`} issued`}</strong>
                   <small>{billing.kind === 'retention'
                     ? `${money.format(billing.amount)} · due ${formatDate(billing.dueAt ?? null)}${billing.daysOverdue ? ` · ${billing.daysOverdue} days overdue` : ''}`
                     : billing.kind === 'down-payment'
@@ -363,9 +382,31 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
           <div className="client-progress-track"><span style={{ width: `${Math.min(100, Math.max(0, project.progress))}%` }} /></div>
           <div className="client-progress-summary"><span>Contract price <strong>{money.format(project.contractPrice)}</strong></span><span>Issued billings <strong>{money.format(issuedTotal)}</strong></span><span>Payments recorded <strong>{money.format(paymentTotal)}</strong></span><span className="client-progress-balance">Due balance <strong>{money.format(outstandingTotal)}</strong></span></div>
         </section>
+        <section className="client-project-timeline" aria-labelledby="client-project-timeline-title">
+          <div className="section-kicker">Project milestones</div>
+          <h2 id="client-project-timeline-title">Project status timeline</h2>
+          {project.milestones.length ? <ol className="client-milestone-list">
+            {project.milestones.map((milestone) => (
+              <li className={`client-milestone client-milestone-${milestone.status} ${isMilestoneOverdue(milestone) ? 'client-milestone-overdue' : ''}`} key={milestone.id}>
+                <span className="client-milestone-marker"><MilestoneStatusIcon status={milestone.status} /></span>
+                <span className="client-milestone-copy">
+                  <strong>{milestone.name}</strong>
+                  <small>{isMilestoneOverdue(milestone) ? 'Overdue' : milestoneStatusLabel(milestone.status)}</small>
+                </span>
+                <span className="client-milestone-date">
+                  {milestone.status === 'complete' && milestone.actualDate
+                    ? `Completed ${formatDate(milestone.actualDate)}`
+                    : milestone.plannedDate
+                      ? `Target ${formatDate(milestone.plannedDate)}`
+                      : 'Date not set'}
+                </span>
+              </li>
+            ))}
+          </ol> : <p className="client-empty-note">No project milestones have been shared yet.</p>}
+        </section>
         <nav className="client-portal-tabs" aria-label="Project information">{(['Billing & payments', 'Documents'] as PortalTab[]).map((item) => <button type="button" key={item} className={tab === item ? 'is-selected' : ''} onClick={() => setTab(item)}>{item}</button>)}</nav>
         {tab === 'Billing & payments' && <div className="client-finance-grid">
-          <section className="client-portal-section"><div className="section-kicker">Issued to your project</div><h2>Billings</h2>{project.billings.length || project.downPaymentAmount > 0 ? <div className="client-record-list">{project.downPaymentAmount > 0 && <div className="client-finance-row"><span className="client-record-icon"><FileText size={16} /></span><span><strong>Contract down payment</strong><small>Contractual down payment</small></span><strong className="client-record-amount">{money.format(projectOutstandingItems.find((item) => item.id === `down-payment:${project.id}`)?.outstandingAmount ?? 0)}</strong></div>}{project.billings.map((billing) => <div className="client-finance-row" key={billing.id}><span className="client-record-icon"><FileText size={16} /></span><span><strong>Billing #{billing.number}</strong><small>{formatDate(billing.issuedAt)} · {billing.progress}% complete{billing.dueAt ? ` · due ${formatDate(billing.dueAt)}` : ''}</small></span><strong className="client-record-amount">{money.format(billing.amount)}</strong><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`Preview billing ${billing.number}`} title="Preview billing PDF" onClick={() => { void openBillingPdf({ projectName: project.name, clientName: project.clientName, location: project.location, billingNumber: billing.number, amount: billing.amount, progressPercent: billing.progress, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }) }}><Eye size={15} /></button><button type="button" className="client-download-button" aria-label={`Download billing ${billing.number}`} title="Download billing PDF" onClick={() => { void downloadBillingPdf({ projectName: project.name, clientName: project.clientName, location: project.location, billingNumber: billing.number, amount: billing.amount, progressPercent: billing.progress, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }) }}><Download size={15} /></button></div></div>)}</div> : <p className="client-empty-note">No billings have been issued yet.</p>}</section>
+          <section className="client-portal-section"><div className="section-kicker">Issued to your project</div><h2>Billings</h2>{project.billings.length || project.downPaymentAmount > 0 ? <div className="client-record-list">{project.downPaymentAmount > 0 && <div className="client-finance-row"><span className="client-record-icon"><FileText size={16} /></span><span><strong>Contract down payment</strong><small>Contractual down payment</small></span><strong className="client-record-amount">{money.format(projectOutstandingItems.find((item) => item.id === `down-payment:${project.id}`)?.outstandingAmount ?? 0)}</strong></div>}{project.billings.map((billing) => <div className="client-finance-row" key={billing.id}><span className="client-record-icon"><FileText size={16} /></span><span><strong>Billing #{formatBillingNumber(billing.number)}</strong><small>{formatDate(billing.issuedAt)} · {billing.progress}% complete{billing.dueAt ? ` · due ${formatDate(billing.dueAt)}` : ''}</small></span><strong className="client-record-amount">{money.format(billing.amount)}</strong><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`Preview billing ${formatBillingNumber(billing.number)}`} title="Preview billing PDF" onClick={() => { void openBillingPdf({ projectName: project.name, clientName: project.clientName, location: project.location, billingNumber: billing.number, amount: billing.amount, progressPercent: billing.progress, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }) }}><Eye size={15} /></button><button type="button" className="client-download-button" aria-label={`Download billing ${formatBillingNumber(billing.number)}`} title="Download billing PDF" onClick={() => { void downloadBillingPdf({ projectName: project.name, clientName: project.clientName, location: project.location, billingNumber: billing.number, amount: billing.amount, progressPercent: billing.progress, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }) }}><Download size={15} /></button></div></div>)}</div> : <p className="client-empty-note">No billings have been issued yet.</p>}</section>
           <section className="client-portal-section"><div className="section-kicker">Recorded payments</div><h2>Payment history</h2>{project.payments.length ? <div className="client-record-list">{project.payments.map((payment) => <div className="client-finance-row" key={payment.id}><span className="client-record-icon"><ArrowDownLeft size={16} /></span><span><strong>{payment.receiptNumber || 'Payment received'}</strong><small>{formatDate(payment.receivedAt)} · {payment.paymentMode.replaceAll('_', ' ')} · {payment.reference || payment.payerName}</small></span><strong className="client-record-amount">{money.format(payment.amount)}</strong><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`Preview receipt ${payment.receiptNumber}`} title="Preview payment receipt" onClick={() => { void openPaymentReceiptPdf({ projectName: project.name, payerName: payment.payerName, receiptNumber: payment.receiptNumber, amount: payment.amount, paymentType: payment.paymentType, paymentMode: payment.paymentMode, reference: payment.reference }) }}><Eye size={15} /></button><button type="button" className="client-download-button" aria-label={`Download receipt ${payment.receiptNumber}`} title="Download payment receipt" onClick={() => { void downloadPaymentReceiptPdf({ projectName: project.name, payerName: payment.payerName, receiptNumber: payment.receiptNumber, amount: payment.amount, paymentType: payment.paymentType, paymentMode: payment.paymentMode, reference: payment.reference }) }}><Download size={15} /></button></div></div>)}</div> : <p className="client-empty-note">No payments have been recorded yet.</p>}</section>
         </div>}
         {tab === 'Documents' && <section className="client-portal-section client-documents-section"><div className="section-kicker">Shared project files</div><h2>Documents</h2>{documentError && <p className="form-error" role="alert">{documentError}</p>}{project.documents.length ? <div className="client-record-list">{project.documents.map((document) => <div className="client-finance-row" key={document.id}><span className="client-record-icon"><FileText size={16} /></span><span><strong>{document.fileName}</strong><small>{document.documentType.replaceAll('_', ' ')} · shared {formatDate(document.createdAt)}</small></span><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`View ${document.fileName}`} title="View document" disabled={downloadingDocument === document.id} onClick={() => { void openDocument(document) }}>{downloadingDocument === document.id ? <RefreshCw size={15} /> : <Eye size={15} />}</button><button type="button" className="client-download-button" aria-label={`Download ${document.fileName}`} title="Download document" disabled={downloadingDocument === document.id} onClick={() => { void openDocument(document, true) }}><Download size={15} /></button></div></div>)}</div> : <p className="client-empty-note">No documents have been shared yet.</p>}</section>}

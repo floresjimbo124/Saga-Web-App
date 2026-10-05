@@ -3,10 +3,11 @@ import { supabase } from '../lib/supabase'
 import { calculateProjectFinance } from '../finance/project-finance'
 import { calculateReceivablesAging } from '../finance/receivables-aging'
 import { getRetentionDueDate, isRetentionDue } from '../finance/retention-due'
+import type { ProjectMilestone } from './project-milestones'
 
 export type ProjectStatus = 'planning' | 'active' | 'on_hold' | 'completed' | 'closed'
 export type ProjectHealthStatus = 'on_track' | 'needs_attention'
-export type ProjectExpenseCategory = 'materials' | 'labor' | 'equipment' | 'transport' | 'permits' | 'other'
+export type ProjectExpenseCategory = 'materials' | 'labor' | 'operational_expenses' | 'payroll' | 'sub_contract' | 'rent' | 'equipment' | 'transport' | 'permits' | 'other'
 
 export type PortfolioExpense = {
   id: string
@@ -49,6 +50,7 @@ export type PortfolioProject = {
   createdAt: string
   updatedAt: string
   milestone: string
+  milestones: ProjectMilestone[]
 }
 
 export type PortfolioPayment = {
@@ -142,7 +144,7 @@ export async function loadPortfolio() {
       .select('project_id, entry_type, amount')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
     client.from('project_milestones')
-      .select('project_id, name, planned_date, status')
+      .select('id, project_id, name, planned_date, actual_date, status, client_visible')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
       .order('planned_date', { ascending: true, nullsFirst: false }),
     client.from('project_change_orders')
@@ -227,18 +229,30 @@ export async function loadPortfolio() {
     const signedAmount = entry.entry_type === 'released' ? -amount : entry.entry_type === 'held' ? amount : 0
     heldByProject.set(entry.project_id, (heldByProject.get(entry.project_id) ?? 0) + signedAmount)
   }
-  const milestoneByProject = new Map<string, string>()
-  const milestoneCountByProject = new Map<string, number>()
+  const milestonesByProject = new Map<string, ProjectMilestone[]>()
   for (const milestone of milestoneResult.data ?? []) {
-    milestoneCountByProject.set(milestone.project_id, (milestoneCountByProject.get(milestone.project_id) ?? 0) + 1)
-    if (milestone.status !== 'complete' && !milestoneByProject.has(milestone.project_id)) {
-      const date = milestone.planned_date ? new Date(`${milestone.planned_date}T12:00:00`) : null
-      const plannedDate = date ? new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit' }).format(date) : 'Date not set'
-      milestoneByProject.set(milestone.project_id, `${milestone.name} · ${plannedDate}`)
-    }
+    const projectMilestones = milestonesByProject.get(milestone.project_id) ?? []
+    projectMilestones.push({
+      id: milestone.id,
+      name: milestone.name,
+      plannedDate: milestone.planned_date,
+      actualDate: milestone.actual_date,
+      status: milestone.status,
+      clientVisible: milestone.client_visible,
+    })
+    milestonesByProject.set(milestone.project_id, projectMilestones)
   }
 
   const projects: PortfolioProject[] = (projectResult.data ?? []).map((project) => {
+    const milestones = milestonesByProject.get(project.id) ?? []
+    const nextMilestone = milestones.find((milestone) => milestone.status === 'in_progress')
+      ?? milestones.find((milestone) => milestone.status === 'pending')
+      ?? milestones.find((milestone) => milestone.status === 'blocked')
+    const milestoneLabel = nextMilestone
+      ? `${nextMilestone.name} · ${nextMilestone.plannedDate
+        ? new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit' }).format(new Date(`${nextMilestone.plannedDate}T12:00:00`))
+        : 'Date not set'}${nextMilestone.status === 'blocked' ? ' · Blocked' : ''}`
+      : milestones.length ? 'All milestones complete' : 'No milestones scheduled'
     const terms = termsByProject.get(project.id)
     const forecast = forecastsByProject.get(project.id)
     const contract = Number(terms?.contract_amount ?? 0)
@@ -297,8 +311,8 @@ export async function loadPortfolio() {
       completedAt: project.completed_at,
       createdAt: project.created_at,
       updatedAt: project.updated_at,
-      milestone: milestoneByProject.get(project.id)
-        ?? (milestoneCountByProject.has(project.id) ? 'All milestones complete' : 'No milestones scheduled'),
+      milestone: milestoneLabel,
+      milestones,
     }
   })
 

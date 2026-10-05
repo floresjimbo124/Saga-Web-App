@@ -78,7 +78,7 @@ const portfolioRows: Record<string, unknown[]> = {
     { project_id: 'project-salo', entry_type: 'released', amount: '1000.00' },
   ],
   project_milestones: [
-    { project_id: 'project-salo', name: 'Electrical rough-in', planned_date: '2026-10-04', status: 'pending' },
+    { id: 'milestone-salo', project_id: 'project-salo', name: 'Electrical rough-in', planned_date: '2026-10-04', actual_date: null, status: 'pending', client_visible: true },
   ],
   project_change_orders: [
     { project_id: 'project-salo', amount: '20000.00', retention_rate_percent: null },
@@ -259,7 +259,7 @@ describe('portfolio data access', () => {
   it('distinguishes unscheduled milestones from milestones that are all complete', async () => {
     mocks.from.mockImplementation((table: string) => queryFor(
       table === 'project_milestones'
-        ? [{ project_id: 'project-dapitan', name: 'Handover', planned_date: '2026-09-30', status: 'complete' }]
+        ? [{ id: 'milestone-dapitan', project_id: 'project-dapitan', name: 'Handover', planned_date: '2026-09-30', actual_date: '2026-09-30', status: 'complete', client_visible: true }]
         : portfolioRows[table] ?? [],
     ))
 
@@ -269,6 +269,26 @@ describe('portfolio data access', () => {
 
     expect(salo?.milestone).toBe('No milestones scheduled')
     expect(dapitan?.milestone).toBe('All milestones complete')
+  })
+
+  it('loads editable milestone fields and prioritizes an in-progress milestone', async () => {
+    mocks.from.mockImplementation((table: string) => queryFor(
+      table === 'project_milestones'
+        ? [
+          { id: 'milestone-pending', project_id: 'project-salo', name: 'Paint', planned_date: '2026-10-04', actual_date: null, status: 'pending', client_visible: false },
+          { id: 'milestone-active', project_id: 'project-salo', name: 'Electrical rough-in', planned_date: '2026-10-10', actual_date: null, status: 'in_progress', client_visible: true },
+        ]
+        : portfolioRows[table] ?? [],
+    ))
+
+    const portfolio = await loadPortfolio()
+    const salo = portfolio.projects.find((project) => project.id === 'project-salo')
+
+    expect(salo?.milestones).toEqual([
+      { id: 'milestone-pending', name: 'Paint', plannedDate: '2026-10-04', actualDate: null, status: 'pending', clientVisible: false },
+      { id: 'milestone-active', name: 'Electrical rough-in', plannedDate: '2026-10-10', actualDate: null, status: 'in_progress', clientVisible: true },
+    ])
+    expect(salo?.milestone).toContain('Electrical rough-in')
   })
 
   it('surfaces RLS/query failures rather than silently showing empty records', async () => {

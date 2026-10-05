@@ -9,8 +9,14 @@ export type ClientAccessAccount = {
 
 async function invokeClientAccess(projectId: string, action: string, details: Record<string, string> = {}) {
   if (!supabase) throw new Error('Supabase is not configured.')
+  const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession()
+  if (sessionError) throw new Error(`Could not refresh your session. Sign out and sign in again. ${sessionError.message}`)
+  const accessToken = sessionData.session?.access_token
+  if (!accessToken) throw new Error('Your session has expired. Sign out and sign in again.')
+
   const { data, error } = await supabase.functions.invoke('invite-client', {
     body: { action, projectId, ...details },
+    headers: { Authorization: `Bearer ${accessToken}` },
   })
   if (error) {
     const context = (error as Error & { context?: unknown }).context

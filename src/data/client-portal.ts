@@ -13,6 +13,13 @@ export type ClientPortalProject = {
   downPaymentAmount: number
   completedAt: string | null
   retentionAmount: number
+  milestones: {
+    id: string
+    name: string
+    plannedDate: string | null
+    actualDate: string | null
+    status: 'pending' | 'in_progress' | 'complete' | 'blocked'
+  }[]
   billings: {
     id: string
     number: number
@@ -81,7 +88,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
   const projectIds = projects.map((project) => project.id)
   if (!projectIds.length) return []
 
-  const [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult] = await Promise.all([
+  const [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult] = await Promise.all([
     client.from('clients')
       .select('id, name')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
@@ -105,13 +112,30 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
       .order('created_at', { ascending: false }),
     client.rpc('get_client_project_retention'),
     client.rpc('get_client_project_down_payment'),
+    client.from('project_milestones')
+      .select('id, project_id, name, planned_date, actual_date, status')
+      .in('project_id', projectIds)
+      .eq('client_visible', true)
+      .order('planned_date', { ascending: true, nullsFirst: false }),
   ])
 
-  for (const result of [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult]) {
+  for (const result of [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult]) {
     throwIfError(result.error)
   }
 
   const clientsById = new Map((clientResult.data ?? []).map((item) => [item.id, item.name]))
+  const milestonesByProject = new Map<string, ClientPortalProject['milestones']>()
+  for (const item of milestoneResult.data ?? []) {
+    const milestones = milestonesByProject.get(item.project_id) ?? []
+    milestones.push({
+      id: item.id,
+      name: item.name,
+      plannedDate: item.planned_date,
+      actualDate: item.actual_date,
+      status: item.status,
+    })
+    milestonesByProject.set(item.project_id, milestones)
+  }
   const billingsByProject = new Map<string, ClientPortalProject['billings']>()
   for (const item of billingResult.data ?? []) {
     const rows = billingsByProject.get(item.project_id) ?? []
@@ -190,6 +214,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
     downPaymentAmount: Number(downPaymentByProject.get(project.id)?.down_payment_amount ?? 0),
     completedAt: retentionByProject.get(project.id)?.completed_at ?? null,
     retentionAmount: Number(retentionByProject.get(project.id)?.retention_amount ?? 0),
+    milestones: milestonesByProject.get(project.id) ?? [],
     billings: billingsByProject.get(project.id) ?? [],
     payments: paymentsByProject.get(project.id) ?? [],
     allocations: allocationsByProject.get(project.id) ?? [],

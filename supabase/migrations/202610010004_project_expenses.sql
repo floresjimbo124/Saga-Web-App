@@ -4,7 +4,7 @@ create table public.project_expenses (
   project_id uuid not null,
   expense_date date not null,
   category text not null
-    check (category in ('materials', 'labor', 'equipment', 'transport', 'permits', 'other')),
+    check (category in ('materials', 'labor', 'operational_expenses', 'payroll', 'sub_contract', 'rent', 'equipment', 'transport', 'permits', 'other')),
   description text not null check (length(trim(description)) between 2 and 500),
   vendor text check (vendor is null or length(trim(vendor)) <= 150),
   amount numeric(14, 2) not null check (amount > 0),
@@ -64,7 +64,7 @@ begin
   if p_amount is null or p_amount <= 0 then
     raise exception 'Expense amount must be greater than zero.';
   end if;
-  if p_category is null or p_category not in ('materials', 'labor', 'equipment', 'transport', 'permits', 'other') then
+  if p_category is null or p_category not in ('materials', 'labor', 'operational_expenses', 'payroll', 'sub_contract', 'rent', 'equipment', 'transport', 'permits', 'other') then
     raise exception 'Choose a supported expense category.';
   end if;
   if length(normalized_description) not between 2 and 500 then

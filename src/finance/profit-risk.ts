@@ -1,4 +1,4 @@
-export type ProfitRiskLevel = 'not-rated' | 'low' | 'medium' | 'high'
+export type ProfitRiskLevel = 'not-rated' | 'low' | 'medium' | 'high' | 'critical'
 
 export type ProjectProfitForecastInput = {
   contractValue: number
@@ -53,6 +53,18 @@ export function calculateProfitRisk(input: ProjectProfitForecastInput): ProfitRi
     : ''
   const detail = `Projected margin ${Math.round(projectedMarginPercent)}%${budgetDetail}`
 
+  if (projectedMarginPercent < 0) {
+    return {
+      level: 'critical',
+      label: 'Critical / Loss',
+      tone: 'red',
+      projectedCost,
+      projectedProfit,
+      projectedMarginPercent,
+      budgetVariance,
+      detail,
+    }
+  }
   if (projectedMarginPercent < 10 || highBudgetOverrun) {
     return {
       level: 'high',

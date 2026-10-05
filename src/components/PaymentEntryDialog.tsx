@@ -3,6 +3,9 @@ import { CircleCheck, Download, Eye, Plus, X } from 'lucide-react'
 import { loadOpenProjectBillings, type OpenProjectBilling } from '../data/billing'
 import { recordProjectPayment } from '../data/portfolio'
 import { downloadPaymentReceiptPdf, openPaymentReceiptPdf } from '../lib/payment-receipt-pdf'
+import { formatBillingNumber } from '../lib/billing-number'
+import { MoneyInput } from './MoneyInput'
+import { parseMoneyInput } from '../lib/money-input'
 
 type PaymentProject = { id: string; name: string; client: string }
 
@@ -52,7 +55,7 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
         projectName: project.name,
         payerName: payerName.trim(),
         receiptNumber: number,
-        amount: Number(amount),
+        amount: parseMoneyInput(amount),
         paymentType,
         paymentMode,
         reference: reference.trim(),
@@ -72,7 +75,7 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
         projectName: project.name,
         payerName: payerName.trim(),
         receiptNumber: number,
-        amount: Number(amount),
+        amount: parseMoneyInput(amount),
         paymentType,
         paymentMode,
         reference: reference.trim(),
@@ -86,13 +89,13 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
 
   const submitPayment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const amountValue = Number(amount)
+    const amountValue = parseMoneyInput(amount)
     if (!Number.isFinite(amountValue) || amountValue <= 0) {
       setError('Enter a payment amount greater than zero.')
       return
     }
     const paymentAllocations = Object.entries(allocations)
-      .map(([billingId, rawAmount]) => ({ billingId, amount: Number(rawAmount) }))
+      .map(([billingId, rawAmount]) => ({ billingId, amount: parseMoneyInput(rawAmount) }))
       .filter((allocation) => Number.isFinite(allocation.amount) && allocation.amount > 0)
     const allocationTotal = paymentAllocations.reduce((total, allocation) => total + allocation.amount, 0)
     if (allocationTotal > amountValue) {
@@ -144,7 +147,7 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
       </div> : <form onSubmit={submitPayment}>
         <div className="form-row">
           <label className="form-field">Payment type<select value={paymentType} onChange={(event) => setPaymentType(event.target.value as PaymentType)}><option value="progress">Progress payment</option><option value="down_payment">Down payment</option><option value="other">Other payment</option></select></label>
-          <label className="form-field">Amount<input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" required /></label>
+          <label className="form-field">Amount<MoneyInput min="0.01" step="0.01" value={amount} onChange={setAmount} placeholder="0.00" required /></label>
         </div>
         <div className="form-row">
           <label className="form-field">Received date<input type="date" value={receivedDate} onChange={(event) => setReceivedDate(event.target.value)} required /></label>
@@ -154,7 +157,7 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
         <label className="form-field">Reference (optional)<input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="Bank reference or check number" /></label>
         <fieldset className="payment-allocation-fieldset">
           <legend>Apply payment to billings</legend>
-          {allocationLoadError ? <p className="form-error" role="alert">{allocationLoadError} Payment can still be recorded without allocations.</p> : isLoadingBillings ? <p className="payment-allocation-empty">Loading open billings…</p> : openBillings.length ? <div className="payment-allocation-list">{openBillings.map((billing) => <label className="payment-allocation-row" key={billing.id}><span><strong>Billing #{billing.billingNumber}</strong><small>{money.format(billing.outstandingAmount)} outstanding{billing.dueAt ? ` · due ${billing.dueAt}` : ''}</small></span><input type="number" min="0" max={billing.outstandingAmount} step="0.01" value={allocations[billing.id] ?? ''} onChange={(event) => setAllocations((current) => ({ ...current, [billing.id]: event.target.value }))} aria-label={`Amount allocated to billing ${billing.billingNumber}`} placeholder="0.00" /></label>)}</div> : <p className="payment-allocation-empty">No open issued billings.</p>}
+          {allocationLoadError ? <p className="form-error" role="alert">{allocationLoadError} Payment can still be recorded without allocations.</p> : isLoadingBillings ? <p className="payment-allocation-empty">Loading open billings…</p> : openBillings.length ? <div className="payment-allocation-list">{openBillings.map((billing) => <label className="payment-allocation-row" key={billing.id}><span><strong>Billing #{formatBillingNumber(billing.billingNumber)}</strong><small>{money.format(billing.outstandingAmount)} outstanding{billing.dueAt ? ` · due ${billing.dueAt}` : ''}</small></span><MoneyInput min="0" max={billing.outstandingAmount} step="0.01" value={allocations[billing.id] ?? ''} onChange={(value) => setAllocations((current) => ({ ...current, [billing.id]: value }))} aria-label={`Amount allocated to billing ${formatBillingNumber(billing.billingNumber)}`} placeholder="0.00" /></label>)}</div> : <p className="payment-allocation-empty">No open issued billings.</p>}
           <p className="payment-allocation-note">You can split one payment across multiple bills. Any unallocated remainder is applied oldest-first.</p>
         </fieldset>
         {error && <p className="form-error" role="alert">{error}</p>}

@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Plus, RefreshCw, X } from 'lucide-react'
 import { recordProjectExpenses, type ProjectExpenseCategory } from '../data/portfolio'
+import { MoneyInput } from './MoneyInput'
+import { parseMoneyInput } from '../lib/money-input'
 
 type ExpenseProjectOption = { id: string; name: string }
 type ExpenseDraft = {
@@ -16,6 +18,10 @@ type ExpenseDraft = {
 const categories: { value: ProjectExpenseCategory; label: string }[] = [
   { value: 'materials', label: 'Materials' },
   { value: 'labor', label: 'Labor' },
+  { value: 'operational_expenses', label: 'Operational Expenses' },
+  { value: 'payroll', label: 'Payroll' },
+  { value: 'sub_contract', label: 'Sub Contract' },
+  { value: 'rent', label: 'Rent' },
   { value: 'equipment', label: 'Equipment' },
   { value: 'transport', label: 'Transport' },
   { value: 'permits', label: 'Permits' },
@@ -62,7 +68,7 @@ export function ExpenseEntryDialog({ projects, initialProjectId, onClose, onSave
       setError(`Choose a project for expense ${missingProjectIndex + 1}.`)
       return
     }
-    const invalidAmountIndex = rows.findIndex((row) => !Number.isFinite(Number(row.amount)) || Number(row.amount) <= 0)
+    const invalidAmountIndex = rows.findIndex((row) => !Number.isFinite(parseMoneyInput(row.amount)) || parseMoneyInput(row.amount) <= 0)
     if (invalidAmountIndex >= 0) {
       setError(`Enter an amount greater than zero for expense ${invalidAmountIndex + 1}.`)
       return
@@ -77,7 +83,7 @@ export function ExpenseEntryDialog({ projects, initialProjectId, onClose, onSave
         category: row.category,
         description: row.description,
         vendor: row.vendor,
-        amount: Number(row.amount),
+        amount: parseMoneyInput(row.amount),
       })))
       onSaved()
     } catch (saveError) {
@@ -105,7 +111,7 @@ export function ExpenseEntryDialog({ projects, initialProjectId, onClose, onSave
               {canChooseProject && <label className="form-field expense-field-project">Project<select value={row.projectId} onChange={(event) => updateRow(row.id, { projectId: event.target.value })} required><option value="">Choose a project</option>{projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
               <label className="form-field">Expense date<input type="date" value={row.date} onChange={(event) => updateRow(row.id, { date: event.target.value })} required /></label>
               <label className="form-field">Category<select value={row.category} onChange={(event) => updateRow(row.id, { category: event.target.value as ProjectExpenseCategory })}>{categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-              <label className="form-field">Amount<input type="number" min="0.01" step="0.01" value={row.amount} onChange={(event) => updateRow(row.id, { amount: event.target.value })} placeholder="0.00" required /></label>
+              <label className="form-field">Amount<MoneyInput min="0.01" step="0.01" value={row.amount} onChange={(value) => updateRow(row.id, { amount: value })} placeholder="0.00" required /></label>
               <label className="form-field expense-field-description">Description<input value={row.description} onChange={(event) => updateRow(row.id, { description: event.target.value })} minLength={2} maxLength={500} placeholder="What was this expense for?" required /></label>
               <label className="form-field expense-field-vendor">Vendor (optional)<input value={row.vendor} onChange={(event) => updateRow(row.id, { vendor: event.target.value })} maxLength={150} placeholder="Supplier or payee" /></label>
             </div>

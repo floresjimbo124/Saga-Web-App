@@ -33,6 +33,10 @@ const tableData: Record<string, unknown[]> = {
     document_type: 'plan', storage_path: 'org-sagact/project-1/site-plan.pdf',
     created_at: '2026-10-01T00:00:00Z',
   }],
+  project_milestones: [{
+    id: 'milestone-1', project_id: 'project-1', name: 'Foundation complete',
+    planned_date: '2026-10-02', actual_date: '2026-10-03', status: 'complete',
+  }],
 }
 
 function queryFor(table: string) {
@@ -80,6 +84,13 @@ describe('client portal data access', () => {
       payments: [{ receiptNumber: 'HAR-0001', amount: 50_000 }],
       allocations: [{ paymentId: 'payment-1', billingId: 'billing-1', amount: 25_000 }],
       documents: [{ fileName: 'Site plan.pdf' }],
+      milestones: [{
+        id: 'milestone-1',
+        name: 'Foundation complete',
+        plannedDate: '2026-10-02',
+        actualDate: '2026-10-03',
+        status: 'complete',
+      }],
     })
   })
 
@@ -89,8 +100,9 @@ describe('client portal data access', () => {
     expect(calls).toContainEqual({ table: 'project_documents', method: 'eq', args: ['client_visible', true] })
     expect(calls).toContainEqual({ table: 'progress_billings', method: 'eq', args: ['status', 'issued'] })
     expect(calls).toContainEqual({ table: 'payment_allocations', method: 'in', args: ['project_id', ['project-1']] })
+    expect(calls).toContainEqual({ table: 'project_milestones', method: 'eq', args: ['client_visible', true] })
     expect(mocks.rpc).toHaveBeenCalledWith('get_client_project_retention')
     expect(mocks.rpc).toHaveBeenCalledWith('get_client_project_down_payment')
-    expect(calls.some(({ table }) => table === 'project_milestones' || table === 'project_progress_updates')).toBe(false)
+    expect(calls.some(({ table }) => table === 'project_progress_updates')).toBe(false)
   })
 })

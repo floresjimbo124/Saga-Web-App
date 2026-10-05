@@ -8,6 +8,10 @@ const dateFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'nume
 const categories: { value: ProjectExpenseCategory; label: string }[] = [
   { value: 'materials', label: 'Materials' },
   { value: 'labor', label: 'Labor' },
+  { value: 'operational_expenses', label: 'Operational Expenses' },
+  { value: 'payroll', label: 'Payroll' },
+  { value: 'sub_contract', label: 'Sub Contract' },
+  { value: 'rent', label: 'Rent' },
   { value: 'equipment', label: 'Equipment' },
   { value: 'transport', label: 'Transport' },
   { value: 'permits', label: 'Permits' },
@@ -36,16 +40,29 @@ export function ExpensePanel({ projectId, projectName, expenses, inflow, onChang
   onChanged: () => void
 }) {
   const [showForm, setShowForm] = useState(false)
-  const net = inflow - expenses.reduce((total, expense) => total + expense.amount, 0)
+  const totalOutflow = expenses.reduce((total, expense) => total + expense.amount, 0)
+  const net = inflow - totalOutflow
+  const categoryTotals = categories.map((category) => ({
+    ...category,
+    total: expenses
+      .filter((expense) => expense.category === category.value)
+      .reduce((sum, expense) => sum + expense.amount, 0),
+  })).filter((category) => category.total > 0)
 
   return <>
     <section className="surface-card tab-content expense-panel">
       <div className="card-heading-row"><div><div className="section-kicker">Project cash flow</div><h2>Expenses</h2></div><button type="button" className="button button-primary button-danger" onClick={() => setShowForm(true)}><Plus size={15} />Add expense</button></div>
       <div className="expense-summary" aria-label="Project cash flow totals">
         <div className="expense-summary-item"><span><ArrowDownLeft size={14} />Inflow</span><strong>{money.format(inflow)}</strong></div>
-        <div className="expense-summary-item"><span><ArrowUpRight size={14} />Outflow</span><strong>{money.format(expenses.reduce((total, expense) => total + expense.amount, 0))}</strong></div>
+        <div className="expense-summary-item"><span><ArrowUpRight size={14} />Outflow</span><strong>{money.format(totalOutflow)}</strong></div>
         <div className="expense-summary-item"><span>Net cash</span><strong className={net < 0 ? 'expense-net-negative' : 'expense-net-positive'}>{money.format(net)}</strong></div>
       </div>
+
+      <div className="expense-category-summary" aria-label="Expense totals by category">
+        <div className="section-kicker expense-register-heading">Expense by category</div>
+        {categoryTotals.length ? <div className="expense-category-list">{categoryTotals.map((category) => <div key={category.value} className="expense-category-row"><span>{category.label}</span><strong>{money.format(category.total)}</strong></div>)}</div> : <div className="empty-state small">No category totals yet.</div>}
+      </div>
+
       <div className="section-kicker expense-register-heading">Expense register</div>
       {expenses.length ? <div className="expense-register-list">{expenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} />)}</div> : <div className="empty-state">No expenses recorded for this project yet.</div>}
     </section>

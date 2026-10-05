@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ invoke: vi.fn() }))
+const mocks = vi.hoisted(() => ({ invoke: vi.fn(), refreshSession: vi.fn() }))
 vi.mock('../lib/supabase', () => ({
-  supabase: { functions: { invoke: mocks.invoke } },
+  supabase: { auth: { refreshSession: mocks.refreshSession }, functions: { invoke: mocks.invoke } },
 }))
 
 import { inviteClientToProject, loadClientAccess, resendClientInvitation, revokeClientAccess } from './client-access'
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  mocks.refreshSession.mockResolvedValue({
+    data: { session: { access_token: 'fresh-access-token' } },
+    error: null,
+  })
+})
 
 describe('client invitations', () => {
   it('invokes the protected function with a normalized email and project', async () => {
@@ -20,6 +26,7 @@ describe('client invitations', () => {
     })
     expect(mocks.invoke).toHaveBeenCalledWith('invite-client', {
       body: { action: 'invite', projectId: 'project-1', email: 'client@example.com' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
     })
   })
 
@@ -58,7 +65,10 @@ describe('client invitations', () => {
     mocks.invoke.mockResolvedValue({ data: { accounts }, error: null })
 
     await expect(loadClientAccess('project-1')).resolves.toEqual(accounts)
-    expect(mocks.invoke).toHaveBeenCalledWith('invite-client', { body: { action: 'list', projectId: 'project-1' } })
+    expect(mocks.invoke).toHaveBeenCalledWith('invite-client', {
+      body: { action: 'list', projectId: 'project-1' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
+    })
   })
 
   it('resends and revokes a linked client user', async () => {
@@ -67,8 +77,14 @@ describe('client invitations', () => {
 
     await expect(resendClientInvitation('project-1', 'user-1')).resolves.toEqual({ type: 'invitation' })
     await expect(revokeClientAccess('project-1', 'user-1')).resolves.toBeUndefined()
-    expect(mocks.invoke).toHaveBeenNthCalledWith(1, 'invite-client', { body: { action: 'resend', projectId: 'project-1', userId: 'user-1' } })
-    expect(mocks.invoke).toHaveBeenNthCalledWith(2, 'invite-client', { body: { action: 'revoke', projectId: 'project-1', userId: 'user-1' } })
+    expect(mocks.invoke).toHaveBeenNthCalledWith(1, 'invite-client', {
+      body: { action: 'resend', projectId: 'project-1', userId: 'user-1' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
+    })
+    expect(mocks.invoke).toHaveBeenNthCalledWith(2, 'invite-client', {
+      body: { action: 'revoke', projectId: 'project-1', userId: 'user-1' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
+    })
   })
 
   it('allows the same account to be invited to another project after revocation from one project', async () => {
@@ -84,9 +100,11 @@ describe('client invitations', () => {
 
     expect(mocks.invoke).toHaveBeenNthCalledWith(1, 'invite-client', {
       body: { action: 'revoke', projectId: 'project-1', userId: 'user-1' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
     })
     expect(mocks.invoke).toHaveBeenNthCalledWith(2, 'invite-client', {
       body: { action: 'invite', projectId: 'project-2', email: 'client@example.com' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
     })
   })
 
@@ -94,5 +112,15 @@ describe('client invitations', () => {
     mocks.invoke.mockResolvedValue({ data: { resent: true, type: 'sign_in' }, error: null })
 
     await expect(resendClientInvitation('project-1', 'user-1')).resolves.toEqual({ type: 'sign_in' })
+  })
+
+  it('does not invoke the function if the user session cannot be refreshed', async () => {
+    mocks.refreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'Refresh token expired.' },
+    })
+
+    await expect(loadClientAccess('project-1')).rejects.toThrow('Could not refresh your session. Sign out and sign in again. Refresh token expired.')
+    expect(mocks.invoke).not.toHaveBeenCalled()
   })
 })

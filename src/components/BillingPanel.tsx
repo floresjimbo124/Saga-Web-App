@@ -8,6 +8,7 @@ import {
   type ProjectBilling,
 } from '../data/billing'
 import { downloadBillingPdf, openBillingPdf } from '../lib/billing-pdf'
+import { formatBillingNumber } from '../lib/billing-number'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
 const dateFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' })
@@ -86,7 +87,7 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
       }
       setProgressInput(null)
       const result = await issueProjectBilling(projectId, dueDate || null)
-      return `Billing #${result.billingNumber} issued for ${money.format(result.amount)}.`
+      return `Billing #${formatBillingNumber(result.billingNumber)} issued for ${money.format(result.amount)}.`
     })
   }
 
@@ -104,14 +105,14 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
       await voidProjectBilling(billing.id, reason)
       setBillingToVoid(null)
       setVoidReason('')
-      return `Billing #${billing.billingNumber} voided.`
+      return `Billing #${formatBillingNumber(billing.billingNumber)} voided.`
     }, setVoidError)
   }
 
   return <>
   {billingToVoid && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setBillingToVoid(null) }}>
     <section className="project-modal" role="dialog" aria-modal="true" aria-labelledby="void-billing-title">
-      <div className="modal-heading"><div><div className="section-kicker">Billing adjustment</div><h2 id="void-billing-title">Void billing #{billingToVoid.billingNumber}</h2></div><button className="icon-button" type="button" onClick={() => setBillingToVoid(null)} aria-label="Close" disabled={busy}><X size={18} /></button></div>
+      <div className="modal-heading"><div><div className="section-kicker">Billing adjustment</div><h2 id="void-billing-title">Void billing #{formatBillingNumber(billingToVoid.billingNumber)}</h2></div><button className="icon-button" type="button" onClick={() => setBillingToVoid(null)} aria-label="Close" disabled={busy}><X size={18} /></button></div>
       <p className="modal-intro">This billing will be marked void. Enter a reason for the project record.</p>
       <form onSubmit={confirmVoidBilling}>
         <label className="form-field">Reason for voiding<textarea autoFocus value={voidReason} onChange={(event) => setVoidReason(event.target.value)} placeholder="Enter the reason" minLength={3} maxLength={500} required /></label>
@@ -138,10 +139,10 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
     {message && <p className="calculation-note" role="status">{message}</p>}
     <div className="section-kicker">Billings issued</div>
     {billings.length ? <div className="billing-register-list">{billings.map((billing) => <div className="payment-detail-row" key={billing.id}>
-      <span className="activity-copy"><strong>Billing #{billing.billingNumber} · {billing.progressPercent}% complete{billing.status === 'void' ? ' · VOID' : ''}</strong><small>{billing.issuedAt ? dateFormat.format(new Date(billing.issuedAt)) : 'Not issued'}{billing.dueAt ? ` · due ${dateFormat.format(new Date(`${billing.dueAt}T12:00:00`))}` : ''}{billing.voidReason ? ` · ${billing.voidReason}` : ''}</small></span>
+      <span className="activity-copy"><strong>Billing #{formatBillingNumber(billing.billingNumber)} · {billing.progressPercent}% complete{billing.status === 'void' ? ' · VOID' : ''}</strong><small>{billing.issuedAt ? dateFormat.format(new Date(billing.issuedAt)) : 'Not issued'}{billing.dueAt ? ` · due ${dateFormat.format(new Date(`${billing.dueAt}T12:00:00`))}` : ''}{billing.voidReason ? ` · ${billing.voidReason}` : ''}</small></span>
       <strong className="activity-amount">{money.format(billing.amount)}</strong>
       {billing.status === 'issued' && <button type="button" className="text-button compact-button" onClick={() => { void openBillingPdf({ projectName, clientName, location, billingNumber: billing.billingNumber, amount: billing.amount, progressPercent: billing.progressPercent, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }).catch(() => setError('Could not preview the billing PDF.')) }}><Eye size={14} />View</button>}
-      {billing.status === 'issued' && <button type="button" className="text-button compact-button" aria-label={`Download billing ${billing.billingNumber}`} title="Download billing PDF" onClick={() => { void downloadBillingPdf({ projectName, clientName, location, billingNumber: billing.billingNumber, amount: billing.amount, progressPercent: billing.progressPercent, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }).catch(() => setError('Could not download the billing PDF.')) }}><Download size={14} /></button>}
+      {billing.status === 'issued' && <button type="button" className="text-button compact-button" aria-label={`Download billing ${formatBillingNumber(billing.billingNumber)}`} title="Download billing PDF" onClick={() => { void downloadBillingPdf({ projectName, clientName, location, billingNumber: billing.billingNumber, amount: billing.amount, progressPercent: billing.progressPercent, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }).catch(() => setError('Could not download the billing PDF.')) }}><Download size={14} /></button>}
       {billing.status === 'issued' && <button type="button" className="text-button compact-button" onClick={() => { setVoidReason(''); setVoidError(''); setBillingToVoid(billing) }} disabled={busy}>Void</button>}
     </div>)}</div> : <div className="empty-state">No billings issued yet.</div>}
   </section>
