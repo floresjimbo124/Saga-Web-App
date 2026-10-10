@@ -1179,10 +1179,11 @@ p {
 }
 
 .progress-cell {
+  min-width: 0;
   display: grid;
-  grid-template-columns: 29px 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
 
 .progress-value {
