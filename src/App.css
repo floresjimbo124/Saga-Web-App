@@ -2738,6 +2738,14 @@ p {
   display: grid;
 }
 
+.client-payment-history-list {
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #b8c4b6 transparent;
+}
+
 .client-record-row,
 .client-finance-row {
   min-width: 0;
