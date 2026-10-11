@@ -4,6 +4,7 @@ import { updateProjectCostForecast } from '../data/portfolio'
 import { calculateProfitRisk } from '../finance/profit-risk'
 import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
+import { useToast } from './toast-context'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
 
@@ -22,6 +23,7 @@ export function ProjectForecastPanel({
   estimatedCostToComplete: number | null
   onChanged: () => void
 }) {
+  const { showToast } = useToast()
   const [budgetInput, setBudgetInput] = useState(costBudget === null ? '' : String(costBudget))
   const [estimateInput, setEstimateInput] = useState(estimatedCostToComplete === null ? '' : String(estimatedCostToComplete))
   const [error, setError] = useState('')
@@ -48,6 +50,7 @@ export function ProjectForecastPanel({
     try {
       await updateProjectCostForecast({ projectId, costBudget: budget, estimatedCostToComplete: estimate })
       setMessage('Forecast saved.')
+      showToast('Project forecast saved.', 'update')
       onChanged()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not save the project forecast.')
@@ -57,7 +60,7 @@ export function ProjectForecastPanel({
   }
 
   return <section className="surface-card tab-content project-forecast-panel">
-    <div className="card-heading-row"><div><div className="section-kicker">Cost planning</div><h2>Project profit forecast</h2></div><span className={`status-badge profit-risk-${forecast.level}`}><span />{forecast.label}</span></div>
+    <div className="card-heading-row"><h2>Project profit forecast</h2><span className={`status-badge profit-risk-${forecast.level}`}><span />{forecast.label}</span></div>
     <p className="forecast-intro">Set the planned total cost and estimate the cost still needed to finish. Forecast profit uses approved contract value and recorded project expenses.</p>
     <form className="forecast-form" onSubmit={(event) => { void saveForecast(event) }}>
       <label className="form-field">Total project cost budget<MoneyInput min="0" step="0.01" value={budgetInput} onChange={setBudgetInput} placeholder="0.00" required /></label>

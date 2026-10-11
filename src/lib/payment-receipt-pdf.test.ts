@@ -1,8 +1,29 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createPaymentReceiptPdf, getCurrentReceiptDate } from './payment-receipt-pdf'
 
+const mocks = vi.hoisted(() => ({ textCalls: [] as unknown[][] }))
+
+vi.mock('jspdf', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('jspdf')>()
+  return {
+    ...actual,
+    jsPDF: class extends actual.jsPDF {
+      constructor(...args: ConstructorParameters<typeof actual.jsPDF>) {
+        super(...args)
+        const originalText = this.text.bind(this)
+        this.text = (...textArgs) => {
+          mocks.textCalls.push(textArgs)
+          return originalText(...textArgs)
+        }
+      }
+    },
+  }
+})
+
 afterEach(() => {
+  vi.restoreAllMocks()
   vi.useRealTimers()
+  mocks.textCalls.length = 0
 })
 
 describe('createPaymentReceiptPdf', () => {
@@ -15,14 +36,14 @@ describe('createPaymentReceiptPdf', () => {
       payerName: 'Northwind Builders',
       receiptNumber: 'SAL-0002',
       amount: 125000,
+      receivedDate: '2026-09-29',
       paymentType: 'down_payment',
       paymentMode: 'bank_transfer',
       reference: 'BANK-REF-12',
     })
-    const output = pdf.output()
 
-    expect(output.startsWith('%PDF-')).toBe(true)
     expect(pdf.getFontList().Roboto).toEqual(['normal', 'bold'])
-    expect(output).toContain('/XObject')
+    expect(mocks.textCalls.some(([label, , y]) => label === 'Date acknowledged: October 3, 2026' && y === 70)).toBe(true)
+    expect(mocks.textCalls.some(([label, x, y]) => label === 'Date received: September 29, 2026' && x === 20 && y === 78)).toBe(true)
   })
 })

@@ -31,8 +31,10 @@ describe('project milestone data access', () => {
   const input = {
     projectId: 'project-1',
     name: 'Foundation complete',
+    startDate: '2026-10-01',
     plannedDate: '2026-10-12',
     actualDate: null,
+    completionPercent: 40,
     status: 'pending' as const,
     clientVisible: true,
   }
@@ -46,8 +48,10 @@ describe('project milestone data access', () => {
         organization_id: 'org-sagact',
         project_id: 'project-1',
         name: 'Foundation complete',
+        start_date: '2026-10-01',
         planned_date: '2026-10-12',
         actual_date: null,
+        completion_percent: 40,
         status: 'pending',
         client_visible: true,
       }],
@@ -65,7 +69,10 @@ describe('project milestone data access', () => {
 
   it('rejects blank names and invalid dates before sending a database request', async () => {
     await expect(createProjectMilestone({ ...input, name: '  ' })).rejects.toThrow('Enter a milestone name.')
-    await expect(createProjectMilestone({ ...input, plannedDate: '10/12/2026' })).rejects.toThrow('Planned date must be a valid date.')
+    await expect(createProjectMilestone({ ...input, plannedDate: '10/12/2026' })).rejects.toThrow('End date must be a valid date.')
+    await expect(createProjectMilestone({ ...input, startDate: '2026-10-13' })).rejects.toThrow('End date cannot be before the start date.')
+    await expect(createProjectMilestone({ ...input, completionPercent: 101 })).rejects.toThrow('Milestone completion must be a whole number from 0 to 100.')
+    await expect(createProjectMilestone({ ...input, completionPercent: 35.5 })).rejects.toThrow('Milestone completion must be a whole number from 0 to 100.')
     expect(calls).toHaveLength(0)
   })
 

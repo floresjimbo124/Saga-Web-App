@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Mail, RefreshCw, UserRoundX, X } from 'lucide-react'
 import { inviteClientToProject, loadClientAccess, resendClientInvitation, revokeClientAccess, type ClientAccessAccount } from '../data/client-access'
+import { useToast } from './toast-context'
 
 export function InviteClientDialog({ projectId, projectName, clientName, clientEmail, onClose }: {
   projectId: string
@@ -9,6 +11,7 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
   clientEmail: string
   onClose: () => void
 }) {
+  const { showToast } = useToast()
   const [email, setEmail] = useState(clientEmail)
   const [error, setError] = useState('')
   const [result, setResult] = useState('')
@@ -54,6 +57,7 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
           : response.emailError
             ? `Access granted to ${email.trim()} for ${projectName}, but the sign-in email could not be sent: ${response.emailError}`
             : `Access granted to ${email.trim()} for ${projectName}. They can sign in with their existing account.`)
+      showToast(response.emailError ? 'Client access granted, but the email could not be sent.' : 'Client invitation/access updated.')
       await refreshAccounts()
     } catch (inviteError) {
       setError(inviteError instanceof Error ? inviteError.message : 'Could not invite this client.')
@@ -71,6 +75,7 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
       setResult(response.type === 'invitation'
         ? `Invitation resent to ${account.email}.`
         : `Sign-in link sent to ${account.email}.`)
+      showToast(response.type === 'invitation' ? 'Client invitation resent.' : 'Client sign-in link sent.')
     } catch (resendError) {
       setError(resendError instanceof Error ? resendError.message : 'Could not resend the invitation.')
     } finally {
@@ -87,6 +92,7 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
       setAccounts((current) => current.filter((item) => item.userId !== account.userId))
       setRevokeCandidate(null)
       setResult(`Access revoked for ${account.email}.`)
+      showToast('Client access revoked.', 'delete')
     } catch (revokeError) {
       setError(revokeError instanceof Error ? revokeError.message : 'Could not revoke client access.')
     } finally {
@@ -94,7 +100,7 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
     }
   }
 
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSubmitting && !workingUserId) onClose() }}>
+  return createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSubmitting && !workingUserId) onClose() }}>
     <section className="project-modal invite-client-dialog" role="dialog" aria-modal="true" aria-labelledby="invite-client-title">
       <div className="modal-heading"><div><div className="section-kicker">Client access</div><h2 id="invite-client-title">Manage {clientName}</h2></div><button className="icon-button" type="button" aria-label="Close" disabled={isSubmitting || Boolean(workingUserId)} onClick={onClose}><X size={18} /></button></div>
       <p className="modal-intro">Invite a client contact to view shared billing, receipts, project status, and documents for {projectName}.</p>
@@ -117,5 +123,5 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
         <div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose} disabled={isSubmitting || Boolean(workingUserId)}>Close</button><button type="submit" className="button button-primary" disabled={isSubmitting || Boolean(workingUserId)}><Mail size={15} />{isSubmitting ? 'Sending…' : 'Send invitation'}</button></div>
       </form>
     </section>
-  </div>
+  </div>, document.body)
 }

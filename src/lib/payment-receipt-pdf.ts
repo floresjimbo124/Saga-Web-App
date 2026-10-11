@@ -5,6 +5,7 @@ export type PaymentReceiptDetails = {
   payerName: string
   receiptNumber: string
   amount: number
+  receivedDate: string
   paymentType: 'down_payment' | 'progress' | 'retention_release' | 'other'
   paymentMode: 'cash' | 'bank_transfer' | 'check' | 'card' | 'other'
   reference: string
@@ -28,7 +29,9 @@ export function getCurrentReceiptDate() {
 }
 
 function formatDate(value: string) {
-  const date = new Date(`${value}T12:00:00`)
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T12:00:00`)
+    : new Date(value)
   return Number.isNaN(date.getTime()) ? value : dateFormat.format(date)
 }
 
@@ -69,9 +72,10 @@ export async function createPaymentReceiptPdf(details: PaymentReceiptDetails) {
   pdf.setFont('Roboto', 'normal')
   pdf.setTextColor(70, 78, 74)
   pdf.text(`Date acknowledged: ${formatDate(getCurrentReceiptDate())}`, margin, 70)
+  pdf.text(`Date received: ${formatDate(details.receivedDate)}`, margin, 78)
 
   pdf.setDrawColor(218, 224, 220)
-  pdf.line(margin, 82, pageWidth - margin, 82)
+  pdf.line(margin, 90, pageWidth - margin, 90)
   pdf.setTextColor(107, 117, 110)
   pdf.setFont('Roboto', 'bold')
   pdf.setFontSize(9)

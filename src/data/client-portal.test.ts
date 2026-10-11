@@ -11,7 +11,7 @@ import { loadClientPortalProjects } from './client-portal'
 const calls: { table: string; method: string; args: unknown[] }[] = []
 const tableData: Record<string, unknown[]> = {
   projects: [{
-    id: 'project-1', client_id: 'client-1', name: 'Harbor Office', location: 'Cebu City',
+    id: 'project-1', client_id: 'client-1', name: 'Harbor Office', prefix: 'HAR', location: 'Cebu City',
     progress_percent: '45.00', status: 'active', created_at: '2026-09-25T00:00:00Z', updated_at: '2026-10-01T00:00:00Z',
   }],
   clients: [{ id: 'client-1', name: 'Northwind Builders' }],
@@ -35,8 +35,19 @@ const tableData: Record<string, unknown[]> = {
   }],
   project_milestones: [{
     id: 'milestone-1', project_id: 'project-1', name: 'Foundation complete',
-    planned_date: '2026-10-02', actual_date: '2026-10-03', status: 'complete',
+    planned_date: '2026-10-02', actual_date: '2026-10-03', completion_percent: 100, status: 'complete',
   }],
+  project_change_orders: [
+    {
+      id: 'change-order-pending', project_id: 'project-1', order_number: 1, title: 'Additional electrical work',
+      description: 'Install additional outlets', amount: '125000.00',
+      status: 'pending_approval', created_at: '2026-10-02T00:00:00Z', pdf_storage_path: 'org-sagact/project-1/change-orders/change-order-pending/HAR-CO-001.pdf',
+    },
+    {
+      id: 'change-order-approved', project_id: 'project-1', order_number: 2, title: 'Approved additional work',
+      description: null, amount: '50000.00', status: 'approved', created_at: '2026-10-01T00:00:00Z', pdf_storage_path: 'org-sagact/project-1/change-orders/change-order-approved/HAR-CO-002.pdf',
+    },
+  ],
 }
 
 function queryFor(table: string) {
@@ -89,8 +100,14 @@ describe('client portal data access', () => {
         name: 'Foundation complete',
         plannedDate: '2026-10-02',
         actualDate: '2026-10-03',
+        completionPercent: 100,
         status: 'complete',
       }],
+      prefix: 'HAR',
+      changeOrders: [
+        { id: 'change-order-pending', orderNumber: 1, title: 'Additional electrical work', status: 'pending_approval', amount: 125_000, pdfStoragePath: 'org-sagact/project-1/change-orders/change-order-pending/HAR-CO-001.pdf' },
+        { id: 'change-order-approved', orderNumber: 2, title: 'Approved additional work', status: 'approved', amount: 50_000, description: '', pdfStoragePath: 'org-sagact/project-1/change-orders/change-order-approved/HAR-CO-002.pdf' },
+      ],
     })
   })
 
@@ -101,6 +118,7 @@ describe('client portal data access', () => {
     expect(calls).toContainEqual({ table: 'progress_billings', method: 'eq', args: ['status', 'issued'] })
     expect(calls).toContainEqual({ table: 'payment_allocations', method: 'in', args: ['project_id', ['project-1']] })
     expect(calls).toContainEqual({ table: 'project_milestones', method: 'eq', args: ['client_visible', true] })
+    expect(calls).toContainEqual({ table: 'project_change_orders', method: 'in', args: ['status', ['pending_approval', 'approved']] })
     expect(mocks.rpc).toHaveBeenCalledWith('get_client_project_retention')
     expect(mocks.rpc).toHaveBeenCalledWith('get_client_project_down_payment')
     expect(calls.some(({ table }) => table === 'project_progress_updates')).toBe(false)

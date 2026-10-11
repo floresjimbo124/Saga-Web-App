@@ -1,8 +1,10 @@
 import { SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
+import type { ProjectChangeOrderStatus } from './portfolio'
 
 export type ClientPortalProject = {
   id: string
   name: string
+  prefix: string
   clientName: string
   location: string
   progress: number
@@ -13,11 +15,22 @@ export type ClientPortalProject = {
   downPaymentAmount: number
   completedAt: string | null
   retentionAmount: number
+  changeOrders: {
+    id: string
+    orderNumber: number
+    title: string
+    description: string
+    amount: number
+    status: Extract<ProjectChangeOrderStatus, 'pending_approval' | 'approved'>
+    createdAt: string
+    pdfStoragePath: string | null
+  }[]
   milestones: {
     id: string
     name: string
     plannedDate: string | null
     actualDate: string | null
+    completionPercent: number
     status: 'pending' | 'in_progress' | 'complete' | 'blocked'
   }[]
   billings: {
@@ -79,7 +92,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
   const client = requireSupabase()
   const { data: projectRows, error: projectError } = await client
     .from('projects')
-    .select('id, client_id, name, location, progress_percent, status, created_at, updated_at')
+    .select('id, client_id, name, prefix, location, progress_percent, status, created_at, updated_at')
     .eq('organization_id', SAGACT_ORGANIZATION_ID)
     .order('updated_at', { ascending: false })
   throwIfError(projectError)
@@ -88,7 +101,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
   const projectIds = projects.map((project) => project.id)
   if (!projectIds.length) return []
 
-  const [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult] = await Promise.all([
+  const [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult, changeOrderResult] = await Promise.all([
     client.from('clients')
       .select('id, name')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
@@ -113,13 +126,18 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
     client.rpc('get_client_project_retention'),
     client.rpc('get_client_project_down_payment'),
     client.from('project_milestones')
-      .select('id, project_id, name, planned_date, actual_date, status')
+      .select('id, project_id, name, planned_date, actual_date, completion_percent, status')
       .in('project_id', projectIds)
       .eq('client_visible', true)
       .order('planned_date', { ascending: true, nullsFirst: false }),
+    client.from('project_change_orders')
+      .select('id, project_id, order_number, title, description, amount, status, created_at, pdf_storage_path')
+      .in('project_id', projectIds)
+      .in('status', ['pending_approval', 'approved'])
+      .order('created_at', { ascending: false }),
   ])
 
-  for (const result of [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult]) {
+  for (const result of [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult, changeOrderResult]) {
     throwIfError(result.error)
   }
 
@@ -132,9 +150,25 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
       name: item.name,
       plannedDate: item.planned_date,
       actualDate: item.actual_date,
+      completionPercent: Number(item.completion_percent),
       status: item.status,
     })
     milestonesByProject.set(item.project_id, milestones)
+  }
+  const changeOrdersByProject = new Map<string, ClientPortalProject['changeOrders']>()
+  for (const item of changeOrderResult.data ?? []) {
+    const changeOrders = changeOrdersByProject.get(item.project_id) ?? []
+    changeOrders.push({
+      id: item.id,
+      orderNumber: item.order_number,
+      title: item.title,
+      description: item.description ?? '',
+      amount: Number(item.amount),
+      status: item.status,
+      createdAt: item.created_at,
+      pdfStoragePath: item.pdf_storage_path,
+    })
+    changeOrdersByProject.set(item.project_id, changeOrders)
   }
   const billingsByProject = new Map<string, ClientPortalProject['billings']>()
   for (const item of billingResult.data ?? []) {
@@ -204,6 +238,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
   return projects.map((project) => ({
     id: project.id,
     name: project.name,
+    prefix: project.prefix,
     clientName: clientsById.get(project.client_id) ?? 'Client',
     location: project.location ?? 'Location not provided',
     progress: Number(project.progress_percent),
@@ -214,6 +249,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
     downPaymentAmount: Number(downPaymentByProject.get(project.id)?.down_payment_amount ?? 0),
     completedAt: retentionByProject.get(project.id)?.completed_at ?? null,
     retentionAmount: Number(retentionByProject.get(project.id)?.retention_amount ?? 0),
+    changeOrders: changeOrdersByProject.get(project.id) ?? [],
     milestones: milestonesByProject.get(project.id) ?? [],
     billings: billingsByProject.get(project.id) ?? [],
     payments: paymentsByProject.get(project.id) ?? [],

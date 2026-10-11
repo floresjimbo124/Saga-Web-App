@@ -33,8 +33,9 @@ function ExpenseRow({ expense, onEdit }: { expense: PortfolioExpense; onEdit: (e
   </div>
 }
 
-export function ExpensePanel({ projectId, projectName, expenses, inflow, onChanged }: {
+export function ExpensePanel({ projectId, contractId, projectName, expenses, inflow, onChanged }: {
   projectId: string
+  contractId?: string
   projectName: string
   expenses: PortfolioExpense[]
   inflow: number
@@ -53,7 +54,7 @@ export function ExpensePanel({ projectId, projectName, expenses, inflow, onChang
 
   return <>
     <section className="surface-card tab-content expense-panel">
-      <div className="card-heading-row"><div><div className="section-kicker">Project cash flow</div><h2>Expenses</h2></div><button type="button" className="button button-primary button-danger" onClick={() => setShowForm(true)}><Plus size={15} />Add expense</button></div>
+      <div className="card-heading-row"><h2>Expenses</h2><button type="button" className="button button-primary button-danger" onClick={() => setShowForm(true)}><Plus size={15} />Add expense</button></div>
       <div className="expense-summary" aria-label="Project cash flow totals">
         <div className="expense-summary-item"><span><ArrowDownLeft size={14} />Inflow</span><strong>{money.format(inflow)}</strong></div>
         <div className="expense-summary-item"><span><ArrowUpRight size={14} />Outflow</span><strong>{money.format(totalOutflow)}</strong></div>
@@ -68,6 +69,6 @@ export function ExpensePanel({ projectId, projectName, expenses, inflow, onChang
       <div className="section-kicker expense-register-heading">Expense register</div>
       {expenses.length ? <div className="expense-register-list">{expenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} onEdit={(item) => { setEditingExpense(item); setShowForm(true) }} />)}</div> : <div className="empty-state">No expenses recorded for this project yet.</div>}
     </section>
-    {showForm && <ExpenseEntryDialog projects={[{ id: projectId, name: projectName }]} initialProjectId={projectId} editingExpense={editingExpense} onClose={() => { setShowForm(false); setEditingExpense(undefined) }} onSaved={() => { setShowForm(false); setEditingExpense(undefined); onChanged() }} />}
+    {showForm && <ExpenseEntryDialog projects={[{ id: projectId, name: projectName }]} initialProjectId={projectId} contractId={contractId} editingExpense={editingExpense} onClose={() => { setShowForm(false); setEditingExpense(undefined) }} onSaved={() => { setShowForm(false); setEditingExpense(undefined); onChanged() }} />}
   </>
 }

@@ -19,6 +19,7 @@ function queryFor(data: unknown, error: QueryResult['error'] = null) {
     select: () => query,
     eq: () => query,
     order: () => query,
+    not: () => query,
     is: () => query,
     neq: () => query,
     then: (resolve: (result: QueryResult) => unknown, reject?: (reason: unknown) => unknown) =>
@@ -78,10 +79,27 @@ const portfolioRows: Record<string, unknown[]> = {
     { project_id: 'project-salo', entry_type: 'released', amount: '1000.00' },
   ],
   project_milestones: [
-    { id: 'milestone-salo', project_id: 'project-salo', name: 'Electrical rough-in', planned_date: '2026-10-04', actual_date: null, status: 'pending', client_visible: true },
+    { id: 'milestone-salo', project_id: 'project-salo', name: 'Electrical rough-in', start_date: null, planned_date: '2026-10-04', actual_date: null, completion_percent: 0, status: 'pending', client_visible: true },
   ],
   project_change_orders: [
-    { project_id: 'project-salo', amount: '20000.00', retention_rate_percent: null },
+    {
+      id: 'change-order-approved', project_id: 'project-salo', title: 'Approved extra work',
+      order_number: 1,
+      description: 'Extra electrical work', amount: '20000.00', retention_rate_percent: null,
+      line_items: [{ item: 'Temporary fencing', description: 'Install fencing', remarks: 'Material and labor', cost: '20000.00' }],
+      contract_time_adjustment_days: 12,
+      status: 'approved', created_at: '2026-10-01T00:00:00Z', decided_at: '2026-10-02T00:00:00Z',
+      decision_note: 'Approved by client.',
+    },
+    {
+      id: 'change-order-draft', project_id: 'project-salo', title: 'Draft extra work',
+      order_number: 2,
+      description: null, amount: '1500000.00', retention_rate_percent: null,
+      status: 'draft', created_at: '2026-10-02T00:00:00Z', decided_at: null, decision_note: null,
+    },
+  ],
+  project_contracts: [
+    { id: 'contract-approved', project_id: 'project-salo', change_order_id: 'change-order-approved', progress_percent: '35.00' },
   ],
 }
 
@@ -120,6 +138,10 @@ describe('portfolio data access', () => {
       milestone: 'Electrical rough-in · Oct 04',
       isSetupComplete: false,
       approvedChangeOrders: [{ amount: 20_000, approved: true, retentionRatePercent: undefined }],
+      changeOrders: [
+        { id: 'change-order-approved', title: 'Approved extra work', status: 'approved', amount: 20_000, orderNumber: 1, items: [{ item: 'Temporary fencing', description: 'Install fencing', remarks: 'Material and labor', cost: 20_000 }], contractTimeAdjustmentDays: 12, contractId: 'contract-approved', contractProgress: 35, decidedAt: '2026-10-02T00:00:00Z', decisionNote: 'Approved by client.' },
+        { id: 'change-order-draft', title: 'Draft extra work', status: 'draft', amount: 1_500_000, orderNumber: 2, decidedAt: null, decisionNote: '' },
+      ],
     })
     expect(dapitan).toMatchObject({
       client: 'Client not set',
@@ -149,6 +171,7 @@ describe('portfolio data access', () => {
       paymentMode: 'bank_transfer',
       paymentReference: '',
       reference: 'SAL-0001',
+      contractId: null,
     }])
     expect(mocks.from).toHaveBeenCalledWith('projects')
     expect(portfolio.receivables).toMatchObject([{
@@ -175,6 +198,31 @@ describe('portfolio data access', () => {
       expect.objectContaining({ id: 'down-payment:project-salo', outstandingAmount: 350_000, kind: 'down-payment' }),
       expect.objectContaining({ id: 'billing-salo-1', outstandingAmount: 120_000 }),
     ]))
+  })
+
+  it('includes project-assigned weekly payroll as a project expense', async () => {
+    mocks.from.mockImplementation((table: string) => queryFor(
+      table === 'payroll_employees'
+        ? [{ id: 'employee-1', full_name: 'Juan Dela Cruz' }]
+        : table === 'payroll_weekly_entries'
+          ? [{ id: 'payroll-1', employee_id: 'employee-1', week_start: '2026-10-05', project_id: 'project-salo', gross_pay: '5000.00', finalized_at: '2026-10-11T15:59:00Z' }]
+          : portfolioRows[table] ?? [],
+    ))
+
+    const portfolio = await loadPortfolio()
+    const salo = portfolio.projects.find((project) => project.id === 'project-salo')
+
+    expect(salo?.outflow).toBe(17_500.5)
+    expect(salo?.expenses).toContainEqual({
+      id: 'payroll:payroll-1',
+      projectId: 'project-salo',
+      contractId: null,
+      date: '2026-10-11',
+      category: 'payroll',
+      description: 'Payroll · Juan Dela Cruz (Oct 5–Oct 11)',
+      vendor: '',
+      amount: 5_000,
+    })
   })
 
   it('shows the contract retention amount even before the ledger has any held entries', async () => {
@@ -275,8 +323,8 @@ describe('portfolio data access', () => {
     mocks.from.mockImplementation((table: string) => queryFor(
       table === 'project_milestones'
         ? [
-          { id: 'milestone-pending', project_id: 'project-salo', name: 'Paint', planned_date: '2026-10-04', actual_date: null, status: 'pending', client_visible: false },
-          { id: 'milestone-active', project_id: 'project-salo', name: 'Electrical rough-in', planned_date: '2026-10-10', actual_date: null, status: 'in_progress', client_visible: true },
+          { id: 'milestone-pending', project_id: 'project-salo', name: 'Paint', start_date: null, planned_date: '2026-10-04', actual_date: null, completion_percent: 0, status: 'pending', client_visible: false },
+          { id: 'milestone-active', project_id: 'project-salo', name: 'Electrical rough-in', start_date: '2026-10-05', planned_date: '2026-10-10', actual_date: null, completion_percent: 60, status: 'in_progress', client_visible: true },
         ]
         : portfolioRows[table] ?? [],
     ))
@@ -285,8 +333,8 @@ describe('portfolio data access', () => {
     const salo = portfolio.projects.find((project) => project.id === 'project-salo')
 
     expect(salo?.milestones).toEqual([
-      { id: 'milestone-pending', name: 'Paint', plannedDate: '2026-10-04', actualDate: null, status: 'pending', clientVisible: false },
-      { id: 'milestone-active', name: 'Electrical rough-in', plannedDate: '2026-10-10', actualDate: null, status: 'in_progress', clientVisible: true },
+      { id: 'milestone-pending', name: 'Paint', startDate: null, plannedDate: '2026-10-04', actualDate: null, completionPercent: 0, status: 'pending', clientVisible: false },
+      { id: 'milestone-active', name: 'Electrical rough-in', startDate: '2026-10-05', plannedDate: '2026-10-10', actualDate: null, completionPercent: 60, status: 'in_progress', clientVisible: true },
     ])
     expect(salo?.milestone).toContain('Electrical rough-in')
   })
@@ -385,7 +433,31 @@ describe('portfolio data access', () => {
     expect(mocks.rpc).toHaveBeenCalledWith('record_project_payment_with_allocations', expect.objectContaining({
       p_project_id: 'project-salo',
       p_amount: 125_000,
+      p_received_date: '2026-10-03',
       p_allocations: [{ billingId: 'billing-salo-1', amount: 125_000 }],
+      p_contract_id: null,
+    }))
+  })
+
+  it('assigns a logged payment to the selected change-order contract', async () => {
+    mocks.rpc.mockReturnValue({
+      single: () => Promise.resolve({ data: { payment_id: 'payment-contract-1', receipt_number: 'SAL-0003' }, error: null }),
+    })
+
+    await recordProjectPayment({
+      projectId: 'project-salo',
+      contractId: 'contract-approved',
+      paymentType: 'progress',
+      amount: 5_000,
+      receivedDate: '2026-10-03',
+      paymentMode: 'cash',
+      payerName: 'Salo Hospitality',
+    })
+
+    expect(mocks.rpc).toHaveBeenCalledWith('record_project_payment_with_allocations', expect.objectContaining({
+      p_project_id: 'project-salo',
+      p_contract_id: 'contract-approved',
+      p_allocations: [],
     }))
   })
 
@@ -440,6 +512,32 @@ describe('portfolio data access', () => {
         { project_id: 'project-salo', expense_date: '2026-10-01', category: 'materials', description: 'Concrete', vendor: 'BuildCo', amount: 12_500.5 },
         { project_id: 'project-dapitan', expense_date: '2026-09-30', category: 'transport', description: 'Delivery', vendor: null, amount: 3_000 },
       ],
+    })
+
+  })
+
+  it('records change-order expenses against their own contract', async () => {
+    mocks.rpc.mockResolvedValue({ data: 1, error: null })
+
+    await expect(recordProjectExpenses([{
+      projectId: 'project-salo',
+      contractId: 'contract-approved',
+      date: '2026-10-03',
+      category: 'materials',
+      description: 'Additional wiring',
+      amount: 2_000,
+    }])).resolves.toBe(1)
+
+    expect(mocks.rpc).toHaveBeenCalledWith('record_project_contract_expenses', {
+      p_contract_id: 'contract-approved',
+      p_expenses: [{
+        project_id: 'project-salo',
+        expense_date: '2026-10-03',
+        category: 'materials',
+        description: 'Additional wiring',
+        vendor: null,
+        amount: 2_000,
+      }],
     })
   })
 

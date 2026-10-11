@@ -5,8 +5,10 @@ export type ProjectMilestoneStatus = 'pending' | 'in_progress' | 'complete' | 'b
 export type ProjectMilestone = {
   id: string
   name: string
+  startDate: string | null
   plannedDate: string | null
   actualDate: string | null
+  completionPercent: number
   status: ProjectMilestoneStatus
   clientVisible: boolean
 }
@@ -14,8 +16,10 @@ export type ProjectMilestone = {
 export type SaveProjectMilestoneInput = {
   projectId: string
   name: string
+  startDate: string | null
   plannedDate: string | null
   actualDate: string | null
+  completionPercent: number
   status: ProjectMilestoneStatus
   clientVisible: boolean
 }
@@ -27,12 +31,18 @@ function requireSupabase() {
 
 function validateMilestone(input: SaveProjectMilestoneInput) {
   if (!input.name.trim()) throw new Error('Enter a milestone name.')
-  for (const [label, date] of [['Planned date', input.plannedDate], ['Actual date', input.actualDate]] as const) {
+  for (const [label, date] of [['Start date', input.startDate], ['End date', input.plannedDate], ['Actual date', input.actualDate]] as const) {
     if (date === null) continue
     const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : null
     if (!parsed || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
       throw new Error(`${label} must be a valid date.`)
     }
+  }
+  if (input.startDate && input.plannedDate && input.startDate > input.plannedDate) {
+    throw new Error('End date cannot be before the start date.')
+  }
+  if (!Number.isInteger(input.completionPercent) || input.completionPercent < 0 || input.completionPercent > 100) {
+    throw new Error('Milestone completion must be a whole number from 0 to 100.')
   }
 }
 
@@ -42,8 +52,10 @@ export async function createProjectMilestone(input: SaveProjectMilestoneInput) {
     organization_id: SAGACT_ORGANIZATION_ID,
     project_id: input.projectId,
     name: input.name.trim(),
+    start_date: input.startDate,
     planned_date: input.plannedDate,
     actual_date: input.actualDate,
+    completion_percent: input.completionPercent,
     status: input.status,
     client_visible: input.clientVisible,
   })
@@ -55,8 +67,10 @@ export async function updateProjectMilestone(milestoneId: string, input: SavePro
   const { error } = await requireSupabase().from('project_milestones')
     .update({
       name: input.name.trim(),
+      start_date: input.startDate,
       planned_date: input.plannedDate,
       actual_date: input.actualDate,
+      completion_percent: input.completionPercent,
       status: input.status,
       client_visible: input.clientVisible,
     })

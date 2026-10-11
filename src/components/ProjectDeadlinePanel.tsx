@@ -3,6 +3,7 @@ import { CalendarDays, Save } from 'lucide-react'
 import type { ProjectStatus } from '../data/portfolio'
 import { updateProjectDeadline } from '../data/portfolio'
 import { getProjectDeadlineStatus } from '../finance/project-deadline'
+import { useToast } from './toast-context'
 
 export function ProjectDeadlinePanel({ projectId, deadline, status, onChanged }: {
   projectId: string
@@ -10,6 +11,7 @@ export function ProjectDeadlinePanel({ projectId, deadline, status, onChanged }:
   status: ProjectStatus
   onChanged: () => void
 }) {
+  const { showToast } = useToast()
   const [date, setDate] = useState(deadline ?? '')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -24,6 +26,7 @@ export function ProjectDeadlinePanel({ projectId, deadline, status, onChanged }:
     try {
       await updateProjectDeadline(projectId, date || null)
       setMessage(date ? 'Project deadline saved.' : 'Project deadline cleared.')
+      showToast(date ? 'Project deadline saved.' : 'Project deadline cleared.', 'update')
       onChanged()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not save the project deadline.')

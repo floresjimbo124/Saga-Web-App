@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Download, Eye, Plus, X } from 'lucide-react'
 import {
   issueProjectBilling,
@@ -9,12 +10,14 @@ import {
 } from '../data/billing'
 import { downloadBillingPdf, openBillingPdf } from '../lib/billing-pdf'
 import { formatBillingNumber } from '../lib/billing-number'
+import { useToast } from './toast-context'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
 const dateFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' })
 
-export function BillingPanel({ projectId, projectName, clientName, location, progress, earned, ceiling, isSetupComplete, onChanged }: {
+export function BillingPanel({ projectId, contractId, projectName, clientName, location, progress, earned, ceiling, isSetupComplete, onChanged }: {
   projectId: string
+  contractId?: string
   projectName: string
   clientName: string
   location: string
@@ -24,6 +27,7 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
   isSetupComplete: boolean
   onChanged: () => void
 }) {
+  const { showToast } = useToast()
   const [billings, setBillings] = useState<ProjectBilling[]>([])
   const [progressInput, setProgressInput] = useState<string | null>(null)
   const [dueDate, setDueDate] = useState('')
@@ -36,22 +40,28 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
 
   const refresh = useCallback(async () => {
     try {
-      setBillings(await loadProjectBillings(projectId))
+      setBillings(await loadProjectBillings(projectId, contractId))
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Could not load billings.')
     }
-  }, [projectId])
+  }, [projectId, contractId])
 
   // This list is populated from the database and intentionally refreshed after the async fetch resolves.
   // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => { void refresh() }, [refresh])
 
-  const run = async (action: () => Promise<string>, onActionError = setError) => {
+  const run = async (
+    action: () => Promise<string>,
+    onActionError = setError,
+    toastAction: 'create' | 'update' | 'delete' = 'create',
+  ) => {
     setBusy(true)
     setError('')
     setMessage('')
     try {
-      setMessage(await action())
+      const successMessage = await action()
+      setMessage(successMessage)
+      showToast(successMessage, toastAction)
       await refresh()
       onChanged()
     } catch (actionError) {
@@ -68,10 +78,10 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
       return
     }
     void run(async () => {
-      await updateProjectProgress({ projectId, progressPercent: value })
+      await updateProjectProgress({ projectId, contractId, progressPercent: value })
       setProgressInput(null)
       return `Progress updated to ${value}%.`
-    })
+    }, setError, 'update')
   }
 
   const issueBilling = () => {
@@ -83,10 +93,10 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
     void run(async () => {
       // Save any progress value typed but not yet saved, so the billing uses it.
       if (pending !== null && pending !== progress) {
-        await updateProjectProgress({ projectId, progressPercent: pending })
+        await updateProjectProgress({ projectId, contractId, progressPercent: pending })
       }
       setProgressInput(null)
-      const result = await issueProjectBilling(projectId, dueDate || null)
+      const result = await issueProjectBilling(projectId, dueDate || null, contractId)
       return `Billing #${formatBillingNumber(result.billingNumber)} issued for ${money.format(result.amount)}.`
     })
   }
@@ -106,11 +116,11 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
       setBillingToVoid(null)
       setVoidReason('')
       return `Billing #${formatBillingNumber(billing.billingNumber)} voided.`
-    }, setVoidError)
+    }, setVoidError, 'update')
   }
 
   return <>
-  {billingToVoid && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setBillingToVoid(null) }}>
+  {billingToVoid && createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setBillingToVoid(null) }}>
     <section className="project-modal" role="dialog" aria-modal="true" aria-labelledby="void-billing-title">
       <div className="modal-heading"><div><div className="section-kicker">Billing adjustment</div><h2 id="void-billing-title">Void billing #{formatBillingNumber(billingToVoid.billingNumber)}</h2></div><button className="icon-button" type="button" onClick={() => setBillingToVoid(null)} aria-label="Close" disabled={busy}><X size={18} /></button></div>
       <p className="modal-intro">This billing will be marked void. Enter a reason for the project record.</p>
@@ -120,9 +130,9 @@ export function BillingPanel({ projectId, projectName, clientName, location, pro
         <div className="modal-actions"><button type="button" className="button button-secondary" onClick={() => setBillingToVoid(null)} disabled={busy}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? 'Voiding…' : 'Void billing'}</button></div>
       </form>
     </section>
-  </div>}
+  </div>, document.body)}
   <section className="surface-card tab-content">
-    <div className="card-heading-row"><div><div className="section-kicker">Billing</div><h2>Progress billing</h2></div></div>
+    <div className="card-heading-row"><h2>{contractId ? 'Contract progress billing' : 'Progress billing'}</h2></div>
     {isSetupComplete
       ? <p className="calculation-note">Earned at {progress}%: <strong>{money.format(earned)}</strong> · Billable ceiling: <strong>{money.format(ceiling)}</strong></p>
       : <p className="calculation-note">Set up the contract amount before issuing a billing.</p>}

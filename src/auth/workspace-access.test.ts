@@ -14,6 +14,12 @@ describe('resolveWorkspaceAccessRoute', () => {
 
   it('does not route staff members through a client account', () => {
     expect(resolveWorkspaceAccessRoute('site_staff', true)).toBe('denied')
+    expect(resolveWorkspaceAccessRoute('site_staff', false, false, false)).toBe('denied')
+  })
+
+  it('routes staff with a designated role to the task workspace', () => {
+    expect(resolveWorkspaceAccessRoute('site_staff', false, false, true)).toBe('staff')
+    expect(resolveWorkspaceAccessRoute('site_staff', true, true, true)).toBe('staff')
   })
 
   it('routes users without an organization role to the client portal only when linked', () => {

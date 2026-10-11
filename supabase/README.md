@@ -33,6 +33,12 @@ on conflict (organization_id, user_id) do nothing;
 
 For a hosted project, apply the migration with `npx supabase db push`. The local seed is not automatically applied to hosted databases; seed or create production records deliberately after reviewing them.
 
+## Team task management
+
+Apply the task-management and payroll-access migrations through `202610110005_liaison_payroll_access.sql` before enabling staff accounts. They add one account slot each for the liaison officer, engineer, and architect, project-linked tasks, owner-managed staff invitations, task realtime updates, and liaison payroll access. Public staff self-registration is disabled. The owner invites approved team members and assigns their roles in **Tasks → Manage team**; invited staff set their password and use the generic sign-in page. The liaison officer can manage payroll; the engineer and architect can access only their assigned tasks.
+
+Owners can use both the task list and monthly calendar, filter by status or assignee, and edit or delete tasks. Staff see only their assigned tasks and may update their status. Their titled staff memberships are excluded from the legacy site-staff data policies, so they do not receive project-management, payroll, or financial controls. Task reads and updates are enforced by authenticated database functions and row-level security.
+
 ## Testing
 
 Run the app's unit tests, type/build check, and lint with:
@@ -69,11 +75,12 @@ Retention becomes receivable one calendar month after a project is marked **Comp
 The client portal includes the contractual down payment in the remaining balance before progress billings are issued. Its amount is provided through the client-authorized `get_client_project_down_payment` RPC.
 The client project summary shows the contract price including approved change orders and excluding the special discount.
 
-Deploy the owner-verified invitation function to the linked project:
+Deploy the client invitation and staff-management functions to the linked project:
 
 ```powershell
 npx supabase functions deploy invite-client --project-ref your-project-ref
+npx supabase functions deploy manage-staff --project-ref your-project-ref --no-verify-jwt
 npx supabase config push --project-ref your-project-ref
 ```
 
-The function requires Supabase's `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` runtime secrets. Supabase supplies these project secrets to Edge Functions; never expose the service-role key to the browser. Email links use the origin that sent the request, falling back to `CLIENT_PORTAL_URL` if there is no origin. Configure the app's deployed URL under **Authentication → URL Configuration → Redirect URLs** before inviting clients. The localhost entries in `config.toml` are only for local development; clients cannot use a localhost link from their own devices.
+The functions require Supabase's `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` runtime secrets. Supabase supplies these project secrets to Edge Functions; never expose the service-role key to the browser. The staff-management function disables gateway JWT verification so browser preflight/authentication failures reach its CORS-enabled handler; it validates each bearer token with Supabase Auth and checks the caller's owner membership before listing or changing staff accounts. Staff roles are assigned when the owner invites a specific email, so a public registration cannot obtain staff access. Configure the app's deployed URL under **Authentication → URL Configuration → Redirect URLs** for staff and client email links. The localhost entries in `config.toml` are only for local development; users cannot use a localhost link from their own devices.

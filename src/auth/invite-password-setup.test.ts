@@ -18,6 +18,10 @@ describe('hasPendingInvitePasswordSetup', () => {
     expect(hasPendingInvitePasswordSetup({ hash: '#access_token=token&type=magiclink', search: '?projectId=project-1&clientPasswordSetup=1' })).toBe(true)
   })
 
+  it('detects password setup requested by a staff invitation', () => {
+    expect(hasPendingInvitePasswordSetup({ hash: '#access_token=token&type=invite', search: '?staffPasswordSetup=1' })).toBe(true)
+  })
+
   it('does not require setup for ordinary magic-link sign-ins', () => {
     expect(hasPendingInvitePasswordSetup({ hash: '#access_token=token&type=magiclink', search: '' })).toBe(false)
   })
@@ -30,5 +34,10 @@ describe('hasPendingInvitePasswordSetup', () => {
   it('clears invite callback query flags after password setup', () => {
     expect(clearPasswordSetupCallback({ pathname: '/', search: '?projectId=project-1&type=invite' }))
       .toBe('/?projectId=project-1')
+  })
+
+  it('clears the staff setup flag after password setup', () => {
+    expect(clearPasswordSetupCallback({ pathname: '/', search: '?staffPasswordSetup=1' }))
+      .toBe('/')
   })
 })

@@ -3,23 +3,23 @@ import type { Session } from '@supabase/supabase-js'
 import { ArrowRight, CircleAlert, LockKeyhole, LogOut, Mail } from 'lucide-react'
 import { isSupabaseConfigured, SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
 import { ClientPortalApp } from '../components/ClientPortalApp'
+import { StaffTaskApp } from '../components/StaffTaskApp'
 import { resolveWorkspaceAccessRoute } from './workspace-access'
 import { clearPasswordSetupCallback, hasPendingInvitePasswordSetup } from './invite-password-setup'
 import { clearPasswordRecoveryCallback, hasFailedPasswordRecovery, hasPendingPasswordRecovery } from './password-recovery'
-
-const ownerLoginEmail = 'cathreenjune@gmail.com'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [requiresPasswordSetup, setRequiresPasswordSetup] = useState(hasPendingInvitePasswordSetup)
   const [requiresPasswordRecovery, setRequiresPasswordRecovery] = useState(hasPendingPasswordRecovery)
   const [passwordRecoveryFailed, setPasswordRecoveryFailed] = useState(hasFailedPasswordRecovery)
-  const [showClientSignIn, setShowClientSignIn] = useState(false)
   const [sessionReady, setSessionReady] = useState(!isSupabaseConfigured)
   const [sessionError, setSessionError] = useState('')
   const [accessResult, setAccessResult] = useState<{
     userId: string
-    status: 'owner' | 'client' | 'denied' | 'error'
+    status: 'owner' | 'staff' | 'client' | 'denied' | 'error'
+    staffName?: string
+    staffTitle?: string
     error?: string
   } | null>(null)
 
@@ -67,6 +67,27 @@ export function AuthGate({ children }: { children: ReactNode }) {
         return
       }
       const organizationRole = membership?.role ?? null
+      let staffTitle: string | null = null
+      let staffName: string | null = null
+      if (organizationRole === 'site_staff') {
+        const { data: staffMembership, error: staffMembershipError } = await client
+          .from('organization_memberships')
+          .select('staff_title, staff_name')
+          .eq('organization_id', SAGACT_ORGANIZATION_ID)
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+        if (!active) return
+        if (staffMembershipError) {
+          setAccessResult({
+            userId: session.user.id,
+            status: 'error',
+            error: 'Staff task access is not set up yet. Ask the workspace owner to apply the task-management database migration.',
+          })
+          return
+        }
+        staffTitle = typeof staffMembership?.staff_title === 'string' ? staffMembership.staff_title : null
+        staffName = typeof staffMembership?.staff_name === 'string' ? staffMembership.staff_name : null
+      }
       const requestedClientProjectId = new URLSearchParams(window.location.search).get('projectId')
       let hasRequestedClientAccess = false
       if (organizationRole === 'owner' && requestedClientProjectId) {
@@ -89,12 +110,17 @@ export function AuthGate({ children }: { children: ReactNode }) {
         organizationRole,
         hasRequestedClientAccess,
         organizationRole === 'owner' && Boolean(requestedClientProjectId),
+        staffTitle === 'liaison_officer'
+          || staffTitle === 'engineer'
+          || staffTitle === 'architect',
       )
       if (organizationRole !== null) {
         setAccessResult({
           userId: session.user.id,
           status: membershipRoute,
-          error: membershipRoute === 'denied' ? 'Staff workspace access is not enabled in this app yet.' : undefined,
+          staffName: staffName ?? undefined,
+          staffTitle: staffTitle ?? undefined,
+          error: membershipRoute === 'denied' ? 'This account is not assigned an enabled workspace role.' : undefined,
         })
         return
       }
@@ -137,7 +163,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
       onCancel={() => {
         window.history.replaceState(null, '', clearPasswordRecoveryCallback())
         setPasswordRecoveryFailed(false)
-        setShowClientSignIn(true)
       }}
     />
   }
@@ -149,11 +174,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
         onCancel={() => {
           window.history.replaceState(null, '', clearPasswordRecoveryCallback())
           setRequiresPasswordRecovery(false)
-          setShowClientSignIn(true)
         }}
       />
     }
-    return <SignInScreen initialError={sessionError} initialClientSignIn={showClientSignIn} />
+    return <SignInScreen initialError={sessionError} />
   }
 
   const currentAccess = accessResult?.userId === session.user.id ? accessResult : null
@@ -161,44 +185,49 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return <AuthLoading message="Verifying workspace access" />
   }
 
-  if (currentAccess.status !== 'owner') {
-    if (currentAccess.status === 'client') {
-      if (requiresPasswordRecovery) {
-        return <PasswordRecoveryScreen
-          sessionAvailable
-          onComplete={() => {
-            window.history.replaceState(null, '', clearPasswordRecoveryCallback())
-            setRequiresPasswordRecovery(false)
-          }}
-          onCancel={() => {
-            window.history.replaceState(null, '', clearPasswordRecoveryCallback())
-            setRequiresPasswordRecovery(false)
-            setShowClientSignIn(true)
-          }}
-        />
-      }
-      if (requiresPasswordSetup) {
-        return <PasswordSetupScreen onComplete={() => {
+  if (currentAccess.status === 'client' || currentAccess.status === 'staff') {
+    if (requiresPasswordRecovery) {
+      return <PasswordRecoveryScreen
+        sessionAvailable
+        onComplete={() => {
+          window.history.replaceState(null, '', clearPasswordRecoveryCallback())
+          setRequiresPasswordRecovery(false)
+        }}
+        onCancel={() => {
+          window.history.replaceState(null, '', clearPasswordRecoveryCallback())
+          setRequiresPasswordRecovery(false)
+        }}
+      />
+    }
+    if (requiresPasswordSetup) {
+      return <PasswordSetupScreen
+        accountType={currentAccess.status}
+        onComplete={() => {
           window.history.replaceState(null, '', clearPasswordSetupCallback())
           setRequiresPasswordSetup(false)
-        }} />
-      }
-      const firstName = session.user.user_metadata.first_name
-      return <ClientPortalApp userId={session.user.id} firstName={typeof firstName === 'string' ? firstName : ''} />
+        }}
+      />
     }
-    return <AccessDenied error={currentAccess.error ?? ''} />
+    if (currentAccess.status === 'staff') {
+      return <StaffTaskApp
+        userId={session.user.id}
+        displayName={currentAccess.staffName ?? (typeof session.user.user_metadata.full_name === 'string' ? session.user.user_metadata.full_name : '')}
+        staffTitle={currentAccess.staffTitle ?? ''}
+      />
+    }
+    const firstName = session.user.user_metadata.first_name
+    return <ClientPortalApp userId={session.user.id} firstName={typeof firstName === 'string' ? firstName : ''} />
   }
+  if (currentAccess.status !== 'owner') return <AccessDenied error={currentAccess.error ?? ''} />
 
   return children
 }
 
-function SignInScreen({ configurationMissing = false, initialError = '', initialClientSignIn = false }: { configurationMissing?: boolean; initialError?: string; initialClientSignIn?: boolean }) {
-  const [email, setEmail] = useState(initialClientSignIn ? '' : ownerLoginEmail)
+function SignInScreen({ configurationMissing = false, initialError = '' }: { configurationMissing?: boolean; initialError?: string }) {
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(initialError)
   const [message, setMessage] = useState('')
-  const [clientSignIn, setClientSignIn] = useState(initialClientSignIn)
-  const [clientMagicLink, setClientMagicLink] = useState(false)
   const [forgotPassword, setForgotPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -210,7 +239,7 @@ function SignInScreen({ configurationMissing = false, initialError = '', initial
     setMessage('')
     setIsSubmitting(true)
     try {
-      if (clientSignIn && forgotPassword) {
+      if (forgotPassword) {
         const trimmedEmail = email.trim()
         if (!trimmedEmail) {
           setError('Enter your email address to receive a password reset link.')
@@ -222,26 +251,14 @@ function SignInScreen({ configurationMissing = false, initialError = '', initial
         })
         if (resetError) throw resetError
         setMessage(`Password reset link sent to ${trimmedEmail}. Check your inbox.`)
-      } else if (clientSignIn && clientMagicLink) {
-        const { error: signInError } = await supabase.auth.signInWithOtp({
-          email: email.trim(),
-          options: {
-            emailRedirectTo: window.location.origin,
-            shouldCreateUser: false,
-          },
-        })
-        if (signInError) throw signInError
-        setMessage(`Sign-in link sent to ${email.trim()}. Check your inbox.`)
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
         if (signInError) throw signInError
       }
     } catch {
-      setError(clientSignIn && forgotPassword
+      setError(forgotPassword
         ? 'Could not send a password reset link. Check the email address and try again.'
-        : clientSignIn && clientMagicLink
-          ? 'Could not send a sign-in link. Check the email address and try again.'
-          : 'The email or password is incorrect. Check your details and try again.')
+        : 'The email or password is incorrect. Check your details and try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -251,65 +268,40 @@ function SignInScreen({ configurationMissing = false, initialError = '', initial
     <section className="auth-panel" aria-labelledby="auth-title">
       <AuthCardBrand />
       <div className="auth-heading">
-        <h1 id="auth-title">{clientSignIn ? 'Client sign in' : 'Welcome back'}</h1>
-        <p>{clientSignIn ? (forgotPassword ? 'Reset your client password' : 'Access your shared project information') : 'Login to your account.'}</p>
+        <h1 id="auth-title">{forgotPassword ? 'Reset your password' : 'Welcome back'}</h1>
+        <p>{forgotPassword ? 'Enter your email address and we’ll send you a reset link.' : 'Log in to your account.'}</p>
       </div>
 
       {configurationMissing ? <div className="auth-notice" role="status"><CircleAlert size={17} /><span>Supabase isn’t configured. Add the project URL and public key to <code>.env.local</code>, then restart the dev server.</span></div> : <>
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="auth-field">Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" required /></label>
-          {(!clientSignIn || (!clientMagicLink && !forgotPassword)) && <label className="auth-field">Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>}
+          {!forgotPassword && <label className="auth-field">Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>}
           {error && <p className="auth-error" role="alert">{error}</p>}
           {message && <p className="auth-success" role="status">{message}</p>}
           <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
             {isSubmitting
-              ? clientSignIn && forgotPassword
-                ? 'Sending reset link…'
-                : clientSignIn && clientMagicLink
-                  ? 'Sending link…'
-                  : 'Signing in…'
-              : clientSignIn && forgotPassword
-                ? 'Send reset link'
-                : clientSignIn && clientMagicLink
-                  ? 'Email me a sign-in link'
-                  : 'Sign in'}
-            {!isSubmitting && (clientSignIn && (forgotPassword || clientMagicLink) ? <Mail size={16} /> : <ArrowRight size={16} />)}
+              ? forgotPassword ? 'Sending reset link…' : 'Signing in…'
+              : forgotPassword ? 'Send reset link' : 'Sign in'}
+            {!isSubmitting && (forgotPassword ? <Mail size={16} /> : <ArrowRight size={16} />)}
           </button>
         </form>
-        {clientSignIn && <button className="auth-mode-toggle" type="button" onClick={() => {
-          setForgotPassword(false)
-          setClientMagicLink((current) => !current)
-          setError('')
-          setMessage('')
-        }}>
-          {clientMagicLink ? 'Sign in with your password' : 'Forgot your password? Email a sign-in link'}
-        </button>}
-        {clientSignIn && <button className="auth-mode-toggle" type="button" onClick={() => {
-          setForgotPassword((current) => !current)
-          setClientMagicLink(false)
-          setError('')
-          setMessage('')
-        }}>
-          {forgotPassword ? 'Back to sign in' : 'Forgot your password? Send a reset link'}
-        </button>}
-        <button className="auth-mode-toggle" type="button" onClick={() => {
-          const nextClientSignIn = !clientSignIn
-          setClientSignIn(nextClientSignIn)
-          setEmail(nextClientSignIn ? '' : ownerLoginEmail)
-          setClientMagicLink(false)
-          setForgotPassword(false)
-          setError('')
-          setMessage('')
-        }}>
-          {clientSignIn ? 'Workspace owner? Sign in here' : 'Client? Sign in to your project'}
-        </button>
+        <div className="auth-account-actions">
+          <button className="auth-mode-toggle" type="button" onClick={() => {
+            setForgotPassword((current) => !current)
+            setPassword('')
+            setError('')
+            setMessage('')
+          }}>
+            {forgotPassword ? 'Back to sign in' : 'Forgot your password?'}
+          </button>
+        </div>
       </>}
       {configurationMissing && <div className="auth-dev-mode">Development mode</div>}
     </section>
   </AuthLayout>
 }
 
-function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
+function PasswordSetupScreen({ accountType, onComplete }: { accountType: 'client' | 'staff'; onComplete: () => void }) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [password, setPassword] = useState('')
@@ -346,8 +338,9 @@ function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
       })
       if (updateError) throw updateError
       onComplete()
-    } catch {
-      setError('Could not save your password. The invitation link may have expired; ask your project contact to resend it.')
+    } catch (setupError) {
+      const details = setupError instanceof Error ? ` ${setupError.message}` : ''
+      setError(`Could not save your password. The invitation link may have expired; ask your workspace owner to resend it.${details}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -358,7 +351,7 @@ function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
       <AuthCardBrand />
       <div className="auth-heading">
         <h1 id="password-setup-title">Create your password</h1>
-        <p>Set a password to access your shared project dashboard whenever you sign in.</p>
+        <p>{accountType === 'staff' ? 'Set a password to access your SAGACT team workspace.' : 'Set a password to access your shared project dashboard whenever you sign in.'}</p>
       </div>
       <form className="auth-form" onSubmit={(event) => { void handleSubmit(event) }}>
         <label className="auth-field">First name<input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required /></label>
@@ -415,7 +408,7 @@ function PasswordRecoveryScreen({ sessionAvailable, onComplete, onCancel }: {
       <div className="auth-heading">
         <h1 id="password-recovery-title">{sessionAvailable ? 'Reset your password' : 'Password reset link unavailable'}</h1>
         <p>{sessionAvailable
-          ? 'Choose a new password for your client account.'
+          ? 'Choose a new password for your account.'
           : 'This password reset link is invalid, expired, or already used. Request a new link to continue.'}</p>
       </div>
       {sessionAvailable ? <form className="auth-form" onSubmit={(event) => { void handleSubmit(event) }}>
@@ -426,7 +419,7 @@ function PasswordRecoveryScreen({ sessionAvailable, onComplete, onCancel }: {
           {isSubmitting ? 'Saving password…' : 'Set new password'}{!isSubmitting && <ArrowRight size={16} />}
         </button>
         <button className="auth-mode-toggle" type="button" onClick={onCancel}>Cancel password reset</button>
-      </form> : <button className="button button-secondary auth-submit" type="button" onClick={onCancel}>Return to client sign in</button>}
+      </form> : <button className="button button-secondary auth-submit" type="button" onClick={onCancel}>Return to sign in</button>}
     </section>
   </AuthLayout>
 }

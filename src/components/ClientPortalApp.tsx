@@ -10,8 +10,11 @@ import { calculateReceivablesAging } from '../finance/receivables-aging'
 import { loadReadClientBillingNotificationIds, saveReadClientBillingNotificationIds } from '../auth/client-billing-notifications'
 import { getRetentionDueDate, isRetentionDue } from '../finance/retention-due'
 import { formatBillingNumber } from '../lib/billing-number'
+import { formatChangeOrderNumber } from '../lib/change-order-number'
+import { respondToProjectChangeOrder } from '../data/change-orders'
+import { useToast } from './toast-context'
 
-type PortalTab = 'Billing & payments' | 'Documents'
+type PortalTab = 'Billing & payments' | 'Change orders' | 'Documents'
 type ClientBillingNotification = {
   kind: 'billing' | 'down-payment' | 'retention'
   id: string
@@ -59,6 +62,7 @@ function MilestoneStatusIcon({ status }: { status: ClientPortalProject['mileston
 }
 
 export function ClientPortalApp({ userId, firstName }: { userId: string; firstName: string }) {
+  const { showToast } = useToast()
   const requestedProjectId = useMemo(() => new URLSearchParams(window.location.search).get('projectId'), [])
   const [projects, setProjects] = useState<ClientPortalProject[]>([])
   const [selectedId, setSelectedId] = useState('')
@@ -66,6 +70,8 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [documentError, setDocumentError] = useState('')
+  const [changeOrderError, setChangeOrderError] = useState('')
+  const [respondingToChangeOrder, setRespondingToChangeOrder] = useState('')
   const [downloadingDocument, setDownloadingDocument] = useState('')
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const [readNotificationState, setReadNotificationState] = useState(() => {
@@ -311,11 +317,26 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
         link.target = '_blank'
         link.rel = 'noopener noreferrer'
       }
+
       link.click()
     } catch {
       setDocumentError(`Could not ${download ? 'download' : 'open'} this shared document. Please try again.`)
     } finally {
       setDownloadingDocument('')
+    }
+  }
+
+  const respondToChangeOrder = async (changeOrderId: string, approved: boolean) => {
+    setChangeOrderError('')
+    setRespondingToChangeOrder(changeOrderId)
+    try {
+      await respondToProjectChangeOrder(changeOrderId, approved)
+      showToast(approved ? 'Change order approved.' : 'Change order declined.', 'update')
+      await loadProjects()
+    } catch (responseError) {
+      setChangeOrderError(responseError instanceof Error ? responseError.message : 'Could not submit your change-order decision.')
+    } finally {
+      setRespondingToChangeOrder('')
     }
   }
 
@@ -392,6 +413,12 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
                 <span className="client-milestone-copy">
                   <strong>{milestone.name}</strong>
                   <small>{isMilestoneOverdue(milestone) ? 'Overdue' : milestoneStatusLabel(milestone.status)}</small>
+                  <span className="client-milestone-progress">
+                    <span className="client-milestone-progress-track" role="progressbar" aria-label={`${milestone.name} completion`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={milestone.completionPercent}>
+                      <span style={{ width: `${milestone.completionPercent}%` }} />
+                    </span>
+                    <small>{milestone.completionPercent}% complete</small>
+                  </span>
                 </span>
                 <span className="client-milestone-date">
                   {milestone.status === 'complete' && milestone.actualDate
@@ -404,12 +431,55 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
             ))}
           </ol> : <p className="client-empty-note">No project milestones have been shared yet.</p>}
         </section>
-        <nav className="client-portal-tabs" aria-label="Project information">{(['Billing & payments', 'Documents'] as PortalTab[]).map((item) => <button type="button" key={item} className={tab === item ? 'is-selected' : ''} onClick={() => setTab(item)}>{item}</button>)}</nav>
+        <nav className="client-portal-tabs" aria-label="Project information">{(['Billing & payments', 'Change orders', 'Documents'] as PortalTab[]).map((item) => <button type="button" key={item} className={tab === item ? 'is-selected' : ''} onClick={() => setTab(item)}>{item}{item === 'Change orders' && project.changeOrders.some((order) => order.status === 'pending_approval') ? ' · Review' : ''}</button>)}</nav>
         {tab === 'Billing & payments' && <div className="client-finance-grid">
           <section className="client-portal-section"><div className="section-kicker">Issued to your project</div><h2>Billings</h2>{project.billings.length || project.downPaymentAmount > 0 ? <div className="client-record-list">{project.downPaymentAmount > 0 && <div className="client-finance-row"><span className="client-record-icon"><FileText size={16} /></span><span><strong>Contract down payment</strong><small>Contractual down payment</small></span><strong className="client-record-amount">{money.format(projectOutstandingItems.find((item) => item.id === `down-payment:${project.id}`)?.outstandingAmount ?? 0)}</strong></div>}{project.billings.map((billing) => <div className="client-finance-row" key={billing.id}><span className="client-record-icon"><FileText size={16} /></span><span><strong>Billing #{formatBillingNumber(billing.number)}</strong><small>{formatDate(billing.issuedAt)} · {billing.progress}% complete{billing.dueAt ? ` · due ${formatDate(billing.dueAt)}` : ''}</small></span><strong className="client-record-amount">{money.format(billing.amount)}</strong><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`Preview billing ${formatBillingNumber(billing.number)}`} title="Preview billing PDF" onClick={() => { void openBillingPdf({ projectName: project.name, clientName: project.clientName, location: project.location, billingNumber: billing.number, amount: billing.amount, progressPercent: billing.progress, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }) }}><Eye size={15} /></button><button type="button" className="client-download-button" aria-label={`Download billing ${formatBillingNumber(billing.number)}`} title="Download billing PDF" onClick={() => { void downloadBillingPdf({ projectName: project.name, clientName: project.clientName, location: project.location, billingNumber: billing.number, amount: billing.amount, progressPercent: billing.progress, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }) }}><Download size={15} /></button></div></div>)}</div> : <p className="client-empty-note">No billings have been issued yet.</p>}</section>
-          <section className="client-portal-section"><div className="section-kicker">Recorded payments</div><h2>Payment history</h2>{project.payments.length ? <div className="client-record-list client-payment-history-list" role="region" aria-label="Payment history" tabIndex={0}>{project.payments.map((payment) => <div className="client-finance-row" key={payment.id}><span className="client-record-icon"><ArrowDownLeft size={16} /></span><span><strong>{payment.receiptNumber || 'Payment received'}</strong><small>{formatDate(payment.receivedAt)} · {payment.paymentMode.replaceAll('_', ' ')} · {payment.reference || payment.payerName}</small></span><strong className="client-record-amount">{money.format(payment.amount)}</strong><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`Preview receipt ${payment.receiptNumber}`} title="Preview payment receipt" onClick={() => { void openPaymentReceiptPdf({ projectName: project.name, payerName: payment.payerName, receiptNumber: payment.receiptNumber, amount: payment.amount, paymentType: payment.paymentType, paymentMode: payment.paymentMode, reference: payment.reference }) }}><Eye size={15} /></button><button type="button" className="client-download-button" aria-label={`Download receipt ${payment.receiptNumber}`} title="Download payment receipt" onClick={() => { void downloadPaymentReceiptPdf({ projectName: project.name, payerName: payment.payerName, receiptNumber: payment.receiptNumber, amount: payment.amount, paymentType: payment.paymentType, paymentMode: payment.paymentMode, reference: payment.reference }) }}><Download size={15} /></button></div></div>)}</div> : <p className="client-empty-note">No payments have been recorded yet.</p>}</section>
+          <section className="client-portal-section"><h2>Payment history</h2>{project.payments.length ? <div className="client-record-list client-payment-history-list" role="region" aria-label="Payment history" tabIndex={0}>{project.payments.map((payment) => <div className="client-finance-row" key={payment.id}><span className="client-record-icon"><ArrowDownLeft size={16} /></span><span><strong>{payment.receiptNumber || 'Payment received'}</strong><small>{formatDate(payment.receivedAt)} · {payment.paymentMode.replaceAll('_', ' ')} · {payment.reference || payment.payerName}</small></span><strong className="client-record-amount">{money.format(payment.amount)}</strong><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`Preview receipt ${payment.receiptNumber}`} title="Preview payment receipt" onClick={() => { void openPaymentReceiptPdf({ projectName: project.name, payerName: payment.payerName, receiptNumber: payment.receiptNumber, amount: payment.amount, receivedDate: payment.receivedAt, paymentType: payment.paymentType, paymentMode: payment.paymentMode, reference: payment.reference }) }}><Eye size={15} /></button><button type="button" className="client-download-button" aria-label={`Download receipt ${payment.receiptNumber}`} title="Download payment receipt" onClick={() => { void downloadPaymentReceiptPdf({ projectName: project.name, payerName: payment.payerName, receiptNumber: payment.receiptNumber, amount: payment.amount, receivedDate: payment.receivedAt, paymentType: payment.paymentType, paymentMode: payment.paymentMode, reference: payment.reference }) }}><Download size={15} /></button></div></div>)}</div> : <p className="client-empty-note">No payments have been recorded yet.</p>}</section>
         </div>}
-        {tab === 'Documents' && <section className="client-portal-section client-documents-section"><div className="section-kicker">Shared project files</div><h2>Documents</h2>{documentError && <p className="form-error" role="alert">{documentError}</p>}{project.documents.length ? <div className="client-record-list">{project.documents.map((document) => <div className="client-finance-row" key={document.id}><span className="client-record-icon"><FileText size={16} /></span><span><strong>{document.fileName}</strong><small>{document.documentType.replaceAll('_', ' ')} · shared {formatDate(document.createdAt)}</small></span><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`View ${document.fileName}`} title="View document" disabled={downloadingDocument === document.id} onClick={() => { void openDocument(document) }}>{downloadingDocument === document.id ? <RefreshCw size={15} /> : <Eye size={15} />}</button><button type="button" className="client-download-button" aria-label={`Download ${document.fileName}`} title="Download document" disabled={downloadingDocument === document.id} onClick={() => { void openDocument(document, true) }}><Download size={15} /></button></div></div>)}</div> : <p className="client-empty-note">No documents have been shared yet.</p>}</section>}
+        {tab === 'Change orders' && <section className={`client-portal-section client-change-orders-section${project.changeOrders.length ? '' : ' is-empty'}`}>
+          <div className="section-kicker">Additional work</div>
+          <h2>Change orders</h2>
+          {project.changeOrders.length > 0 && <p className="client-empty-note">View or download the change-order PDF. Approving records your sign-off; reject it if changes are needed.</p>}
+          {changeOrderError && <p className="form-error" role="alert">{changeOrderError}</p>}
+          {documentError && <p className="form-error" role="alert">{documentError}</p>}
+          {project.changeOrders.length > 0
+            ? <div className="client-record-list">{project.changeOrders.map((order) => {
+              const pdfStoragePath = order.pdfStoragePath
+              return <article className="client-change-order-row" key={order.id}>
+                <div className="client-change-order-copy">
+                  <strong>{formatChangeOrderNumber(project.prefix, order.orderNumber)} · {order.title}</strong>
+                  <small>{order.status === 'pending_approval' ? 'Waiting for your decision' : 'Approved'} · {formatDate(order.createdAt)}</small>
+                </div>
+                <strong className="client-record-amount">{money.format(order.amount)}</strong>
+                {pdfStoragePath && <div className="client-download-actions">
+                  <button type="button" className="client-download-button" aria-label={`View change order ${formatChangeOrderNumber(project.prefix, order.orderNumber)} PDF`} title="View change-order PDF" disabled={downloadingDocument === order.id} onClick={() => { void openDocument({ id: order.id, fileName: `${formatChangeOrderNumber(project.prefix, order.orderNumber)}.pdf`, storagePath: pdfStoragePath, createdAt: order.createdAt, documentType: 'change order' }) }}>{downloadingDocument === order.id ? <RefreshCw size={15} /> : <Eye size={15} />}</button>
+                  <button type="button" className="client-download-button" aria-label={`Download change order ${formatChangeOrderNumber(project.prefix, order.orderNumber)} PDF`} title="Download change-order PDF" disabled={downloadingDocument === order.id} onClick={() => { void openDocument({ id: order.id, fileName: `${formatChangeOrderNumber(project.prefix, order.orderNumber)}.pdf`, storagePath: pdfStoragePath, createdAt: order.createdAt, documentType: 'change order' }, true) }}><Download size={15} /></button>
+                </div>}
+                {order.status === 'pending_approval' && <div className="client-change-order-actions">
+                  <button type="button" className="button button-secondary" onClick={() => { void respondToChangeOrder(order.id, false) }} disabled={respondingToChangeOrder !== ''}>Reject</button>
+                  <button type="button" className="button button-primary" onClick={() => { void respondToChangeOrder(order.id, true) }} disabled={respondingToChangeOrder !== ''}>{respondingToChangeOrder === order.id ? 'Submitting…' : 'Approve & sign off'}</button>
+                </div>}
+              </article>
+            })}</div>
+            : <div className="client-change-order-empty">No change orders at this time.</div>}
+        </section>}
+        {tab === 'Documents' && <section className={`client-portal-section client-documents-section${project.documents.length ? '' : ' is-empty'}`}>
+          <div className="section-kicker">Shared project files</div>
+          <h2>Documents</h2>
+          {documentError && <p className="form-error" role="alert">{documentError}</p>}
+          {project.documents.length > 0
+            ? <div className="client-record-list">{project.documents.map((document) => (
+              <div className="client-finance-row" key={document.id}>
+                <span className="client-record-icon"><FileText size={16} /></span>
+                <span><strong>{document.fileName}</strong><small>{document.documentType.replaceAll('_', ' ')} · shared {formatDate(document.createdAt)}</small></span>
+                <div className="client-download-actions">
+                  <button type="button" className="client-download-button" aria-label={`View ${document.fileName}`} title="View document" disabled={downloadingDocument === document.id} onClick={() => { void openDocument(document) }}>{downloadingDocument === document.id ? <RefreshCw size={15} /> : <Eye size={15} />}</button>
+                  <button type="button" className="client-download-button" aria-label={`Download ${document.fileName}`} title="Download document" disabled={downloadingDocument === document.id} onClick={() => { void openDocument(document, true) }}><Download size={15} /></button>
+                </div>
+              </div>
+            ))}</div>
+            : <div className="client-change-order-empty">No documents at this time.</div>}
+        </section>}
       </>}
     </div>
   </main>

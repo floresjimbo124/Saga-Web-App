@@ -8,10 +8,38 @@ import type { ProjectMilestone } from './project-milestones'
 export type ProjectStatus = 'planning' | 'active' | 'on_hold' | 'completed' | 'closed'
 export type ProjectHealthStatus = 'on_track' | 'needs_attention'
 export type ProjectExpenseCategory = 'materials' | 'labor' | 'operational_expenses' | 'payroll' | 'sub_contract' | 'rent' | 'equipment' | 'transport' | 'permits' | 'other'
+export type ProjectChangeOrderStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'void'
+
+export type ProjectChangeOrder = {
+  id: string
+  projectId: string
+  orderNumber: number
+  pdfStoragePath: string | null
+  items: ProjectChangeOrderItem[]
+  contractTimeAdjustmentDays: number
+  contractId: string | null
+  contractProgress: number
+  title: string
+  description: string
+  amount: number
+  retentionRatePercent?: number
+  status: ProjectChangeOrderStatus
+  createdAt: string
+  decidedAt: string | null
+  decisionNote: string
+}
+
+export type ProjectChangeOrderItem = {
+  item: string
+  description: string
+  remarks: string
+  cost: number
+}
 
 export type PortfolioExpense = {
   id: string
   projectId: string
+  contractId: string | null
   date: string
   category: ProjectExpenseCategory
   description: string
@@ -32,6 +60,7 @@ export type PortfolioProject = {
   specialDiscount: number
   costBudget: number | null
   estimatedCostToComplete: number | null
+  changeOrders: ProjectChangeOrder[]
   approvedChangeOrders: { amount: number; approved: boolean; retentionRatePercent?: number }[]
   billed: number
   collected: number
@@ -56,6 +85,7 @@ export type PortfolioProject = {
 export type PortfolioPayment = {
   id: string
   projectId: string
+  contractId: string | null
   payer: string
   date: string
   amount: number
@@ -81,6 +111,7 @@ export type CreateProjectInput = {
 
 export type RecordProjectExpenseInput = {
   projectId: string
+  contractId?: string | null
   date: string
   category: ProjectExpenseCategory
   description: string
@@ -116,7 +147,7 @@ function retentionMethod(method: string | undefined): PortfolioProject['retentio
 
 export async function loadPortfolio() {
   const client = requireSupabase()
-  const [projectResult, clientResult, termResult, billingResult, paymentResult, allocationResult, expenseResult, retentionResult, milestoneResult, changeOrderResult, forecastResult] = await Promise.all([
+  const [projectResult, clientResult, termResult, billingResult, paymentResult, allocationResult, expenseResult, retentionResult, milestoneResult, changeOrderResult, contractResult, forecastResult, payrollEmployeeResult, payrollEntryResult] = await Promise.all([
     client.from('projects')
       .select('id, name, prefix, location, deadline, status, health_status, progress_percent, client_id, completed_at, created_at, updated_at')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
@@ -128,11 +159,11 @@ export async function loadPortfolio() {
       .select('project_id, contract_amount, special_discount, down_payment_percent, retention_rate_percent, retention_method')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
     client.from('progress_billings')
-      .select('id, project_id, billing_number, amount_for_billing, issued_at, due_at, created_at')
+      .select('id, project_id, contract_id, billing_number, amount_for_billing, issued_at, due_at, created_at')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
       .eq('status', 'issued'),
     client.from('payments')
-      .select('id, project_id, payer_name, received_at, created_at, amount, payment_type, payment_mode, reference, receipt_number')
+      .select('id, project_id, contract_id, payer_name, received_at, created_at, amount, payment_type, payment_mode, reference, receipt_number')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
       .is('voided_at', null)
       .order('received_at', { ascending: false }),
@@ -140,7 +171,7 @@ export async function loadPortfolio() {
       .select('payment_id, billing_id, amount')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
     client.from('project_expenses')
-      .select('id, project_id, expense_date, category, description, vendor, amount')
+      .select('id, project_id, contract_id, expense_date, category, description, vendor, amount')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
       .order('expense_date', { ascending: false })
       .order('created_at', { ascending: false }),
@@ -148,35 +179,82 @@ export async function loadPortfolio() {
       .select('project_id, entry_type, amount')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
     client.from('project_milestones')
-      .select('id, project_id, name, planned_date, actual_date, status, client_visible')
+      .select('id, project_id, name, start_date, planned_date, actual_date, completion_percent, status, client_visible')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
       .order('planned_date', { ascending: true, nullsFirst: false }),
     client.from('project_change_orders')
-      .select('project_id, amount, retention_rate_percent')
+      .select('id, project_id, order_number, title, description, amount, line_items, contract_time_adjustment_days, retention_rate_percent, status, created_at, decided_at, decision_note, pdf_storage_path')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
-      .eq('status', 'approved'),
+      .order('created_at', { ascending: false }),
+    client.from('project_contracts')
+      .select('id, project_id, change_order_id, progress_percent')
+      .eq('organization_id', SAGACT_ORGANIZATION_ID),
     client.from('project_cost_forecasts')
       .select('project_id, cost_budget, estimated_cost_to_complete')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
+    client.from('payroll_employees')
+      .select('id, full_name')
+      .eq('organization_id', SAGACT_ORGANIZATION_ID),
+    client.from('payroll_weekly_entries')
+      .select('id, employee_id, week_start, project_id, gross_pay, finalized_at')
+      .eq('organization_id', SAGACT_ORGANIZATION_ID)
+      .not('project_id', 'is', null)
+      .not('finalized_at', 'is', null),
   ])
 
-  for (const result of [projectResult, clientResult, termResult, billingResult, paymentResult, allocationResult, expenseResult, retentionResult, milestoneResult, changeOrderResult, forecastResult]) {
+  for (const result of [projectResult, clientResult, termResult, billingResult, paymentResult, allocationResult, expenseResult, retentionResult, milestoneResult, changeOrderResult, contractResult, forecastResult, payrollEmployeeResult, payrollEntryResult]) {
     throwIfError(result.error)
   }
 
   const clientsById = new Map((clientResult.data ?? []).map((item) => [item.id, item.name]))
   const clientEmailsById = new Map((clientResult.data ?? []).map((item) => [item.id, item.email ?? '']))
+  const payrollEmployeesById = new Map((payrollEmployeeResult.data ?? []).map((item) => [item.id, item.full_name]))
   const termsByProject = new Map((termResult.data ?? []).map((item) => [item.project_id, item]))
   const forecastsByProject = new Map((forecastResult.data ?? []).map((item) => [item.project_id, item]))
+  const contractsByChangeOrder = new Map((contractResult.data ?? []).map((contract) => [contract.change_order_id, contract]))
   const changeOrdersByProject = new Map<string, { amount: number; approved: boolean; retentionRatePercent?: number }[]>()
+  const allChangeOrdersByProject = new Map<string, ProjectChangeOrder[]>()
   for (const order of changeOrderResult.data ?? []) {
-    const approvedOrders = changeOrdersByProject.get(order.project_id) ?? []
-    approvedOrders.push({
+    const changeOrder: ProjectChangeOrder = {
+      id: order.id,
+      projectId: order.project_id,
+      orderNumber: order.order_number,
+      pdfStoragePath: order.pdf_storage_path ?? null,
+      items: ((order.line_items ?? []) as {
+        item: string
+        description?: string | null
+        remarks?: string | null
+        cost: number | string
+      }[]).map((item) => ({
+        item: item.item,
+        description: item.description ?? '',
+        remarks: item.remarks ?? '',
+        cost: Number(item.cost),
+      })),
+      contractTimeAdjustmentDays: order.contract_time_adjustment_days ?? 0,
+      contractId: contractsByChangeOrder.get(order.id)?.id ?? null,
+      contractProgress: Number(contractsByChangeOrder.get(order.id)?.progress_percent ?? 0),
+      title: order.title,
+      description: order.description ?? '',
       amount: Number(order.amount),
-      approved: true,
       retentionRatePercent: order.retention_rate_percent === null ? undefined : Number(order.retention_rate_percent),
-    })
-    changeOrdersByProject.set(order.project_id, approvedOrders)
+      status: order.status,
+      createdAt: order.created_at,
+      decidedAt: order.decided_at,
+      decisionNote: order.decision_note ?? '',
+    }
+    const projectChangeOrders = allChangeOrdersByProject.get(order.project_id) ?? []
+    projectChangeOrders.push(changeOrder)
+    allChangeOrdersByProject.set(order.project_id, projectChangeOrders)
+    if (order.status === 'approved') {
+      const approvedOrders = changeOrdersByProject.get(order.project_id) ?? []
+      approvedOrders.push({
+        amount: changeOrder.amount,
+        approved: true,
+        retentionRatePercent: changeOrder.retentionRatePercent,
+      })
+      changeOrdersByProject.set(order.project_id, approvedOrders)
+    }
   }
   const billedByProject = new Map<string, number>()
   for (const billing of billingResult.data ?? []) {
@@ -193,6 +271,7 @@ export async function loadPortfolio() {
     return {
       id: payment.id,
       projectId: payment.project_id,
+      contractId: payment.contract_id ?? null,
       payer: payment.payer_name,
       date: payment.received_at,
       amount: Number(payment.amount),
@@ -213,6 +292,7 @@ export async function loadPortfolio() {
     expenses.push({
       id: expense.id,
       projectId: expense.project_id,
+      contractId: expense.contract_id ?? null,
       date: expense.expense_date,
       category: expense.category,
       description: expense.description,
@@ -221,6 +301,27 @@ export async function loadPortfolio() {
     })
     expensesByProject.set(expense.project_id, expenses)
     outflowByProject.set(expense.project_id, (outflowByProject.get(expense.project_id) ?? 0) + amount)
+  }
+  for (const payrollEntry of payrollEntryResult.data ?? []) {
+    if (!payrollEntry.project_id) continue
+    const weekEnd = new Date(`${payrollEntry.week_start}T12:00:00`)
+    weekEnd.setDate(weekEnd.getDate() + 6)
+    const expenseDate = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth() + 1).padStart(2, '0')}-${String(weekEnd.getDate()).padStart(2, '0')}`
+    const weekLabel = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' })
+    const amount = Number(payrollEntry.gross_pay)
+    const expenses = expensesByProject.get(payrollEntry.project_id) ?? []
+    expenses.push({
+      id: `payroll:${payrollEntry.id}`,
+      projectId: payrollEntry.project_id,
+      contractId: null,
+      date: expenseDate,
+      category: 'payroll',
+      description: `Payroll · ${payrollEmployeesById.get(payrollEntry.employee_id) ?? 'Employee'} (${weekLabel.format(new Date(`${payrollEntry.week_start}T12:00:00`))}–${weekLabel.format(weekEnd)})`,
+      vendor: '',
+      amount,
+    })
+    expensesByProject.set(payrollEntry.project_id, expenses)
+    outflowByProject.set(payrollEntry.project_id, (outflowByProject.get(payrollEntry.project_id) ?? 0) + amount)
   }
 
   const heldByProject = new Map<string, number>()
@@ -239,8 +340,10 @@ export async function loadPortfolio() {
     projectMilestones.push({
       id: milestone.id,
       name: milestone.name,
+      startDate: milestone.start_date,
       plannedDate: milestone.planned_date,
       actualDate: milestone.actual_date,
+      completionPercent: milestone.completion_percent,
       status: milestone.status,
       clientVisible: milestone.client_visible,
     })
@@ -298,6 +401,7 @@ export async function loadPortfolio() {
       specialDiscount,
       costBudget: forecast ? Number(forecast.cost_budget) : null,
       estimatedCostToComplete: forecast ? Number(forecast.estimated_cost_to_complete) : null,
+      changeOrders: allChangeOrdersByProject.get(project.id) ?? [],
       approvedChangeOrders: changeOrdersByProject.get(project.id) ?? [],
       billed: (billedByProject.get(project.id) ?? 0) + downPaymentBilled,
       collected: collectedByProject.get(project.id) ?? 0,
@@ -345,6 +449,7 @@ export async function loadPortfolio() {
       return project ? [{
         id: billing.id,
         projectId: billing.project_id,
+        contractId: billing.contract_id ?? null,
         projectName: project.name,
         clientName: project.client,
         billingNumber: billing.billing_number,
@@ -358,6 +463,7 @@ export async function loadPortfolio() {
     (paymentResult.data ?? []).map((payment) => ({
       id: payment.id,
       projectId: payment.project_id,
+      contractId: payment.contract_id ?? null,
       amount: Number(payment.amount),
       recordedAt: payment.created_at,
       paymentType: payment.payment_type,
@@ -457,6 +563,7 @@ export async function updateProjectSetup(input: UpdateProjectSetupInput) {
 
 export type RecordProjectPaymentInput = {
   projectId: string
+  contractId?: string | null
   paymentType: 'down_payment' | 'progress' | 'other'
   amount: number
   receivedDate: string
@@ -477,6 +584,7 @@ export async function recordProjectPayment(input: RecordProjectPaymentInput) {
     p_payer_name: input.payerName.trim(),
     p_reference: input.reference?.trim() || null,
     p_allocations: input.allocations ?? [],
+    p_contract_id: input.contractId ?? null,
   }).single()
   throwIfError(error)
   const payment = data as { payment_id: string; receipt_number: string } | null
@@ -500,16 +608,22 @@ export async function recordProjectExpense(input: RecordProjectExpenseInput) {
 
 export async function recordProjectExpenses(inputs: RecordProjectExpenseInput[]) {
   if (!inputs.length) throw new Error('Add at least one expense row.')
-  const { data, error } = await requireSupabase().rpc('record_project_expenses', {
-    p_expenses: inputs.map((input) => ({
-      project_id: input.projectId,
-      expense_date: input.date,
-      category: input.category,
-      description: input.description.trim(),
-      vendor: input.vendor?.trim() || null,
-      amount: input.amount,
-    })),
-  })
+  const client = requireSupabase()
+  const contractId = inputs[0].contractId
+  if (contractId && inputs.some((input) => input.contractId !== contractId)) {
+    throw new Error('Expenses in one batch must belong to the same contract.')
+  }
+  const expenseRows = inputs.map((input) => ({
+    project_id: input.projectId,
+    expense_date: input.date,
+    category: input.category,
+    description: input.description.trim(),
+    vendor: input.vendor?.trim() || null,
+    amount: input.amount,
+  }))
+  const { data, error } = contractId
+    ? await client.rpc('record_project_contract_expenses', { p_contract_id: contractId, p_expenses: expenseRows })
+    : await client.rpc('record_project_expenses', { p_expenses: expenseRows })
   throwIfError(error)
   const savedCount = Number(data)
   if (savedCount !== inputs.length) throw new Error('Not all expense rows were recorded.')

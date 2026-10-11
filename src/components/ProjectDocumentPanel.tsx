@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Eye, FileText, RefreshCw, Share2, Trash2, Upload, X } from 'lucide-react'
 import {
   createProjectDocumentUrl,
@@ -8,6 +9,7 @@ import {
   uploadProjectDocument,
   type ProjectDocument,
 } from '../data/project-documents'
+import { useToast } from './toast-context'
 
 const documentTypes = [
   { value: 'contract', label: 'Contract' },
@@ -24,6 +26,7 @@ function formatDate(value: string) {
 }
 
 export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
+  const { showToast } = useToast()
   const [documents, setDocuments] = useState<ProjectDocument[]>([])
   const [documentType, setDocumentType] = useState('other')
   const [isLoading, setIsLoading] = useState(true)
@@ -64,6 +67,7 @@ export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
       await uploadProjectDocument({ projectId, file, documentType })
       setDocumentType('other')
       setMessage('Document uploaded and shared with the client.')
+      showToast('Document uploaded and shared with the client.')
       await refreshDocuments()
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Could not upload this document.')
@@ -99,7 +103,9 @@ export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
       setDocuments((current) => current.map((item) => item.id === document.id
         ? { ...item, clientVisible: !item.clientVisible }
         : item))
-      setMessage(document.clientVisible ? 'Document removed from client view.' : 'Document shared with the client.')
+      const successMessage = document.clientVisible ? 'Document removed from client view.' : 'Document shared with the client.'
+      setMessage(successMessage)
+      showToast(successMessage, 'update')
     } catch (visibilityError) {
       setError(visibilityError instanceof Error ? visibilityError.message : 'Could not update document sharing.')
     } finally {
@@ -116,6 +122,7 @@ export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
       setDocuments((current) => current.filter((item) => item.id !== document.id))
       setPendingDelete(null)
       setMessage('Document deleted.')
+      showToast('Document deleted.', 'delete')
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this document.')
     } finally {
@@ -124,14 +131,14 @@ export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
   }
 
   return <>
-    {pendingDelete && <div className="modal-backdrop document-confirm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !workingDocumentId) setPendingDelete(null) }}><section className="project-modal document-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-document-title" aria-describedby="delete-document-copy">
+    {pendingDelete && createPortal(<div className="modal-backdrop document-confirm-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !workingDocumentId) setPendingDelete(null) }}><section className="project-modal document-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-document-title" aria-describedby="delete-document-copy">
       <div className="modal-heading"><div><div className="section-kicker">Delete project file</div><h2 id="delete-document-title">Delete this document?</h2></div><button className="icon-button" type="button" aria-label="Close confirmation" disabled={Boolean(workingDocumentId)} onClick={() => setPendingDelete(null)}><X size={18} /></button></div>
       <p className="document-confirm-copy" id="delete-document-copy"><strong>{pendingDelete.fileName}</strong> will be permanently deleted. This cannot be undone.</p>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="document-confirm-actions"><button className="button button-secondary" type="button" disabled={Boolean(workingDocumentId)} onClick={() => setPendingDelete(null)}>Cancel</button><button className="button button-danger" type="button" disabled={Boolean(workingDocumentId)} onClick={() => { void removeDocument(pendingDelete) }}>{workingDocumentId === pendingDelete.id ? <RefreshCw size={15} /> : <Trash2 size={15} />}{workingDocumentId === pendingDelete.id ? 'Deleting' : 'Delete document'}</button></div>
-    </section></div>}
+    </section></div>, document.body)}
     <section className="surface-card tab-content document-manager">
-    <div className="card-heading-row"><div><div className="section-kicker">Project files</div><h2>Documents</h2></div><span className="document-count">{documents.length}</span></div>
+    <div className="card-heading-row"><h2>Documents</h2><span className="document-count">{documents.length}</span></div>
     <div className="document-upload-form">
       <input ref={fileInput} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.dwg,.dxf" aria-label="Select a document to upload" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadFile(file) }} />
       <label className="form-field">Document type<select value={documentType} onChange={(event) => setDocumentType(event.target.value)}>{documentTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>

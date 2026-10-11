@@ -3,6 +3,7 @@ export type ReceivableAgingBucket = 'not-due' | 'no-due-date' | '1-30' | '31-60'
 export type ReceivableBillingInput = {
   id: string
   projectId: string
+  contractId?: string | null
   projectName: string
   clientName: string
   billingNumber: number
@@ -16,6 +17,7 @@ export type ReceivableBillingInput = {
 export type ReceivablePaymentInput = {
   id: string
   projectId: string
+  contractId?: string | null
   amount: number
   recordedAt: string
   paymentType: string
@@ -48,6 +50,10 @@ function eventTime(value: string) {
   return Number.isNaN(parsed) ? 0 : parsed
 }
 
+function contractScope(projectId: string, contractId: string | null | undefined) {
+  return `${projectId}:${contractId ?? 'original'}`
+}
+
 function todayLocal() {
   const date = new Date()
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -63,7 +69,7 @@ export function calculateReceivablesAging(
   const events = [
     ...billings.map((billing) => ({
       type: 'billing' as const,
-      projectId: billing.projectId,
+      scope: contractScope(billing.projectId, billing.contractId),
       time: eventTime(billing.issuedAt ?? billing.createdAt),
       billing,
     })),
@@ -71,7 +77,7 @@ export function calculateReceivablesAging(
       .filter((payment) => payment.paymentType !== 'retention_release')
       .map((payment) => ({
         type: 'payment' as const,
-        projectId: payment.projectId,
+        scope: contractScope(payment.projectId, payment.contractId),
         time: eventTime(payment.recordedAt),
         payment,
       })),
@@ -91,7 +97,8 @@ export function calculateReceivablesAging(
     let remainingPayment = event.payment.amount
     const paymentAllocations = allocations.filter((allocation) => allocation.paymentId === event.payment.id)
     for (const allocation of paymentAllocations) {
-      const billing = billings.find((item) => item.id === allocation.billingId && item.projectId === event.projectId)
+      const billing = billings.find((item) => item.id === allocation.billingId
+        && contractScope(item.projectId, item.contractId) === event.scope)
       if (!billing) continue
       const openAmount = openAmounts.get(billing.id) ?? 0
       const appliedAmount = Math.min(openAmount, allocation.amount)
@@ -100,7 +107,7 @@ export function calculateReceivablesAging(
     }
 
     const projectBillings = billings
-      .filter((billing) => billing.projectId === event.projectId && openAmounts.has(billing.id))
+      .filter((billing) => contractScope(billing.projectId, billing.contractId) === event.scope && openAmounts.has(billing.id))
       .sort((left, right) => eventTime(left.issuedAt ?? left.createdAt) - eventTime(right.issuedAt ?? right.createdAt)
         || left.billingNumber - right.billingNumber)
     for (const billing of projectBillings) {

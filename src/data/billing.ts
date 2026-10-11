@@ -24,12 +24,13 @@ function requireSupabase() {
   return supabase
 }
 
-export async function loadProjectBillings(projectId: string): Promise<ProjectBilling[]> {
-  const { data, error } = await requireSupabase()
+export async function loadProjectBillings(projectId: string, contractId?: string): Promise<ProjectBilling[]> {
+  let query = requireSupabase()
     .from('progress_billings')
-    .select('id, billing_number, status, progress_percent, amount_for_billing, issued_at, due_at, void_reason')
+    .select('id, contract_id, billing_number, status, progress_percent, amount_for_billing, issued_at, due_at, void_reason')
     .eq('project_id', projectId)
-    .order('billing_number', { ascending: false })
+  query = contractId ? query.eq('contract_id', contractId) : query.is('contract_id', null)
+  const { data, error } = await query.order('billing_number', { ascending: false })
   if (error) throw new Error(error.message)
   return (data ?? []).map((row) => ({
     id: row.id,
@@ -43,17 +44,21 @@ export async function loadProjectBillings(projectId: string): Promise<ProjectBil
   }))
 }
 
-export async function loadOpenProjectBillings(projectId: string): Promise<OpenProjectBilling[]> {
+export async function loadOpenProjectBillings(projectId: string, contractId?: string): Promise<OpenProjectBilling[]> {
   const client = requireSupabase()
+  let billings = client.from('progress_billings')
+    .select('id, project_id, contract_id, billing_number, amount_for_billing, issued_at, created_at, due_at')
+    .eq('project_id', projectId)
+    .eq('status', 'issued')
+  let payments = client.from('payments')
+    .select('id, project_id, contract_id, amount, created_at, payment_type')
+    .eq('project_id', projectId)
+    .is('voided_at', null)
+  billings = contractId ? billings.eq('contract_id', contractId) : billings.is('contract_id', null)
+  payments = contractId ? payments.eq('contract_id', contractId) : payments.is('contract_id', null)
   const [billingResult, paymentResult, allocationResult] = await Promise.all([
-    client.from('progress_billings')
-      .select('id, project_id, billing_number, amount_for_billing, issued_at, created_at, due_at')
-      .eq('project_id', projectId)
-      .eq('status', 'issued'),
-    client.from('payments')
-      .select('id, project_id, amount, created_at, payment_type')
-      .eq('project_id', projectId)
-      .is('voided_at', null),
+    billings,
+    payments,
     client.from('payment_allocations')
       .select('payment_id, billing_id, amount')
       .eq('project_id', projectId),
@@ -66,6 +71,7 @@ export async function loadOpenProjectBillings(projectId: string): Promise<OpenPr
     (billingResult.data ?? []).map((billing) => ({
       id: billing.id,
       projectId: billing.project_id,
+      contractId: billing.contract_id ?? null,
       projectName: '',
       clientName: '',
       billingNumber: billing.billing_number,
@@ -77,6 +83,7 @@ export async function loadOpenProjectBillings(projectId: string): Promise<OpenPr
     (paymentResult.data ?? []).map((payment) => ({
       id: payment.id,
       projectId: payment.project_id,
+      contractId: payment.contract_id ?? null,
       amount: Number(payment.amount),
       recordedAt: payment.created_at,
       paymentType: payment.payment_type,
@@ -95,18 +102,23 @@ export async function loadOpenProjectBillings(projectId: string): Promise<OpenPr
   }))
 }
 
-export async function updateProjectProgress(input: { projectId: string; progressPercent: number; summary?: string }) {
-  const { error } = await requireSupabase().rpc('update_project_progress', {
+export async function updateProjectProgress(input: { projectId: string; contractId?: string; progressPercent: number; summary?: string }) {
+  const { error } = await requireSupabase().rpc(input.contractId ? 'update_project_contract_progress' : 'update_project_progress', {
     p_project_id: input.projectId,
+    ...(input.contractId ? { p_contract_id: input.contractId } : {}),
     p_progress_percent: input.progressPercent,
     p_summary: input.summary?.trim() || null,
   })
   if (error) throw new Error(error.message)
 }
 
-export async function issueProjectBilling(projectId: string, dueDate: string | null) {
+export async function issueProjectBilling(projectId: string, dueDate: string | null, contractId?: string) {
   const { data, error } = await requireSupabase()
-    .rpc('issue_progress_billing', { p_project_id: projectId, p_due_date: dueDate })
+    .rpc(contractId ? 'issue_project_contract_billing' : 'issue_progress_billing', {
+      p_project_id: projectId,
+      ...(contractId ? { p_contract_id: contractId } : {}),
+      p_due_date: dueDate,
+    })
     .single()
   if (error) throw new Error(error.message)
   const row = data as { billing_id: string; billing_number: number; amount_for_billing: number | string } | null

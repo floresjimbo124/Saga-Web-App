@@ -81,4 +81,20 @@ describe('calculateReceivablesAging', () => {
       { id: 'billing-2', outstandingAmount: 10, bucket: 'not-due' },
     ])
   })
+
+  it('keeps unallocated payments within their own contract', () => {
+    const changeOrderBilling = { ...secondBilling, contractId: 'contract-1' }
+    const payment: ReceivablePaymentInput = {
+      id: 'payment-2',
+      projectId: 'project-1',
+      contractId: null,
+      amount: 100,
+      recordedAt: '2026-10-03T10:00:00Z',
+      paymentType: 'progress',
+    }
+
+    const result = calculateReceivablesAging([firstBilling, changeOrderBilling], [payment], [], '2026-10-03')
+
+    expect(result).toMatchObject([{ id: 'billing-2', contractId: 'contract-1', outstandingAmount: 80 }])
+  })
 })

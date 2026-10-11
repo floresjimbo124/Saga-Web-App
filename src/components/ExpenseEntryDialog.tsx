@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, RefreshCw, X } from 'lucide-react'
 import { recordProjectExpenses, updateProjectExpense, type PortfolioExpense, type ProjectExpenseCategory } from '../data/portfolio'
 import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
+import { useToast } from './toast-context'
 
 type ExpenseProjectOption = { id: string; name: string }
 type ExpenseDraft = {
@@ -43,13 +45,15 @@ function createExpenseDraft(id: number, projectId: string, expense?: PortfolioEx
   }
 }
 
-export function ExpenseEntryDialog({ projects, initialProjectId, editingExpense, onClose, onSaved }: {
+export function ExpenseEntryDialog({ projects, initialProjectId, contractId, editingExpense, onClose, onSaved }: {
   projects: ExpenseProjectOption[]
   initialProjectId?: string
+  contractId?: string
   editingExpense?: PortfolioExpense
   onClose: () => void
   onSaved: () => void
 }) {
+  const { showToast } = useToast()
   const [rows, setRows] = useState<ExpenseDraft[]>([createExpenseDraft(1, initialProjectId ?? '', editingExpense)])
   const [error, setError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -89,6 +93,7 @@ export function ExpenseEntryDialog({ projects, initialProjectId, editingExpense,
     try {
       const expenseInputs = rows.map((row) => ({
         projectId: row.projectId,
+        contractId,
         date: row.date,
         category: row.category,
         description: row.description,
@@ -101,6 +106,10 @@ export function ExpenseEntryDialog({ projects, initialProjectId, editingExpense,
       } else {
         await recordProjectExpenses(expenseInputs)
       }
+      showToast(
+        isEditing ? 'Expense updated.' : `${expenseInputs.length} expense${expenseInputs.length === 1 ? '' : 's'} added.`,
+        isEditing ? 'update' : 'create',
+      )
       onSaved()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not record these expenses.')
@@ -113,7 +122,7 @@ export function ExpenseEntryDialog({ projects, initialProjectId, editingExpense,
     if (!isSaving) onClose()
   }
 
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDialog() }}>
+  return createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDialog() }}>
     <section className="project-modal expense-batch-modal" role="dialog" aria-modal="true" aria-labelledby="expense-dialog-title">
       <div className="modal-heading">
         <div><div className="section-kicker">Project expenses</div><h2 id="expense-dialog-title">{isEditing ? `Edit expense · ${projects[0]?.name ?? ''}` : canChooseProject ? 'Add expenses' : `Add expenses · ${projects[0]?.name ?? ''}`}</h2></div>
@@ -138,5 +147,5 @@ export function ExpenseEntryDialog({ projects, initialProjectId, editingExpense,
         <div className="modal-actions"><button type="button" className="button button-secondary" onClick={closeDialog} disabled={isSaving}>Cancel</button><button type="submit" className="button button-primary" disabled={isSaving}>{isSaving ? <><RefreshCw size={15} />Saving…</> : isEditing ? 'Save changes' : <><Plus size={15} />Save {rows.length} expense{rows.length === 1 ? '' : 's'}</>}</button></div>
       </form>
     </section>
-  </div>
+  </div>, document.body)
 }

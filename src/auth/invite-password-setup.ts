@@ -3,6 +3,7 @@ export function hasPendingInvitePasswordSetup(location: Pick<Location, 'hash' | 
   const searchParams = new URLSearchParams(location.search)
   const queryType = searchParams.get('type')
   return searchParams.get('clientPasswordSetup') === '1'
+    || searchParams.get('staffPasswordSetup') === '1'
     || hashType === 'invite'
     || hashType === 'signup'
     || queryType === 'invite'
@@ -12,6 +13,7 @@ export function hasPendingInvitePasswordSetup(location: Pick<Location, 'hash' | 
 export function clearPasswordSetupCallback(location: Pick<Location, 'pathname' | 'search'> = window.location) {
   const searchParams = new URLSearchParams(location.search)
   searchParams.delete('clientPasswordSetup')
+  searchParams.delete('staffPasswordSetup')
   if (searchParams.get('type') === 'invite' || searchParams.get('type') === 'signup') searchParams.delete('type')
   const query = searchParams.toString()
   return `${location.pathname}${query ? `?${query}` : ''}`

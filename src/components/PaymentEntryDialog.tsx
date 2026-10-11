@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { CircleCheck, Download, Eye, Plus, X } from 'lucide-react'
 import { loadOpenProjectBillings, type OpenProjectBilling } from '../data/billing'
 import { recordProjectPayment } from '../data/portfolio'
@@ -6,6 +7,7 @@ import { downloadPaymentReceiptPdf, openPaymentReceiptPdf } from '../lib/payment
 import { formatBillingNumber } from '../lib/billing-number'
 import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
+import { useToast } from './toast-context'
 
 type PaymentProject = { id: string; name: string; client: string }
 
@@ -16,11 +18,13 @@ const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP
 type PaymentType = 'down_payment' | 'progress' | 'other'
 type PaymentMode = 'cash' | 'bank_transfer' | 'check' | 'card' | 'other'
 
-export function PaymentEntryDialog({ project, onClose, onSaved }: {
+export function PaymentEntryDialog({ project, contractId, onClose, onSaved }: {
   project: PaymentProject
+  contractId?: string
   onClose: () => void
   onSaved: () => void
 }) {
+  const { showToast } = useToast()
   const [paymentType, setPaymentType] = useState<PaymentType>('progress')
   const [amount, setAmount] = useState('')
   const [receivedDate, setReceivedDate] = useState(localToday)
@@ -38,14 +42,14 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
 
   useEffect(() => {
     let active = true
-    void loadOpenProjectBillings(project.id)
+    void loadOpenProjectBillings(project.id, contractId)
       .then((billings) => { if (active) setOpenBillings(billings) })
       .catch((loadError: unknown) => {
         if (active) setAllocationLoadError(loadError instanceof Error ? loadError.message : 'Could not load open billings.')
       })
       .finally(() => { if (active) setIsLoadingBillings(false) })
     return () => { active = false }
-  }, [project.id])
+  }, [project.id, contractId])
 
   const downloadReceipt = async (number: string) => {
     setIsSaving(true)
@@ -56,6 +60,7 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
         payerName: payerName.trim(),
         receiptNumber: number,
         amount: parseMoneyInput(amount),
+        receivedDate,
         paymentType,
         paymentMode,
         reference: reference.trim(),
@@ -76,6 +81,7 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
         payerName: payerName.trim(),
         receiptNumber: number,
         amount: parseMoneyInput(amount),
+        receivedDate,
         paymentType,
         paymentMode,
         reference: reference.trim(),
@@ -115,6 +121,7 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
     try {
       const receipt = await recordProjectPayment({
         projectId: project.id,
+        contractId,
         paymentType,
         amount: amountValue,
         receivedDate,
@@ -124,6 +131,7 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
         allocations: paymentAllocations,
       })
       setReceiptNumber(receipt.receiptNumber)
+      showToast('Payment recorded.')
       onSaved()
       await downloadReceipt(receipt.receiptNumber)
     } catch (paymentError) {
@@ -133,7 +141,7 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
     }
   }
 
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSaving) onClose() }}>
+  return createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSaving) onClose() }}>
     <section className="project-modal" role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title">
       <div className="modal-heading">
         <div><div className="section-kicker">{receiptNumber ? 'Payment recorded' : 'New receipt'}</div><h2 id="payment-dialog-title">{receiptNumber || `Log payment · ${project.name}`}</h2></div>
@@ -164,5 +172,5 @@ export function PaymentEntryDialog({ project, onClose, onSaved }: {
         <div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose} disabled={isSaving}>Cancel</button><button type="submit" className="button button-primary" disabled={isSaving}><Plus size={15} />{isSaving ? 'Recording…' : 'Record payment'}</button></div>
       </form>}
     </section>
-  </div>
+  </div>, document.body)
 }
