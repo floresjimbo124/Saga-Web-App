@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ArrowRight, CircleAlert, LockKeyhole, LogOut, Mail } from 'lucide-react'
+import { ArrowRight, CircleAlert, LockKeyhole, LogOut, Mail, UserRound } from 'lucide-react'
 import { isSupabaseConfigured, SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
 import { ClientPortalApp } from '../components/ClientPortalApp'
 import { StaffTaskApp } from '../components/StaffTaskApp'
@@ -359,14 +359,14 @@ function PasswordSetupScreen({ accountType, onComplete }: { accountType: 'client
         <h1 id="password-setup-title">Create your password</h1>
         <p>{accountType === 'staff' ? 'Set a password to access your SAGACT team workspace.' : 'Set a password to access your shared project dashboard whenever you sign in.'}</p>
       </div>
-      <form className="auth-form" onSubmit={(event) => { void handleSubmit(event) }}>
-        <label className="auth-field">First name<input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required /></label>
-        <label className="auth-field">Last name<input type="text" autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} required /></label>
-        <label className="auth-field">Password<input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-        <label className="auth-field">Confirm password<input type="password" autoComplete="new-password" minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required /></label>
+      <form className="auth-form auth-account-form" onSubmit={(event) => { void handleSubmit(event) }}>
+        <label className="auth-field"><span>First name</span><span className="auth-field-control"><UserRound size={16} aria-hidden="true" /><input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required /></span></label>
+        <label className="auth-field"><span>Last name</span><span className="auth-field-control"><UserRound size={16} aria-hidden="true" /><input type="text" autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} required /></span></label>
+        <label className="auth-field"><span>Password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></span></label>
+        <label className="auth-field"><span>Confirm password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="new-password" minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required /></span></label>
         {error && <p className="auth-error" role="alert">{error}</p>}
         <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving password…' : 'Create password'}{!isSubmitting && <ArrowRight size={16} />}
+          {isSubmitting ? 'Creating account…' : 'Create account'}{!isSubmitting && <ArrowRight size={16} />}
         </button>
       </form>
     </section>

@@ -382,6 +382,10 @@ textarea:focus-visible,
   margin-top: 26px;
 }
 
+.auth-account-form {
+  gap: 14px;
+}
+
 .auth-field {
   display: grid;
   gap: 6px;
@@ -614,6 +618,19 @@ textarea:focus-visible,
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  .auth-account-form .auth-field {
+    gap: 6px;
+  }
+
+  .auth-account-form .auth-field > span:first-child:not(.auth-field-control) {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
   }
 
   .auth-field-control input {
