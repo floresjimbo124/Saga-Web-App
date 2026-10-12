@@ -201,7 +201,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }
     if (requiresPasswordSetup) {
       return <PasswordSetupScreen
-        accountType={currentAccess.status}
         onComplete={() => {
           window.history.replaceState(null, '', clearPasswordSetupCallback())
           setRequiresPasswordSetup(false)
@@ -307,7 +306,7 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
   </AuthLayout>
 }
 
-function PasswordSetupScreen({ accountType, onComplete }: { accountType: 'client' | 'staff'; onComplete: () => void }) {
+function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [password, setPassword] = useState('')
@@ -357,7 +356,6 @@ function PasswordSetupScreen({ accountType, onComplete }: { accountType: 'client
       <AuthCardBrand />
       <div className="auth-heading">
         <h1 id="password-setup-title">Create your password</h1>
-        <p>{accountType === 'staff' ? 'Set a password to access your SAGACT team workspace.' : 'Set a password to access your shared project dashboard whenever you sign in.'}</p>
       </div>
       <form className="auth-form auth-account-form" onSubmit={(event) => { void handleSubmit(event) }}>
         <label className="auth-field"><span>First name</span><span className="auth-field-control"><UserRound size={16} aria-hidden="true" /><input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required /></span></label>
