@@ -351,8 +351,8 @@ function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
     }
   }
 
-  return <AuthLayout>
-    <section className="auth-panel" aria-labelledby="password-setup-title">
+  return <AuthLayout className="auth-account-screen" contentClassName="auth-account-content">
+    <section className="auth-panel auth-account-panel" aria-labelledby="password-setup-title">
       <AuthCardBrand />
       <div className="auth-heading">
         <h1 id="password-setup-title">Create your password</h1>
@@ -428,15 +428,15 @@ function PasswordRecoveryScreen({ sessionAvailable, onComplete, onCancel }: {
   </AuthLayout>
 }
 
-function AuthLayout({ children }: { children: ReactNode }) {
-  return <main className="auth-screen">
+function AuthLayout({ children, className = '', contentClassName = '' }: { children: ReactNode; className?: string; contentClassName?: string }) {
+  return <main className={`auth-screen ${className}`.trim()}>
     <aside className="auth-story">
       <div className="auth-story-copy">
         <h2>Accessible Architecture for every Juan</h2>
         <span className="auth-story-rule" />
       </div>
     </aside>
-    <section className="auth-content">
+    <section className={`auth-content ${contentClassName}`.trim()}>
       {children}
       <footer className="auth-footer">SAGACT <span>·</span> Project workspace</footer>
     </section>

@@ -666,6 +666,60 @@ textarea:focus-visible,
   .auth-footer {
     display: none;
   }
+
+  .auth-account-content {
+    justify-content: center;
+    padding: 20px 16px max(20px, env(safe-area-inset-bottom));
+  }
+
+  .auth-account-panel {
+    width: min(100%, 420px);
+    padding: 22px 20px 20px;
+    border: 1px solid #ece9df;
+    border-radius: 13px;
+    background: #fffdf8;
+    box-shadow: 0 10px 28px rgba(23, 40, 30, 0.08);
+  }
+
+  .auth-account-panel .auth-brand {
+    flex-direction: row;
+    gap: 7px;
+    margin-bottom: 18px;
+  }
+
+  .auth-account-panel .auth-brand-mark {
+    width: 26px;
+    height: 26px;
+    margin-bottom: 0;
+  }
+
+  .auth-account-panel .auth-heading h1,
+  .auth-account-panel .auth-heading > p {
+    text-align: center;
+  }
+
+  .auth-account-panel .auth-heading h1 {
+    font-size: 21px;
+  }
+
+  .auth-account-form {
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .auth-account-form .auth-field {
+    gap: 5px;
+  }
+
+  .auth-account-form .auth-field-control input {
+    height: 42px;
+    border-radius: 7px;
+  }
+
+  .auth-account-form .auth-submit {
+    min-height: 44px;
+    margin-top: 2px;
+  }
 }
 
 .app-main {
