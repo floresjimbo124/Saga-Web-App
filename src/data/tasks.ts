@@ -34,6 +34,30 @@ export type TaskInput = {
   priority: TaskPriority
 }
 
+export type ProjectTaskActivityType = 'created' | 'updated' | 'status_changed' | 'comment'
+
+export type ProjectTaskActivity = {
+  id: string
+  taskId: string
+  authorId: string | null
+  activityType: ProjectTaskActivityType
+  body: string
+  oldStatus: TaskStatus | null
+  newStatus: TaskStatus | null
+  createdAt: string
+}
+
+export type StaffTaskWeekSummary = {
+  userId: string
+  staffName: string
+  dueThisWeek: number
+  complete: number
+  pending: number
+  inProgress: number
+  blocked: number
+  overdue: number
+}
+
 type ProjectTaskRow = {
   id: string
   project_id: string
@@ -46,6 +70,17 @@ type ProjectTaskRow = {
   status: TaskStatus
   created_at: string
   updated_at: string
+}
+
+type ProjectTaskActivityRow = {
+  id: string
+  task_id: string
+  author_id: string | null
+  activity_type: ProjectTaskActivityType
+  body: string | null
+  old_status: TaskStatus | null
+  new_status: TaskStatus | null
+  created_at: string
 }
 
 function requireSupabase() {
@@ -72,6 +107,35 @@ export function validateTaskInput(input: TaskInput) {
   if (input.description.trim().length > 4000) throw new Error('Task description must not exceed 4,000 characters.')
   if (!isValidDateText(input.dueDate)) throw new Error('Enter a valid task deadline.')
   if (!['low', 'normal', 'high'].includes(input.priority)) throw new Error('Choose a valid task priority.')
+}
+
+function addDaysToDateText(date: string, days: number) {
+  const parsed = new Date(`${date}T00:00:00.000Z`)
+  parsed.setUTCDate(parsed.getUTCDate() + days)
+  return parsed.toISOString().slice(0, 10)
+}
+
+export function summarizeStaffTasksForWeek(
+  tasks: ProjectTask[],
+  staff: { userId: string; name: string }[],
+  weekStart: string,
+  today: string,
+): StaffTaskWeekSummary[] {
+  const weekEnd = addDaysToDateText(weekStart, 6)
+  return staff.map((member) => {
+    const assignedTasks = tasks.filter((task) => task.assignedTo === member.userId)
+    const dueThisWeek = assignedTasks.filter((task) => task.dueDate >= weekStart && task.dueDate <= weekEnd)
+    return {
+      userId: member.userId,
+      staffName: member.name,
+      dueThisWeek: dueThisWeek.length,
+      complete: dueThisWeek.filter((task) => task.status === 'done').length,
+      pending: dueThisWeek.filter((task) => task.status === 'todo').length,
+      inProgress: dueThisWeek.filter((task) => task.status === 'in_progress').length,
+      blocked: dueThisWeek.filter((task) => task.status === 'blocked').length,
+      overdue: assignedTasks.filter((task) => task.status !== 'done' && task.dueDate < today).length,
+    }
+  })
 }
 
 export async function loadProjectTasks() {
@@ -125,5 +189,36 @@ export async function updateProjectTaskStatus(taskId: string, status: TaskStatus
 
 export async function deleteProjectTask(taskId: string) {
   const { error } = await requireSupabase().rpc('delete_project_task', { p_task_id: taskId })
+  throwIfError(error)
+}
+
+export async function loadProjectTaskActivity(taskId: string) {
+  const { data, error } = await requireSupabase()
+    .from('project_task_activity')
+    .select('id, task_id, author_id, activity_type, body, old_status, new_status, created_at')
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: true })
+  throwIfError(error)
+  return ((data ?? []) as ProjectTaskActivityRow[]).map((activity) => ({
+    id: activity.id,
+    taskId: activity.task_id,
+    authorId: activity.author_id,
+    activityType: activity.activity_type,
+    body: activity.body ?? '',
+    oldStatus: activity.old_status,
+    newStatus: activity.new_status,
+    createdAt: activity.created_at,
+  } satisfies ProjectTaskActivity))
+}
+
+export async function addProjectTaskComment(taskId: string, body: string) {
+  const normalizedBody = body.trim()
+  if (!normalizedBody || normalizedBody.length > 2000) {
+    throw new Error('Comments must contain between 1 and 2,000 characters.')
+  }
+  const { error } = await requireSupabase().rpc('add_project_task_comment', {
+    p_task_id: taskId,
+    p_body: normalizedBody,
+  })
   throwIfError(error)
 }

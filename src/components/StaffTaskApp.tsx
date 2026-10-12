@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CalendarDays, ClipboardList, LogOut, WalletCards } from 'lucide-react'
+import { ClipboardList, LogOut, WalletCards } from 'lucide-react'
 import { TaskManagementPanel } from './TaskManagementPanel'
 import { supabase } from '../lib/supabase'
 import { loadPayrollProjectOptions, type PayrollProjectOption } from '../data/payroll'
@@ -18,7 +18,6 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
 }) {
   const name = displayName.trim() || 'Team member'
   const firstName = name.split(/\s+/)[0]
-  const [today] = useState(() => new Intl.DateTimeFormat('en-PH', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date()))
   const canManagePayroll = staffTitle === 'liaison_officer'
   const [view, setView] = useState<'tasks' | 'payroll'>('tasks')
   const [payrollProjects, setPayrollProjects] = useState<PayrollProjectOption[]>([])
@@ -64,7 +63,6 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
         {canManagePayroll && <button className={`nav-item ${view === 'payroll' ? 'is-active' : ''}`} type="button" aria-current={view === 'payroll' ? 'page' : undefined} onClick={() => setView('payroll')}><WalletCards size={17} /><span>Payroll</span></button>}
       </nav>
       <div className="sidebar-bottom">
-        <div className="workspace-state"><span className="live-dot" />Team workspace</div>
         <div className="owner-profile">
           <span className="owner-avatar">{firstName.slice(0, 1).toUpperCase()}</span>
           <div><strong>{firstName}</strong><span>{roleLabels[staffTitle] ?? 'Staff'}</span></div>
@@ -75,7 +73,9 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
     <div className="app-main">
       <header className="topbar">
         <div className="breadcrumbs"><span>SAGACT</span><span className="staff-breadcrumb-separator">›</span><strong>{view === 'payroll' ? 'Payroll' : 'My tasks'}</strong></div>
-        <div className="topbar-right"><span className="topbar-date"><CalendarDays size={14} />{today}</span><button className="icon-button topbar-sign-out" type="button" aria-label="Sign out" title="Sign out" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={16} /></button></div>
+        <button className="button button-secondary staff-mobile-sign-out" type="button" onClick={() => { void supabase?.auth.signOut() }}>
+          <LogOut size={15} />Sign out
+        </button>
       </header>
       <main className="page-content">
         {view === 'payroll' && canManagePayroll

@@ -34,6 +34,7 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [isCreateBillingOpen, setIsCreateBillingOpen] = useState(false)
   const [billingToVoid, setBillingToVoid] = useState<ProjectBilling | null>(null)
   const [voidReason, setVoidReason] = useState('')
   const [voidError, setVoidError] = useState('')
@@ -54,7 +55,7 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
     action: () => Promise<string>,
     onActionError = setError,
     toastAction: 'create' | 'update' | 'delete' = 'create',
-  ) => {
+  ): Promise<boolean> => {
     setBusy(true)
     setError('')
     setMessage('')
@@ -64,8 +65,10 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       showToast(successMessage, toastAction)
       await refresh()
       onChanged()
+      return true
     } catch (actionError) {
       onActionError(actionError instanceof Error ? actionError.message : 'Something went wrong.')
+      return false
     } finally {
       setBusy(false)
     }
@@ -84,13 +87,13 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
     }, setError, 'update')
   }
 
-  const issueBilling = () => {
+  const issueBilling = async () => {
     const pending = progressInput === null ? null : Number(progressInput)
     if (pending !== null && (!Number.isFinite(pending) || pending < 0 || pending > 100)) {
       setError('Enter a progress value from 0 to 100.')
       return
     }
-    void run(async () => {
+    const issued = await run(async () => {
       // Save any progress value typed but not yet saved, so the billing uses it.
       if (pending !== null && pending !== progress) {
         await updateProjectProgress({ projectId, contractId, progressPercent: pending })
@@ -99,6 +102,7 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       const result = await issueProjectBilling(projectId, dueDate || null, contractId)
       return `Billing #${formatBillingNumber(result.billingNumber)} issued for ${money.format(result.amount)}.`
     })
+    if (issued) setIsCreateBillingOpen(false)
   }
 
   const confirmVoidBilling = (event: FormEvent<HTMLFormElement>) => {
@@ -120,6 +124,30 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
   }
 
   return <>
+  {isCreateBillingOpen && createPortal(<div className="modal-backdrop billing-create-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setIsCreateBillingOpen(false) }}>
+    <section className="project-modal billing-create-dialog" role="dialog" aria-modal="true" aria-labelledby="create-billing-title">
+      <div className="modal-heading">
+        <div><div className="section-kicker">Progress billing</div><h2 id="create-billing-title">Create billing</h2></div>
+        <button className="icon-button" type="button" onClick={() => setIsCreateBillingOpen(false)} aria-label="Close" disabled={busy}><X size={18} /></button>
+      </div>
+      <p className="modal-intro">Update completed work and choose an optional due date before issuing a billing.</p>
+      <div className="billing-dialog-summary">
+        <span>Current progress<strong>{progress}%</strong></span>
+        <span>Earned to date<strong>{money.format(earned)}</strong></span>
+        <span>Billable ceiling<strong>{money.format(ceiling)}</strong></span>
+      </div>
+      <div className="form-row billing-create-fields">
+        <label className="form-field">Work completed (%)<input type="number" min="0" max="100" step="0.01" value={progressInput ?? String(progress)} onChange={(event) => setProgressInput(event.target.value)} /></label>
+        <label className="form-field">Due date (optional)<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
+      </div>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      {message && <p className="calculation-note" role="status">{message}</p>}
+      <div className="modal-actions billing-create-actions">
+        <button type="button" className="button button-secondary" onClick={saveProgress} disabled={busy || progressInput === null}>Save progress</button>
+        <button type="button" className="button button-primary" onClick={() => { void issueBilling() }} disabled={busy || !isSetupComplete}><Plus size={15} />{busy ? 'Issuing…' : 'Issue billing'}</button>
+      </div>
+    </section>
+  </div>, document.body)}
   {billingToVoid && createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setBillingToVoid(null) }}>
     <section className="project-modal" role="dialog" aria-modal="true" aria-labelledby="void-billing-title">
       <div className="modal-heading"><div><div className="section-kicker">Billing adjustment</div><h2 id="void-billing-title">Void billing #{formatBillingNumber(billingToVoid.billingNumber)}</h2></div><button className="icon-button" type="button" onClick={() => setBillingToVoid(null)} aria-label="Close" disabled={busy}><X size={18} /></button></div>
@@ -131,29 +159,24 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       </form>
     </section>
   </div>, document.body)}
-  <section className="surface-card tab-content">
-    <div className="card-heading-row"><h2>{contractId ? 'Contract progress billing' : 'Progress billing'}</h2></div>
+  <section className="surface-card tab-content billing-panel">
+    <div className="card-heading-row billing-panel-heading">
+      <div><h2>{contractId ? 'Contract progress billing' : 'Progress billing'}</h2><p>{progress}% complete · {money.format(earned)} earned</p></div>
+      <button type="button" className="button button-primary" onClick={() => { setProgressInput(null); setError(''); setIsCreateBillingOpen(true) }} disabled={!isSetupComplete}><Plus size={15} />Create billing</button>
+    </div>
     {isSetupComplete
-      ? <p className="calculation-note">Earned at {progress}%: <strong>{money.format(earned)}</strong> · Billable ceiling: <strong>{money.format(ceiling)}</strong></p>
+      ? <p className="calculation-note billing-panel-ceiling">Billable ceiling: <strong>{money.format(ceiling)}</strong></p>
       : <p className="calculation-note">Set up the contract amount before issuing a billing.</p>}
-    <p className="billing-current-progress">Current project progress: <strong>{progress}%</strong></p>
-    <div className="form-row">
-      <label className="form-field">Work completed (%)<input type="number" min="0" max="100" step="0.01" value={progressInput ?? String(progress)} onChange={(event) => setProgressInput(event.target.value)} /></label>
-      <label className="form-field">Due date (optional)<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
-    </div>
-    <div className="modal-actions">
-      <button type="button" className="button button-secondary" onClick={saveProgress} disabled={busy || progressInput === null}>Save progress</button>
-      <button type="button" className="button button-primary" onClick={issueBilling} disabled={busy || !isSetupComplete}><Plus size={15} />Issue billing</button>
-    </div>
-    {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="calculation-note" role="status">{message}</p>}
     <div className="section-kicker">Billings issued</div>
-    {billings.length ? <div className="billing-register-list">{billings.map((billing) => <div className="payment-detail-row" key={billing.id}>
+    {billings.length ? <div className="billing-register-list billing-timeline" role="list" aria-label="Issued billings">{billings.map((billing) => <div className={`payment-detail-row billing-register-row${billing.status === 'void' ? ' is-void' : ''}`} key={billing.id} role="listitem">
       <span className="activity-copy"><strong>Billing #{formatBillingNumber(billing.billingNumber)} · {billing.progressPercent}% complete{billing.status === 'void' ? ' · VOID' : ''}</strong><small>{billing.issuedAt ? dateFormat.format(new Date(billing.issuedAt)) : 'Not issued'}{billing.dueAt ? ` · due ${dateFormat.format(new Date(`${billing.dueAt}T12:00:00`))}` : ''}{billing.voidReason ? ` · ${billing.voidReason}` : ''}</small></span>
       <strong className="activity-amount">{money.format(billing.amount)}</strong>
+      <span className="billing-row-actions">
       {billing.status === 'issued' && <button type="button" className="text-button compact-button" onClick={() => { void openBillingPdf({ projectName, clientName, location, billingNumber: billing.billingNumber, amount: billing.amount, progressPercent: billing.progressPercent, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }).catch(() => setError('Could not preview the billing PDF.')) }}><Eye size={14} />View</button>}
       {billing.status === 'issued' && <button type="button" className="text-button compact-button" aria-label={`Download billing ${formatBillingNumber(billing.billingNumber)}`} title="Download billing PDF" onClick={() => { void downloadBillingPdf({ projectName, clientName, location, billingNumber: billing.billingNumber, amount: billing.amount, progressPercent: billing.progressPercent, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }).catch(() => setError('Could not download the billing PDF.')) }}><Download size={14} /></button>}
       {billing.status === 'issued' && <button type="button" className="text-button compact-button" onClick={() => { setVoidReason(''); setVoidError(''); setBillingToVoid(billing) }} disabled={busy}>Void</button>}
+      </span>
     </div>)}</div> : <div className="empty-state">No billings issued yet.</div>}
   </section>
   </>

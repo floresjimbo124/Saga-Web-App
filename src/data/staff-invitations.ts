@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { refreshAccessToken } from '../lib/refresh-session'
 import type { StaffTitle } from './tasks'
 
 export type StaffAccount = {
@@ -16,7 +17,12 @@ function requireSupabase() {
 
 async function invokeStaffAccess(body: Record<string, string>) {
   const client = requireSupabase()
-  const { data, error } = await client.functions.invoke('manage-staff', { body })
+  const accessToken = await refreshAccessToken(client.auth)
+
+  const { data, error } = await client.functions.invoke('manage-staff', {
+    body,
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
   if (error) {
     const context = (error as Error & { context?: unknown }).context
     if (context instanceof Response) {

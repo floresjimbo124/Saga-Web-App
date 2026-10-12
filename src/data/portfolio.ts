@@ -74,7 +74,9 @@ export type PortfolioProject = {
   retentionMethod: 'final-schedule' | 'per-billing'
   status: ProjectStatus
   healthStatus: ProjectHealthStatus
+  startDate: string | null
   deadline: string | null
+  coverPhotoStoragePath: string | null
   completedAt: string | null
   createdAt: string
   updatedAt: string
@@ -149,7 +151,7 @@ export async function loadPortfolio() {
   const client = requireSupabase()
   const [projectResult, clientResult, termResult, billingResult, paymentResult, allocationResult, expenseResult, retentionResult, milestoneResult, changeOrderResult, contractResult, forecastResult, payrollEmployeeResult, payrollEntryResult] = await Promise.all([
     client.from('projects')
-      .select('id, name, prefix, location, deadline, status, health_status, progress_percent, client_id, completed_at, created_at, updated_at')
+      .select('id, name, prefix, location, start_date, deadline, cover_photo_storage_path, status, health_status, progress_percent, client_id, completed_at, created_at, updated_at')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
       .order('created_at', { ascending: true }),
     client.from('clients')
@@ -179,7 +181,7 @@ export async function loadPortfolio() {
       .select('project_id, entry_type, amount')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
     client.from('project_milestones')
-      .select('id, project_id, name, start_date, planned_date, actual_date, completion_percent, status, client_visible')
+      .select('id, project_id, name, start_date, planned_date, actual_date, completion_percent, status, client_visible, photo_storage_path')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
       .order('planned_date', { ascending: true, nullsFirst: false }),
     client.from('project_change_orders')
@@ -346,6 +348,7 @@ export async function loadPortfolio() {
       completionPercent: milestone.completion_percent,
       status: milestone.status,
       clientVisible: milestone.client_visible,
+      photoStoragePath: milestone.photo_storage_path ?? null,
     })
     milestonesByProject.set(milestone.project_id, projectMilestones)
   }
@@ -415,7 +418,9 @@ export async function loadPortfolio() {
       retentionRate,
       retentionMethod: retentionMethod(terms?.retention_method),
       status: projectStatus(project.status),
+      startDate: project.start_date,
       deadline: project.deadline,
+      coverPhotoStoragePath: project.cover_photo_storage_path ?? null,
       completedAt: project.completed_at,
       createdAt: project.created_at,
       updatedAt: project.updated_at,
@@ -510,14 +515,6 @@ export async function updateProjectState(input: {
   throwIfError(error)
 }
 
-export async function updateProjectDeadline(projectId: string, deadline: string | null) {
-  const { error } = await requireSupabase().rpc('update_project_deadline', {
-    p_project_id: projectId,
-    p_deadline: deadline,
-  })
-  throwIfError(error)
-}
-
 export async function createProject(input: CreateProjectInput) {
   const client = requireSupabase()
   const { data, error } = await client.rpc('create_project_with_terms', {
@@ -545,11 +542,13 @@ export type UpdateProjectSetupInput = {
   downPaymentPercent: number
   retentionRatePercent: number
   retentionMethod: 'final_schedule' | 'per_billing'
+  startDate: string
+  deadline: string | null
 }
 
 export async function updateProjectSetup(input: UpdateProjectSetupInput) {
   const client = requireSupabase()
-  const { error } = await client.rpc('update_project_setup', {
+  const { error } = await client.rpc('update_project_contract_schedule', {
     p_project_id: input.projectId,
     p_client_name: input.clientName.trim(),
     p_contract_amount: input.contractAmount,
@@ -557,6 +556,8 @@ export async function updateProjectSetup(input: UpdateProjectSetupInput) {
     p_down_payment_percent: input.downPaymentPercent,
     p_retention_rate_percent: input.retentionRatePercent,
     p_retention_method: input.retentionMethod,
+    p_start_date: input.startDate,
+    p_deadline: input.deadline,
   })
   throwIfError(error)
 }

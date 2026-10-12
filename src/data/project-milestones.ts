@@ -1,5 +1,10 @@
 import { SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
 
+const photoBucket = 'project-documents'
+const maximumPhotoSize = 10 * 1024 * 1024
+const allowedPhotoTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const allowedPhotoExtensions = new Set(['jpg', 'jpeg', 'png', 'webp'])
+
 export type ProjectMilestoneStatus = 'pending' | 'in_progress' | 'complete' | 'blocked'
 
 export type ProjectMilestone = {
@@ -11,6 +16,7 @@ export type ProjectMilestone = {
   completionPercent: number
   status: ProjectMilestoneStatus
   clientVisible: boolean
+  photoStoragePath: string | null
 }
 
 export type SaveProjectMilestoneInput = {
@@ -44,6 +50,71 @@ function validateMilestone(input: SaveProjectMilestoneInput) {
   if (!Number.isInteger(input.completionPercent) || input.completionPercent < 0 || input.completionPercent > 100) {
     throw new Error('Milestone completion must be a whole number from 0 to 100.')
   }
+}
+
+export function validateProjectMilestonePhoto(file: File) {
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? ''
+  if (!allowedPhotoExtensions.has(extension) || !allowedPhotoTypes.has(file.type)) {
+    throw new Error('Choose a JPG, PNG, or WebP image.')
+  }
+  if (file.size === 0) throw new Error('The selected image is empty.')
+  if (file.size > maximumPhotoSize) throw new Error('Milestone photos must be 10 MB or smaller.')
+}
+
+export async function uploadProjectMilestonePhoto(projectId: string, milestoneId: string, file: File, previousStoragePath: string | null) {
+  validateProjectMilestonePhoto(file)
+  const client = requireSupabase()
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? ''
+  const storagePath = `${SAGACT_ORGANIZATION_ID}/${projectId}/milestones/${milestoneId}/${crypto.randomUUID()}.${extension}`
+  const { error: uploadError } = await client.storage.from(photoBucket).upload(storagePath, file, {
+    cacheControl: '3600',
+    contentType: file.type,
+    upsert: false,
+  })
+  if (uploadError) throw new Error(uploadError.message)
+
+  const { data, error } = await client.from('project_milestones')
+    .update({ photo_storage_path: storagePath })
+    .eq('organization_id', SAGACT_ORGANIZATION_ID)
+    .eq('project_id', projectId)
+    .eq('id', milestoneId)
+    .eq('status', 'complete')
+    .select('id')
+    .maybeSingle()
+  if (error || !data) {
+    const { error: cleanupError } = await client.storage.from(photoBucket).remove([storagePath])
+    if (cleanupError) {
+      throw new Error(`Could not attach the photo to this completed milestone. The uploaded file also could not be cleaned up: ${cleanupError.message}`)
+    }
+    throw new Error(error?.message ?? 'Save the milestone as complete before attaching a photo.')
+  }
+  if (previousStoragePath) {
+    const { error: cleanupError } = await client.storage.from(photoBucket).remove([previousStoragePath])
+    if (cleanupError) {
+      throw new Error(`The new milestone photo was saved, but the previous photo could not be deleted: ${cleanupError.message}`)
+    }
+  }
+  return storagePath
+}
+
+export async function deleteProjectMilestonePhoto(projectId: string, milestoneId: string, storagePath: string) {
+  const client = requireSupabase()
+  const { error: updateError } = await client.from('project_milestones')
+    .update({ photo_storage_path: null })
+    .eq('organization_id', SAGACT_ORGANIZATION_ID)
+    .eq('project_id', projectId)
+    .eq('id', milestoneId)
+    .eq('photo_storage_path', storagePath)
+  if (updateError) throw new Error(updateError.message)
+  const { error: removeError } = await client.storage.from(photoBucket).remove([storagePath])
+  if (removeError) throw new Error(`The milestone photo was detached, but its stored file could not be deleted: ${removeError.message}`)
+}
+
+export async function createProjectMilestonePhotoUrl(storagePath: string) {
+  const { data, error } = await requireSupabase().storage.from(photoBucket).createSignedUrl(storagePath, 3600)
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('Could not create a secure milestone photo link.')
+  return data.signedUrl
 }
 
 export async function createProjectMilestone(input: SaveProjectMilestoneInput) {
@@ -81,10 +152,24 @@ export async function updateProjectMilestone(milestoneId: string, input: SavePro
 }
 
 export async function deleteProjectMilestone(projectId: string, milestoneId: string) {
-  const { error } = await requireSupabase().from('project_milestones')
+  const client = requireSupabase()
+  const { data: milestone, error: loadError } = await client.from('project_milestones')
+    .select('photo_storage_path')
+    .eq('organization_id', SAGACT_ORGANIZATION_ID)
+    .eq('project_id', projectId)
+    .eq('id', milestoneId)
+    .maybeSingle()
+  if (loadError) throw new Error(loadError.message)
+
+  const { error } = await client.from('project_milestones')
     .delete()
     .eq('organization_id', SAGACT_ORGANIZATION_ID)
     .eq('project_id', projectId)
     .eq('id', milestoneId)
   if (error) throw new Error(error.message)
+
+  if (milestone?.photo_storage_path) {
+    const { error: removeError } = await client.storage.from(photoBucket).remove([milestone.photo_storage_path])
+    if (removeError) throw new Error(`The milestone was deleted, but its stored photo could not be deleted: ${removeError.message}`)
+  }
 }

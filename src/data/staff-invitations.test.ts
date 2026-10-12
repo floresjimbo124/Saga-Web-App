@@ -1,13 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ invoke: vi.fn() }))
+const mocks = vi.hoisted(() => ({ invoke: vi.fn(), refreshSession: vi.fn(), signOut: vi.fn() }))
 vi.mock('../lib/supabase', () => ({
-  supabase: { functions: { invoke: mocks.invoke } },
+  supabase: { auth: { refreshSession: mocks.refreshSession, signOut: mocks.signOut }, functions: { invoke: mocks.invoke } },
 }))
 
 import { inviteStaffMember, loadStaffMembers, resendStaffInvitation, revokeStaffAccess } from './staff-invitations'
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  mocks.refreshSession.mockResolvedValue({
+    data: { session: { access_token: 'fresh-access-token' } },
+    error: null,
+  })
+  mocks.signOut.mockResolvedValue({ error: null })
+})
 
 describe('staff invitations', () => {
   it('normalizes staff emails and sends the selected role', async () => {
@@ -20,6 +27,7 @@ describe('staff invitations', () => {
     })).resolves.toEqual({ emailSent: true, emailError: null })
     expect(mocks.invoke).toHaveBeenCalledWith('manage-staff', {
       body: { action: 'invite', email: 'engineer@example.com', name: 'Alex Engineer', title: 'engineer' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
     })
   })
 
@@ -43,7 +51,10 @@ describe('staff invitations', () => {
     mocks.invoke.mockResolvedValue({ data: { members }, error: null })
 
     await expect(loadStaffMembers()).resolves.toEqual(members)
-    expect(mocks.invoke).toHaveBeenCalledWith('manage-staff', { body: { action: 'list' } })
+    expect(mocks.invoke).toHaveBeenCalledWith('manage-staff', {
+      body: { action: 'list' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
+    })
   })
 
   it('resends invitations or sign-in links with an explicit result type', async () => {
@@ -52,6 +63,7 @@ describe('staff invitations', () => {
     await expect(resendStaffInvitation('staff-1')).resolves.toEqual({ type: 'sign_in' })
     expect(mocks.invoke).toHaveBeenCalledWith('manage-staff', {
       body: { action: 'resend', userId: 'staff-1' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
     })
   })
 
@@ -61,6 +73,7 @@ describe('staff invitations', () => {
     await expect(revokeStaffAccess('staff-1')).resolves.toBeUndefined()
     expect(mocks.invoke).toHaveBeenCalledWith('manage-staff', {
       body: { action: 'revoke', userId: 'staff-1' },
+      headers: { Authorization: 'Bearer fresh-access-token' },
     })
   })
 
@@ -73,5 +86,24 @@ describe('staff invitations', () => {
     })
 
     await expect(loadStaffMembers()).rejects.toThrow('Only a workspace owner can manage staff accounts.')
+  })
+
+  it('does not invoke the function if the session cannot be refreshed', async () => {
+    mocks.refreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'Invalid Refresh Token: Refresh Token Not Found' },
+    })
+
+    await expect(loadStaffMembers()).rejects.toThrow('Your expired session was cleared. Sign in again.')
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' })
+    expect(mocks.invoke).not.toHaveBeenCalled()
+  })
+
+  it('does not invoke the function when there is no active session', async () => {
+    mocks.refreshSession.mockResolvedValue({ data: { session: null }, error: null })
+
+    await expect(loadStaffMembers()).rejects.toThrow('Your session has expired. Sign out and sign in again.')
+    expect(mocks.invoke).not.toHaveBeenCalled()
+    expect(mocks.signOut).not.toHaveBeenCalled()
   })
 })

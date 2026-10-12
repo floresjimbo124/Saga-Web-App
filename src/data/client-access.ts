@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { refreshAccessToken } from '../lib/refresh-session'
 
 export type ClientAccessAccount = {
   userId: string
@@ -9,10 +10,7 @@ export type ClientAccessAccount = {
 
 async function invokeClientAccess(projectId: string, action: string, details: Record<string, string> = {}) {
   if (!supabase) throw new Error('Supabase is not configured.')
-  const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession()
-  if (sessionError) throw new Error(`Could not refresh your session. Sign out and sign in again. ${sessionError.message}`)
-  const accessToken = sessionData.session?.access_token
-  if (!accessToken) throw new Error('Your session has expired. Sign out and sign in again.')
+  const accessToken = await refreshAccessToken(supabase.auth)
 
   const { data, error } = await supabase.functions.invoke('invite-client', {
     body: { action, projectId, ...details },

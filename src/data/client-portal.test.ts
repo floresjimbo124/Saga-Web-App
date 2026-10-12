@@ -36,6 +36,7 @@ const tableData: Record<string, unknown[]> = {
   project_milestones: [{
     id: 'milestone-1', project_id: 'project-1', name: 'Foundation complete',
     planned_date: '2026-10-02', actual_date: '2026-10-03', completion_percent: 100, status: 'complete',
+    photo_storage_path: 'org-sagact/project-1/milestones/milestone-1/photo.jpg',
   }],
   project_change_orders: [
     {
@@ -55,6 +56,7 @@ function queryFor(table: string) {
     select: (...args: unknown[]) => { calls.push({ table, method: 'select', args }); return query },
     eq: (...args: unknown[]) => { calls.push({ table, method: 'eq', args }); return query },
     in: (...args: unknown[]) => { calls.push({ table, method: 'in', args }); return query },
+    or: (...args: unknown[]) => { calls.push({ table, method: 'or', args }); return query },
     is: (...args: unknown[]) => { calls.push({ table, method: 'is', args }); return query },
     order: (...args: unknown[]) => { calls.push({ table, method: 'order', args }); return query },
     then: (resolve: (result: { data: unknown[]; error: null }) => unknown, reject?: (reason: unknown) => unknown) =>
@@ -102,6 +104,7 @@ describe('client portal data access', () => {
         actualDate: '2026-10-03',
         completionPercent: 100,
         status: 'complete',
+        photoStoragePath: 'org-sagact/project-1/milestones/milestone-1/photo.jpg',
       }],
       prefix: 'HAR',
       changeOrders: [
@@ -117,7 +120,11 @@ describe('client portal data access', () => {
     expect(calls).toContainEqual({ table: 'project_documents', method: 'eq', args: ['client_visible', true] })
     expect(calls).toContainEqual({ table: 'progress_billings', method: 'eq', args: ['status', 'issued'] })
     expect(calls).toContainEqual({ table: 'payment_allocations', method: 'in', args: ['project_id', ['project-1']] })
-    expect(calls).toContainEqual({ table: 'project_milestones', method: 'eq', args: ['client_visible', true] })
+    expect(calls).toContainEqual({
+      table: 'project_milestones',
+      method: 'or',
+      args: ['client_visible.eq.true,and(status.eq.complete,photo_storage_path.not.is.null)'],
+    })
     expect(calls).toContainEqual({ table: 'project_change_orders', method: 'in', args: ['status', ['pending_approval', 'approved']] })
     expect(mocks.rpc).toHaveBeenCalledWith('get_client_project_retention')
     expect(mocks.rpc).toHaveBeenCalledWith('get_client_project_down_payment')

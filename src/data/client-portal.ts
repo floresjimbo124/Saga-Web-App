@@ -32,6 +32,7 @@ export type ClientPortalProject = {
     actualDate: string | null
     completionPercent: number
     status: 'pending' | 'in_progress' | 'complete' | 'blocked'
+    photoStoragePath: string | null
   }[]
   billings: {
     id: string
@@ -126,9 +127,9 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
     client.rpc('get_client_project_retention'),
     client.rpc('get_client_project_down_payment'),
     client.from('project_milestones')
-      .select('id, project_id, name, planned_date, actual_date, completion_percent, status')
+      .select('id, project_id, name, planned_date, actual_date, completion_percent, status, photo_storage_path')
       .in('project_id', projectIds)
-      .eq('client_visible', true)
+      .or('client_visible.eq.true,and(status.eq.complete,photo_storage_path.not.is.null)')
       .order('planned_date', { ascending: true, nullsFirst: false }),
     client.from('project_change_orders')
       .select('id, project_id, order_number, title, description, amount, status, created_at, pdf_storage_path')
@@ -152,6 +153,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
       actualDate: item.actual_date,
       completionPercent: Number(item.completion_percent),
       status: item.status,
+      photoStoragePath: item.photo_storage_path ?? null,
     })
     milestonesByProject.set(item.project_id, milestones)
   }

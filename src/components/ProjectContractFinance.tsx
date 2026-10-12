@@ -75,7 +75,7 @@ export function ProjectContractFinance({ order, projectName, clientName, locatio
       isSetupComplete
       onChanged={onChanged}
     />
-    <section className="surface-card tab-content">
+    <section className="surface-card tab-content payment-register-card">
       <div className="card-heading-row">
         <div><div className="section-kicker">Contract payments</div><h2>Received payments</h2></div>
         <button className="button button-primary" onClick={() => setShowPaymentDialog(true)}><Plus size={15} />Log payment</button>

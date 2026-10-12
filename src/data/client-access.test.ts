@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ invoke: vi.fn(), refreshSession: vi.fn() }))
+const mocks = vi.hoisted(() => ({ invoke: vi.fn(), refreshSession: vi.fn(), signOut: vi.fn() }))
 vi.mock('../lib/supabase', () => ({
-  supabase: { auth: { refreshSession: mocks.refreshSession }, functions: { invoke: mocks.invoke } },
+  supabase: { auth: { refreshSession: mocks.refreshSession, signOut: mocks.signOut }, functions: { invoke: mocks.invoke } },
 }))
 
 import { inviteClientToProject, loadClientAccess, resendClientInvitation, revokeClientAccess } from './client-access'
@@ -13,6 +13,7 @@ beforeEach(() => {
     data: { session: { access_token: 'fresh-access-token' } },
     error: null,
   })
+  mocks.signOut.mockResolvedValue({ error: null })
 })
 
 describe('client invitations', () => {
@@ -117,10 +118,11 @@ describe('client invitations', () => {
   it('does not invoke the function if the user session cannot be refreshed', async () => {
     mocks.refreshSession.mockResolvedValue({
       data: { session: null },
-      error: { message: 'Refresh token expired.' },
+      error: { message: 'Invalid Refresh Token: Refresh Token Not Found' },
     })
 
-    await expect(loadClientAccess('project-1')).rejects.toThrow('Could not refresh your session. Sign out and sign in again. Refresh token expired.')
+    await expect(loadClientAccess('project-1')).rejects.toThrow('Your expired session was cleared. Sign in again.')
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' })
     expect(mocks.invoke).not.toHaveBeenCalled()
   })
 })

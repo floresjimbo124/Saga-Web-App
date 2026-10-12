@@ -274,10 +274,26 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
 
       {configurationMissing ? <div className="auth-notice" role="status"><CircleAlert size={17} /><span>Supabase isn’t configured. Add the project URL and public key to <code>.env.local</code>, then restart the dev server.</span></div> : <>
         <form className="auth-form" onSubmit={handleSubmit}>
-          <label className="auth-field">Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" required /></label>
-          {!forgotPassword && <label className="auth-field">Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /></label>}
+          <label className="auth-field">
+            <span>Email address</span>
+            <span className="auth-field-control"><Mail size={16} aria-hidden="true" /><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email address" required /></span>
+          </label>
+          {!forgotPassword && <label className="auth-field">
+            <span>Password</span>
+            <span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" required /></span>
+          </label>}
           {error && <p className="auth-error" role="alert">{error}</p>}
           {message && <p className="auth-success" role="status">{message}</p>}
+          <div className="auth-account-actions">
+            <button className="auth-mode-toggle" type="button" onClick={() => {
+              setForgotPassword((current) => !current)
+              setPassword('')
+              setError('')
+              setMessage('')
+            }}>
+              {forgotPassword ? 'Back to sign in' : 'Forgot password?'}
+            </button>
+          </div>
           <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
             {isSubmitting
               ? forgotPassword ? 'Sending reset link…' : 'Signing in…'
@@ -285,16 +301,6 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
             {!isSubmitting && (forgotPassword ? <Mail size={16} /> : <ArrowRight size={16} />)}
           </button>
         </form>
-        <div className="auth-account-actions">
-          <button className="auth-mode-toggle" type="button" onClick={() => {
-            setForgotPassword((current) => !current)
-            setPassword('')
-            setError('')
-            setMessage('')
-          }}>
-            {forgotPassword ? 'Back to sign in' : 'Forgot your password?'}
-          </button>
-        </div>
       </>}
       {configurationMissing && <div className="auth-dev-mode">Development mode</div>}
     </section>
@@ -440,7 +446,7 @@ function AuthLayout({ children }: { children: ReactNode }) {
 }
 
 function AuthCardBrand() {
-  return <div className="auth-brand auth-card-brand"><span className="auth-brand-mark"><img src="/sagact-mark.svg" alt="" /></span><span>SAGACT<span>.</span></span></div>
+  return <div className="auth-brand auth-card-brand"><span className="auth-brand-mark"><img src="/sagact-mark.svg" alt="" /></span><span className="auth-brand-name">SAGACT<span>.</span></span><span className="auth-brand-caption">Project Workspace</span></div>
 }
 
 function AuthLoading({ message }: { message: string }) {

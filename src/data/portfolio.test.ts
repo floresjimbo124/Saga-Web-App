@@ -10,7 +10,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: { from: mocks.from, rpc: mocks.rpc },
 }))
 
-import { createProject, loadPortfolio, recordProjectExpense, recordProjectExpenses, recordProjectPayment, updateProjectCostForecast, updateProjectDeadline, updateProjectExpense, updateProjectSetup, updateProjectState } from './portfolio'
+import { createProject, loadPortfolio, recordProjectExpense, recordProjectExpenses, recordProjectPayment, updateProjectCostForecast, updateProjectExpense, updateProjectSetup, updateProjectState } from './portfolio'
 
 type QueryResult = { data: unknown; error: { message: string } | null }
 
@@ -32,12 +32,12 @@ const portfolioRows: Record<string, unknown[]> = {
   projects: [
     {
       id: 'project-salo', name: 'Salo Spot', prefix: 'SAL', location: 'Makati', status: 'planning',
-      deadline: '2026-11-02', progress_percent: 0, health_status: 'on_track', client_id: 'client-salo',
+      start_date: '2026-09-20', deadline: '2026-11-02', progress_percent: 0, health_status: 'on_track', client_id: 'client-salo',
       created_at: '2026-09-24T00:00:00Z', updated_at: '2026-09-24T00:00:00Z',
     },
     {
       id: 'project-dapitan', name: 'Dapitan Cafe', prefix: 'DAP', location: null, status: 'completed',
-      deadline: null, progress_percent: 0, health_status: 'needs_attention', client_id: null,
+      start_date: null, deadline: null, progress_percent: 0, health_status: 'needs_attention', client_id: null,
       created_at: '2026-09-25T00:00:00Z', updated_at: '2026-09-25T00:00:00Z',
     },
   ],
@@ -120,6 +120,7 @@ describe('portfolio data access', () => {
       clientEmail: 'client@salo.example',
       status: 'planning',
       healthStatus: 'on_track',
+      startDate: '2026-09-20',
       deadline: '2026-11-02',
       contract: 0,
       costBudget: 800_000,
@@ -147,6 +148,7 @@ describe('portfolio data access', () => {
       client: 'Client not set',
       status: 'completed',
       healthStatus: 'needs_attention',
+      startDate: null,
       contract: 0,
       billed: 0,
       collected: 0,
@@ -333,8 +335,8 @@ describe('portfolio data access', () => {
     const salo = portfolio.projects.find((project) => project.id === 'project-salo')
 
     expect(salo?.milestones).toEqual([
-      { id: 'milestone-pending', name: 'Paint', startDate: null, plannedDate: '2026-10-04', actualDate: null, completionPercent: 0, status: 'pending', clientVisible: false },
-      { id: 'milestone-active', name: 'Electrical rough-in', startDate: '2026-10-05', plannedDate: '2026-10-10', actualDate: null, completionPercent: 60, status: 'in_progress', clientVisible: true },
+      { id: 'milestone-pending', name: 'Paint', startDate: null, plannedDate: '2026-10-04', actualDate: null, completionPercent: 0, status: 'pending', clientVisible: false, photoStoragePath: null },
+      { id: 'milestone-active', name: 'Electrical rough-in', startDate: '2026-10-05', plannedDate: '2026-10-10', actualDate: null, completionPercent: 60, status: 'in_progress', clientVisible: true, photoStoragePath: null },
     ])
     expect(salo?.milestone).toContain('Electrical rough-in')
   })
@@ -376,16 +378,20 @@ describe('portfolio data access', () => {
       clientName: 'Salo Hospitality Group',
       contractAmount: 4_500_000,
       specialDiscount: 50_000,
+      startDate: '2026-09-20',
+      deadline: '2026-12-31',
       downPaymentPercent: 40,
       retentionRatePercent: 5,
       retentionMethod: 'final_schedule',
     })
 
-    expect(mocks.rpc).toHaveBeenCalledWith('update_project_setup', expect.objectContaining({
+    expect(mocks.rpc).toHaveBeenCalledWith('update_project_contract_schedule', expect.objectContaining({
       p_project_id: 'project-salo',
       p_special_discount: 50_000,
       p_down_payment_percent: 40,
       p_retention_method: 'final_schedule',
+      p_start_date: '2026-09-20',
+      p_deadline: '2026-12-31',
     }))
   })
 
@@ -401,17 +407,6 @@ describe('portfolio data access', () => {
       p_project_id: 'project-salo',
       p_status: 'active',
       p_health_status: 'needs_attention',
-    })
-  })
-
-  it('updates a project deadline through the owner RPC', async () => {
-    mocks.rpc.mockResolvedValue({ data: null, error: null })
-
-    await updateProjectDeadline('project-salo', '2026-12-31')
-
-    expect(mocks.rpc).toHaveBeenCalledWith('update_project_deadline', {
-      p_project_id: 'project-salo',
-      p_deadline: '2026-12-31',
     })
   })
 

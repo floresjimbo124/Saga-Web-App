@@ -283,7 +283,7 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
       </div>
     ))}</div> : <p className="client-empty-note">No change orders yet.</p>}
     {isCreateOpen && createPortal(<div className="modal-backdrop change-order-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeCreateDialog() }}>
-      <section className="project-modal change-order-dialog" style={{ width: 'calc(100vw - 32px)', maxWidth: '1000px' }} role="dialog" aria-modal="true" aria-labelledby="change-order-dialog-title">
+      <section className="project-modal change-order-dialog" role="dialog" aria-modal="true" aria-labelledby="change-order-dialog-title">
         <div className="modal-heading">
           <div><div className="section-kicker">Additional project work</div><h2 id="change-order-dialog-title">{editingOrder ? 'Edit change-order draft' : 'Create a change order'}</h2></div>
           <button className="icon-button" type="button" onClick={closeCreateDialog} aria-label="Close" disabled={isSaving}><X size={18} /></button>

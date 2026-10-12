@@ -1,30 +1,55 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ from: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  from: vi.fn(),
+  upload: vi.fn(),
+  remove: vi.fn(),
+  createSignedUrl: vi.fn(),
+}))
 vi.mock('../lib/supabase', () => ({
   SAGACT_ORGANIZATION_ID: 'org-sagact',
-  supabase: { from: mocks.from },
+  supabase: {
+    from: mocks.from,
+    storage: { from: () => ({
+      upload: mocks.upload,
+      remove: mocks.remove,
+      createSignedUrl: mocks.createSignedUrl,
+    }) },
+  },
 }))
 
-import { createProjectMilestone, deleteProjectMilestone, updateProjectMilestone } from './project-milestones'
+import {
+  createProjectMilestone,
+  createProjectMilestonePhotoUrl,
+  deleteProjectMilestone,
+  deleteProjectMilestonePhoto,
+  updateProjectMilestone,
+  uploadProjectMilestonePhoto,
+  validateProjectMilestonePhoto,
+} from './project-milestones'
 
 const calls: { method: string; args: unknown[] }[] = []
 
-function queryFor(error: { message: string } | null = null) {
+function queryFor(error: { message: string } | null = null, data: unknown = null) {
   const query = {
     insert: (...args: unknown[]) => { calls.push({ method: 'insert', args }); return query },
     update: (...args: unknown[]) => { calls.push({ method: 'update', args }); return query },
     delete: (...args: unknown[]) => { calls.push({ method: 'delete', args }); return query },
+    select: (...args: unknown[]) => { calls.push({ method: 'select', args }); return query },
     eq: (...args: unknown[]) => { calls.push({ method: 'eq', args }); return query },
     then: (resolve: (result: { error: typeof error }) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve({ error }).then(resolve, reject),
+    maybeSingle: () => Promise.resolve({ data, error }),
   }
   return query
 }
 
 beforeEach(() => {
   calls.length = 0
-  mocks.from.mockImplementation(() => queryFor())
+  mocks.from.mockImplementation(() => queryFor(null, { id: 'milestone-1' }))
+  mocks.upload.mockResolvedValue({ error: null })
+  mocks.remove.mockResolvedValue({ error: null })
+  mocks.createSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://example.com/photo.jpg' }, error: null })
 })
 
 describe('project milestone data access', () => {
@@ -80,5 +105,47 @@ describe('project milestone data access', () => {
     mocks.from.mockImplementation(() => queryFor({ message: 'permission denied' }))
 
     await expect(createProjectMilestone(input)).rejects.toThrow('permission denied')
+  })
+
+  it('validates milestone photo formats and file sizes', () => {
+    validateProjectMilestonePhoto(new File(['image'], 'site.jpg', { type: 'image/jpeg' }))
+    expect(() => validateProjectMilestonePhoto(new File(['text'], 'notes.txt', { type: 'text/plain' })))
+      .toThrow('Choose a JPG, PNG, or WebP image.')
+    expect(() => validateProjectMilestonePhoto(new File([''], 'empty.png', { type: 'image/png' })))
+      .toThrow('The selected image is empty.')
+    expect(() => validateProjectMilestonePhoto(new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'large.png', { type: 'image/png' })))
+      .toThrow('Milestone photos must be 10 MB or smaller.')
+  })
+
+  it('uploads a completed milestone photo to project-scoped storage and records its path', async () => {
+    await expect(uploadProjectMilestonePhoto(
+      'project-1',
+      'milestone-1',
+      new File(['image'], 'site.jpg', { type: 'image/jpeg' }),
+      null,
+    )).resolves.toMatch(/^org-sagact\/project-1\/milestones\/milestone-1\/.+\.jpg$/)
+
+    expect(mocks.upload).toHaveBeenCalledWith(expect.stringMatching(/^org-sagact\/project-1\/milestones\/milestone-1\/.+\.jpg$/), expect.any(File), {
+      cacheControl: '3600',
+      contentType: 'image/jpeg',
+      upsert: false,
+    })
+    expect(calls).toContainEqual({
+      method: 'update',
+      args: [{ photo_storage_path: expect.stringMatching(/^org-sagact\/project-1\/milestones\/milestone-1\/.+\.jpg$/) }],
+    })
+    expect(calls).toContainEqual({ method: 'eq', args: ['status', 'complete'] })
+  })
+
+  it('removes a photo reference before deleting the stored image', async () => {
+    await deleteProjectMilestonePhoto('project-1', 'milestone-1', 'org-sagact/project-1/milestones/milestone-1/photo.jpg')
+
+    expect(calls).toContainEqual({ method: 'update', args: [{ photo_storage_path: null }] })
+    expect(mocks.remove).toHaveBeenCalledWith(['org-sagact/project-1/milestones/milestone-1/photo.jpg'])
+  })
+
+  it('creates a signed URL for private milestone photos', async () => {
+    await expect(createProjectMilestonePhotoUrl('org-sagact/project-1/milestones/milestone-1/photo.jpg'))
+      .resolves.toBe('https://example.com/photo.jpg')
   })
 })

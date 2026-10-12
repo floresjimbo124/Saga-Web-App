@@ -1,8 +1,11 @@
-import { useState, type FormEvent } from 'react'
-import { Eye, EyeOff, Plus, Save, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Camera, Eye, EyeOff, Plus, Save, Trash2, Upload } from 'lucide-react'
 import {
+  createProjectMilestonePhotoUrl,
   createProjectMilestone,
+  deleteProjectMilestonePhoto,
   deleteProjectMilestone,
+  uploadProjectMilestonePhoto,
   updateProjectMilestone,
   type ProjectMilestone,
   type ProjectMilestoneStatus,
@@ -50,6 +53,56 @@ function ProjectMilestoneRow({ projectId, milestone, onChanged }: {
   const [clientVisible, setClientVisible] = useState(milestone.clientVisible)
   const [error, setError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [photoError, setPhotoError] = useState('')
+  const [isPhotoWorking, setIsPhotoWorking] = useState(false)
+  const photoInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    let active = true
+    if (milestone.photoStoragePath) {
+      void createProjectMilestonePhotoUrl(milestone.photoStoragePath)
+        .then((url) => { if (active) setPhotoUrl(url) })
+        .catch((photoLoadError: unknown) => {
+          if (active) setPhotoError(photoLoadError instanceof Error ? photoLoadError.message : 'Could not load this milestone photo.')
+        })
+    }
+    return () => { active = false }
+  }, [milestone.photoStoragePath])
+
+  const uploadPhoto = async (file: File) => {
+    setPhotoError('')
+    setIsPhotoWorking(true)
+    try {
+      const storagePath = await uploadProjectMilestonePhoto(projectId, milestone.id, file, milestone.photoStoragePath)
+      setPhotoUrl(await createProjectMilestonePhotoUrl(storagePath))
+      showToast('Milestone photo attached.')
+      onChanged()
+    } catch (uploadError) {
+      setPhotoError(uploadError instanceof Error ? uploadError.message : 'Could not upload this milestone photo.')
+      onChanged()
+    } finally {
+      if (photoInput.current) photoInput.current.value = ''
+      setIsPhotoWorking(false)
+    }
+  }
+
+  const removePhoto = async () => {
+    if (!milestone.photoStoragePath) return
+    setPhotoError('')
+    setIsPhotoWorking(true)
+    try {
+      await deleteProjectMilestonePhoto(projectId, milestone.id, milestone.photoStoragePath)
+      setPhotoUrl('')
+      showToast('Milestone photo removed.', 'delete')
+      onChanged()
+    } catch (removeError) {
+      setPhotoError(removeError instanceof Error ? removeError.message : 'Could not remove this milestone photo.')
+      onChanged()
+    } finally {
+      setIsPhotoWorking(false)
+    }
+  }
 
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -93,6 +146,26 @@ function ProjectMilestoneRow({ projectId, milestone, onChanged }: {
     }}>{statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
     {status === 'complete' && <label className="form-field">Completed on<input type="date" value={actualDate} onChange={(event) => setActualDate(event.target.value)} /></label>}
     <label className="milestone-client-visible"><input type="checkbox" checked={clientVisible} onChange={(event) => setClientVisible(event.target.checked)} /><span>{clientVisible ? <Eye size={14} /> : <EyeOff size={14} />}Show in client portal</span></label>
+    {status === 'complete' && <div className="milestone-photo-control">
+      <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" aria-label={`Attach a photo to ${milestone.name}`} hidden onChange={(event) => {
+        const file = event.target.files?.[0]
+        if (file) void uploadPhoto(file)
+      }} />
+      {milestone.status === 'complete'
+        ? <>
+          {photoUrl && <img className="milestone-photo-preview" src={photoUrl} alt={`${milestone.name} completion`} />}
+          <div className="milestone-photo-actions">
+            <button className="button button-secondary" type="button" disabled={isPhotoWorking} onClick={() => photoInput.current?.click()}>
+              {milestone.photoStoragePath ? <Camera size={14} /> : <Upload size={14} />}
+              {isPhotoWorking ? 'Saving photo…' : milestone.photoStoragePath ? 'Change photo' : 'Attach photo'}
+            </button>
+            {milestone.photoStoragePath && <button className="button button-secondary" type="button" disabled={isPhotoWorking} onClick={() => { void removePhoto() }}><Trash2 size={14} />Remove photo</button>}
+          </div>
+          <small className="milestone-photo-note">JPG, PNG, or WebP · 10 MB max. A completed milestone with a photo is shared with the client automatically.</small>
+        </>
+        : <small className="milestone-photo-note">Save this milestone as complete before attaching a photo.</small>}
+      {photoError && <p className="form-error milestone-photo-error" role="alert">{photoError}</p>}
+    </div>}
     {error && <p className="form-error milestone-manage-error" role="alert">{error}</p>}
     <div className="milestone-manage-actions">
       <button className="button button-primary" type="submit" disabled={isSaving}><Save size={14} />{isSaving ? 'Saving…' : 'Save changes'}</button>

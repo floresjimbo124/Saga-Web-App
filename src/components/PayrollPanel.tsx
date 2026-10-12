@@ -273,6 +273,7 @@ export function PayrollPanel({ projects, onChanged }: {
   const [historyWeekFilter, setHistoryWeekFilter] = useState('all')
   const [isViewEmployeesOpen, setIsViewEmployeesOpen] = useState(false)
   const [isCreatingEmployee, setIsCreatingEmployee] = useState(false)
+  const [selectedPayrollEmployeeId, setSelectedPayrollEmployeeId] = useState<string | null>(null)
   const [advanceAmount, setAdvanceAmount] = useState('')
   const [advanceDate, setAdvanceDate] = useState(localToday)
   const [advanceNote, setAdvanceNote] = useState('')
@@ -490,25 +491,21 @@ export function PayrollPanel({ projects, onChanged }: {
       {weekFinalizeError && <p className="form-error" role="alert">{weekFinalizeError}</p>}
       {isLoading ? <p className="payroll-empty">Loading payroll…</p> : activeEmployees.length ? <div className="payroll-week-list">{activeEmployees.map((employee) => {
         const entry = currentEntries.find((item) => item.employeeId === employee.id)
-        return <article className="payroll-person-card" key={`${employee.id}:${weekStart}`}>
-          <div className="payroll-person-heading">
-            <strong>{employee.name}</strong>
-            <small>{money.format(entry?.dailyRate ?? employee.dailyRate)} per day{entry ? ` · ${entry.presentDays} days present${entry.finalizedAt ? ' · finalized' : ' · draft'}` : ' · Attendance not entered'}</small>
-          </div>
-          <WeeklyPayrollRow
-            employee={employee}
-            weekStart={weekStart}
-            dates={weekDates}
-            entry={entry}
-            attendance={data.attendance}
-            projects={projects}
-            advances={data.advances}
-            entries={data.entries}
-            onSaved={() => { refresh(true); onChanged() }}
-            onDraftSaving={updateDraftSaving}
-            onManageAdvances={() => { setAdvanceHistoryEmployeeId(employee.id); setEditingAdvanceId(null); setIsAddAdvanceOpen(false); setAdvanceEditError(''); setAdvanceError('') }}
-          />
-        </article>
+        const netPay = entry ? entry.grossPay - entry.advanceDeduction : null
+        const status = entry ? entry.finalizedAt ? 'Finalized' : 'Draft saved' : 'Not entered'
+        return <button
+          type="button"
+          className="payroll-worker-row"
+          key={employee.id}
+          onClick={() => setSelectedPayrollEmployeeId(employee.id)}
+          aria-label={`Edit payroll for ${employee.name}`}
+        >
+          <span className="payroll-worker-avatar" aria-hidden="true">{employee.name.trim().charAt(0).toUpperCase() || '?'}</span>
+          <span className="payroll-worker-name"><strong>{employee.name}</strong><small>{money.format(entry?.dailyRate ?? employee.dailyRate)} per day · {entry ? `${entry.presentDays} days present` : 'Attendance not entered'}</small></span>
+          <span className={`payroll-worker-status${entry?.finalizedAt ? ' is-finalized' : ''}${!entry ? ' is-empty' : ''}`}>{status}</span>
+          <span className="payroll-worker-pay"><strong>{netPay === null ? '—' : money.format(netPay)}</strong><small>Net pay</small></span>
+          <span className="payroll-worker-open" aria-hidden="true">›</span>
+        </button>
       })}</div> : <p className="payroll-empty">Add an active employee below to start weekly payroll.</p>}
       <div className="payroll-week-totals"><span>Saved gross pay <strong>{money.format(savedGross)}</strong></span><span>Saved deductions <strong>{money.format(savedDeductions)}</strong></span><span>Saved net pay <strong>{money.format(savedGross - savedDeductions)}</strong></span></div>
       {!isLoading && currentEntries.length > 0 && <div className="payroll-history-heading">
@@ -526,7 +523,44 @@ export function PayrollPanel({ projects, onChanged }: {
       </div>}
     </section>
 
-    {isPayrollHistoryOpen && createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsPayrollHistoryOpen(false) }}>
+    {selectedPayrollEmployeeId && (() => {
+      const employee = activeEmployees.find((item) => item.id === selectedPayrollEmployeeId)
+      if (!employee) return null
+      const entry = currentEntries.find((item) => item.employeeId === employee.id)
+      const isSaving = pendingDraftSaves.has(employee.id)
+      const closePayrollDrawer = () => {
+        if (isSaving) {
+          showToast('Wait for payroll changes to finish saving before closing.', 'update')
+          return
+        }
+        setSelectedPayrollEmployeeId(null)
+      }
+      return createPortal(<div className="modal-backdrop payroll-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closePayrollDrawer() }}>
+        <section className="project-modal payroll-worker-drawer" role="dialog" aria-modal="true" aria-labelledby="payroll-worker-drawer-title">
+          <div className="modal-heading">
+            <div><div className="section-kicker">Weekly payroll · {displayDate(weekStart, fullDate)} – {displayDate(shiftDate(weekStart, 6), fullDate)}</div><h2 id="payroll-worker-drawer-title">{employee.name}</h2></div>
+            <button className="icon-button" type="button" onClick={closePayrollDrawer} aria-label={`Close payroll for ${employee.name}`} disabled={isSaving}><X size={18} /></button>
+          </div>
+          <p className="payroll-drawer-intro">{money.format(entry?.dailyRate ?? employee.dailyRate)} per day{isSaving ? ' · Saving changes…' : ''}</p>
+          <WeeklyPayrollRow
+            key={`${employee.id}:${weekStart}`}
+            employee={employee}
+            weekStart={weekStart}
+            dates={weekDates}
+            entry={entry}
+            attendance={data.attendance}
+            projects={projects}
+            advances={data.advances}
+            entries={data.entries}
+            onSaved={() => { refresh(true); onChanged() }}
+            onDraftSaving={updateDraftSaving}
+            onManageAdvances={() => { setAdvanceHistoryEmployeeId(employee.id); setEditingAdvanceId(null); setIsAddAdvanceOpen(false); setAdvanceEditError(''); setAdvanceError('') }}
+          />
+        </section>
+      </div>, document.body)
+    })()}
+
+    {isPayrollHistoryOpen && createPortal(<div className="modal-backdrop payroll-history-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsPayrollHistoryOpen(false) }}>
       <section className="project-modal payroll-history-dialog" role="dialog" aria-modal="true" aria-labelledby="payroll-history-title">
         <div className="modal-heading">
           <div><div className="section-kicker">All weeks</div><h2 id="payroll-history-title">Payroll history</h2></div>
@@ -565,7 +599,7 @@ export function PayrollPanel({ projects, onChanged }: {
         </div> : <p className="payroll-empty">{finalizedEntries.length ? 'No finalized payroll entries for this week.' : 'No finalized payroll entries yet.'}</p>}
       </section>
     </div>, document.body)}
-    {isViewEmployeesOpen && createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSavingEmployee) { setIsViewEmployeesOpen(false); setIsCreatingEmployee(false) } }}>
+    {isViewEmployeesOpen && createPortal(<div className="modal-backdrop payroll-employees-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSavingEmployee) { setIsViewEmployeesOpen(false); setIsCreatingEmployee(false) } }}>
       <section className="project-modal payroll-employees-dialog" role="dialog" aria-modal="true" aria-labelledby="payroll-employees-title">
         <div className="modal-heading">
           <div><div className="section-kicker">Employee management</div><h2 id="payroll-employees-title">Employees</h2></div>
@@ -584,13 +618,13 @@ export function PayrollPanel({ projects, onChanged }: {
         {data.employees.length ? <div className="payroll-employee-list">{data.employees.map((employee) => <EmployeeEditor key={employee.id} employee={employee} onSaved={() => refresh(true)} />)}</div> : <p className="payroll-empty">No employees added yet.</p>}
       </section>
     </div>, document.body)}
-    {advanceHistoryEmployeeId && createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSavingAdvanceEdit && !isSavingAdvance) { setAdvanceHistoryEmployeeId(null); setEditingAdvanceId(null); setIsAddAdvanceOpen(false) } }}>
+    {advanceHistoryEmployeeId && createPortal(<div className="modal-backdrop payroll-advances-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSavingAdvanceEdit && !isSavingAdvance) { setAdvanceHistoryEmployeeId(null); setEditingAdvanceId(null); setIsAddAdvanceOpen(false) } }}>
       <section className="project-modal payroll-advances-dialog" role="dialog" aria-modal="true" aria-labelledby="payroll-advance-history-title">
         <div className="modal-heading">
           <div><div className="section-kicker">Cash advances</div><h2 id="payroll-advance-history-title">{data.employees.find((employee) => employee.id === advanceHistoryEmployeeId)?.name ?? 'Employee'}</h2></div>
           <button className="icon-button" type="button" onClick={() => { setAdvanceHistoryEmployeeId(null); setEditingAdvanceId(null); setIsAddAdvanceOpen(false) }} aria-label="Close" disabled={isSavingAdvanceEdit || isSavingAdvance}><X size={18} /></button>
         </div>
-        <button type="button" className="button button-primary payroll-advance-add-button" onClick={() => { setAdvanceError(''); setIsAddAdvanceOpen((open) => !open) }} disabled={isSavingAdvance || isSavingAdvanceEdit}>{isAddAdvanceOpen ? <X size={15} /> : <Plus size={15} />}{isAddAdvanceOpen ? 'Cancel new advance' : 'Record advance'}</button>
+        <button type="button" className="button button-primary payroll-advance-add-button" onClick={() => { setAdvanceError(''); setIsAddAdvanceOpen((open) => !open) }} disabled={isSavingAdvance || isSavingAdvanceEdit}>{isAddAdvanceOpen ? <X size={15} /> : <Plus size={15} />}{isAddAdvanceOpen ? 'Cancel new advance' : 'Create new advance'}</button>
         {isAddAdvanceOpen && <form className="payroll-advance-edit-form payroll-advance-create-form" onSubmit={(event) => { void addAdvance(event) }}>
           <strong>New advance</strong>
           <label className="form-field">Amount<MoneyInput min="0.01" step="0.01" value={advanceAmount} onChange={setAdvanceAmount} placeholder="0.00" required /></label>
