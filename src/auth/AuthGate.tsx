@@ -263,8 +263,8 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
     }
   }
 
-  return <AuthLayout>
-    <section className="auth-panel" aria-labelledby="auth-title">
+  return <AuthLayout className="auth-signin-screen" contentClassName="auth-signin-content">
+    <section className="auth-panel auth-signin-panel" aria-labelledby="auth-title">
       <AuthCardBrand />
       <div className="auth-heading">
         <h1 id="auth-title">{forgotPassword ? 'Reset your password' : 'Welcome back'}</h1>
@@ -272,7 +272,7 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
       </div>
 
       {configurationMissing ? <div className="auth-notice" role="status"><CircleAlert size={17} /><span>Supabase isn’t configured. Add the project URL and public key to <code>.env.local</code>, then restart the dev server.</span></div> : <>
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className="auth-form auth-signin-form" onSubmit={handleSubmit}>
           <label className="auth-field">
             <span>Email address</span>
             <span className="auth-field-control"><Mail size={16} aria-hidden="true" /><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email address" required /></span>
