@@ -463,32 +463,25 @@ export function PayrollPanel({ projects, onChanged }: {
   }
 
   return <div className="payroll-page">
-    <section className="surface-card tab-content payroll-management-card payroll-employees-toolbar">
-      <div className="card-heading-row">
-        <div><h2><Users size={17} />Employees</h2><p>View, edit, and update employee names and daily pay rates.</p></div>
-        <button type="button" className="button button-primary" onClick={() => { setIsCreatingEmployee(false); setIsViewEmployeesOpen(true) }}><Users size={15} />View employees</button>
-      </div>
-    </section>
-    <section className="surface-card tab-content payroll-weekly-section">
-      <div className="card-heading-row">
-        <div><h2>Weekly payroll</h2><p>Mark each day 1 for present or 0 for absent. Payroll is automatically finalized every Sunday at 11:59 PM (Manila time); use the manual option below to finalize the selected week earlier.</p></div>
-      </div>
-      <div className="payroll-week-toolbar">
-        <button type="button" className="button button-secondary" onClick={() => setWeekStart(shiftDate(weekStart, -7))} aria-label="Previous payroll week"><ArrowLeft size={15} />Previous week</button>
-        <strong>{displayDate(weekStart, fullDate)} – {displayDate(shiftDate(weekStart, 6), fullDate)}</strong>
-        <button type="button" className="button button-secondary" onClick={() => setWeekStart(shiftDate(weekStart, 7))} aria-label="Next payroll week">Next week<ArrowRight size={15} /></button>
-      </div>
-      <div className="payroll-finalize-action">
-        <div className="payroll-finalize-copy"><strong>{draftEntries.length > 0 ? `${draftEntries.length} saved ${draftEntries.length === 1 ? 'entry' : 'entries'} ready` : 'No saved payroll entries ready'}</strong><small>Manual finalization posts saved payroll now and immediately charges each assigned project.</small></div>
-        <div className="payroll-finalize-buttons">
-          <button type="button" className="button button-secondary" onClick={() => setIsPayrollHistoryOpen(true)}><History size={15} />View payroll history</button>
-          <button type="button" className="button button-primary" disabled={!canFinalizeWeek || isCheckingFinalize || isConfirmingWeek || isFinalizingWeek} onClick={() => { void confirmAndFinalizeWeek() }}><BadgeCheck size={15} />{isCheckingFinalize ? 'Checking…' : isConfirmingWeek ? 'Confirming…' : isFinalizingWeek ? 'Finalizing…' : 'Finalize week'}</button>
+    <section className="surface-card tab-content payroll-weekly-section pr-card">
+      <header className="pr-header">
+        <div className="pr-title"><h2>Weekly payroll</h2><p>Mark attendance per day. Payroll auto-finalizes Sunday 11:59 PM (Manila).</p></div>
+        <div className="pr-header-actions">
+          <button type="button" className="button button-secondary" onClick={() => { setIsCreatingEmployee(false); setIsViewEmployeesOpen(true) }}><Users size={15} />Employees</button>
+          <button type="button" className="button button-secondary" onClick={() => setIsPayrollHistoryOpen(true)}><History size={15} />History</button>
         </div>
+      </header>
+      <div className="pr-week">
+        <button type="button" className="pr-week-step" onClick={() => setWeekStart(shiftDate(weekStart, -7))} aria-label="Previous payroll week"><ArrowLeft size={16} /></button>
+        <div className="pr-week-label"><small>Pay week</small><strong>{displayDate(weekStart, fullDate)} – {displayDate(shiftDate(weekStart, 6), fullDate)}</strong></div>
+        <button type="button" className="pr-week-step" onClick={() => setWeekStart(shiftDate(weekStart, 7))} aria-label="Next payroll week"><ArrowRight size={16} /></button>
       </div>
-      {draftEntries.length === 0 && !isLoading && <p className="payroll-finalize-hint">Save at least one employee’s attendance before finalizing this week.</p>}
-      {pendingDraftSaves.size > 0 && <p className="payroll-finalize-hint">Waiting for payroll changes to finish saving…</p>}
+      <div className="pr-stats">
+        <div><small>Gross pay</small><strong>{money.format(savedGross)}</strong></div>
+        <div><small>Deductions</small><strong>{money.format(savedDeductions)}</strong></div>
+        <div className="is-net"><small>Net pay</small><strong>{money.format(savedGross - savedDeductions)}</strong></div>
+      </div>
       {loadError && <p className="form-error" role="alert">{loadError} <button type="button" className="text-button" onClick={() => refresh()}>Retry</button></p>}
-      {weekFinalizeError && <p className="form-error" role="alert">{weekFinalizeError}</p>}
       {isLoading ? <p className="payroll-empty">Loading payroll…</p> : activeEmployees.length ? <div className="payroll-week-list">{activeEmployees.map((employee) => {
         const entry = currentEntries.find((item) => item.employeeId === employee.id)
         const netPay = entry ? entry.grossPay - entry.advanceDeduction : null
@@ -506,8 +499,20 @@ export function PayrollPanel({ projects, onChanged }: {
           <span className="payroll-worker-pay"><strong>{netPay === null ? '—' : money.format(netPay)}</strong><small>Net pay</small></span>
           <span className="payroll-worker-open" aria-hidden="true">›</span>
         </button>
-      })}</div> : <p className="payroll-empty">Add an active employee below to start weekly payroll.</p>}
-      <div className="payroll-week-totals"><span>Saved gross pay <strong>{money.format(savedGross)}</strong></span><span>Saved deductions <strong>{money.format(savedDeductions)}</strong></span><span>Saved net pay <strong>{money.format(savedGross - savedDeductions)}</strong></span></div>
+      })}</div> : <div className="pr-empty">
+        <span className="pr-empty-icon" aria-hidden="true"><Users size={20} /></span>
+        <strong>No active employees yet</strong>
+        <p>Add your crew to start tracking attendance and weekly pay.</p>
+        <button type="button" className="button button-primary" onClick={() => { setIsCreatingEmployee(true); setIsViewEmployeesOpen(true) }}><Plus size={15} />Add employee</button>
+      </div>}
+      <footer className="pr-finalize">
+        <div className="pr-finalize-copy">
+          <strong>{draftEntries.length > 0 ? `${draftEntries.length} saved ${draftEntries.length === 1 ? 'entry' : 'entries'} ready to finalize` : 'Nothing to finalize yet'}</strong>
+          <small>{pendingDraftSaves.size > 0 ? 'Waiting for payroll changes to finish saving…' : draftEntries.length > 0 ? 'Finalizing now posts payroll and charges each assigned project.' : 'Save at least one employee’s attendance first.'}</small>
+        </div>
+        <button type="button" className="button button-primary" disabled={!canFinalizeWeek || isCheckingFinalize || isConfirmingWeek || isFinalizingWeek} onClick={() => { void confirmAndFinalizeWeek() }}><BadgeCheck size={15} />{isCheckingFinalize ? 'Checking…' : isConfirmingWeek ? 'Confirming…' : isFinalizingWeek ? 'Finalizing…' : 'Finalize week'}</button>
+      </footer>
+      {weekFinalizeError && <p className="form-error" role="alert">{weekFinalizeError}</p>}
       {!isLoading && currentEntries.length > 0 && <div className="payroll-history-heading">
         <div className="payroll-history-title">Weekly payroll by employee</div>
         <div className="payroll-history-list">{currentEntries.map((entry) => {

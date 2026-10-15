@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEven
 import { createPortal } from 'react-dom'
 import {
   CalendarDays, ChevronLeft, ChevronRight, CircleAlert, Columns3, Filter, Mail, MessageCircle, Pencil,
-  Plus, RefreshCw, Trash2, UserRoundPlus, Users, X,
+  Plus, RefreshCw, Trash2, UserRoundPlus, Users, X, CheckCircle2, ClipboardCheck, HardHat, Ruler, Send, UserRoundX,
 } from 'lucide-react'
 import { TaskActivityPanel } from './TaskActivityPanel'
 import {
@@ -348,17 +348,16 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
       </div>
     </section>
 
-    <section className="task-upcoming-summary">
-      <button type="button" className="task-upcoming-toggle" aria-haspopup="dialog" onClick={() => setIsUpcomingOpen(true)}>
-        <CalendarDays size={18} aria-hidden="true" />
-        <span className="task-upcoming-content">
-          <span className="task-upcoming-heading">
-            <strong id="task-upcoming-title">Upcoming tasks</strong>
-            <span>{upcomingTasks.length} due in the next 7 days</span>
-          </span>
-        </span>
-        <ChevronRight size={16} aria-hidden="true" />
+    <section className="tk-stats" aria-label="Task overview">
+      <button type="button" className="tk-stat is-upcoming" aria-haspopup="dialog" onClick={() => setIsUpcomingOpen(true)}>
+        <span><CalendarDays size={15} aria-hidden="true" />Due next 7 days</span>
+        <strong id="task-upcoming-title">{upcomingTasks.length}</strong>
+        <small>View list <ChevronRight size={13} aria-hidden="true" /></small>
       </button>
+      <div className={`tk-stat is-overdue${overdueTasks.length ? ' has-value' : ''}`}><span><CircleAlert size={15} aria-hidden="true" />Overdue</span><strong>{overdueTasks.length}</strong><small>{overdueTasks.length ? 'Needs follow-up' : 'Nothing late'}</small></div>
+      <div className="tk-stat is-progress"><span>In progress</span><strong>{tasks.filter((task) => task.status === 'in_progress').length}</strong><small>Being worked on</small></div>
+      <div className="tk-stat is-blocked"><span>Blocked</span><strong>{tasks.filter((task) => task.status === 'blocked').length}</strong><small>Waiting on something</small></div>
+      <div className="tk-stat is-done"><span>Done</span><strong>{tasks.filter((task) => task.status === 'done').length}</strong><small>Completed tasks</small></div>
     </section>
 
     {error && <div className="task-error" role="alert">{error}</div>}
@@ -383,15 +382,15 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
         }}
       >{overdueOnly ? 'Show all tasks' : 'View overdue tasks'}</button>
     </section>}
-    {!isLoading && !error && isOwner && (!projects.length || !activeStaff.length) && <section className="task-setup-notice">
-      <Users size={18} />
+    {!isLoading && !error && isOwner && (!projects.length || !activeStaff.length) && <section className="task-setup-notice tk-setup">
+      <span className="tk-setup-icon" aria-hidden="true"><Users size={20} /></span>
       <div><strong>{!activeStaff.length ? 'Invite your team to get started' : 'Add a project before creating tasks'}</strong>
         <p>{!activeStaff.length ? 'Invite the liaison officer, engineer, and architect. You can assign tasks once their accounts are set up.' : 'Tasks need to be linked to a project.'}</p>
       </div>
       {!activeStaff.length && <button type="button" className="button button-secondary" onClick={() => setShowTeamDialog(true)}><UserRoundPlus size={15} />Invite staff</button>}
     </section>}
 
-    {isOwner && <section className="task-weekly-summary surface-card" aria-labelledby="task-weekly-summary-title">
+    {isOwner && activeStaff.length > 0 && <section className="task-weekly-summary surface-card" aria-labelledby="task-weekly-summary-title">
       <div className="task-weekly-summary-heading">
         <div>
           <h2 id="task-weekly-summary-title">Weekly task summary</h2>
@@ -459,9 +458,6 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
         </label>}
       </div>
       <div className="task-toolbar-actions">
-        <button type="button" className="button button-secondary task-refresh-button" onClick={refresh} disabled={isLoading} aria-label="Refresh tasks">
-          <RefreshCw size={14} className={isLoading ? 'is-spinning' : ''} />Refresh
-        </button>
         <div className="task-view-switch" role="group" aria-label="Task view">
           <button type="button" className={layout === 'kanban' ? 'is-active' : ''} aria-pressed={layout === 'kanban'} onClick={() => setLayout('kanban')}><Columns3 size={15} />Kanban</button>
           <button type="button" className={layout === 'calendar' ? 'is-active' : ''} aria-pressed={layout === 'calendar'} onClick={() => setLayout('calendar')}><CalendarDays size={15} />Calendar</button>
@@ -508,7 +504,12 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
             onDelete={() => { void removeTask(task) }}
           />) : <p className="task-kanban-empty">{overdueOnly ? 'No overdue tasks match these filters.' : tasks.length ? 'No tasks match these filters.' : isOwner ? 'No tasks yet. Add a task and assign it to a team member.' : 'No tasks have been assigned to you yet.'}</p>}
         </section>
-        <div className="task-kanban-board">
+        {!tasks.length && !overdueOnly ? <div className="pr-empty tk-empty">
+          <span className="pr-empty-icon" aria-hidden="true"><Columns3 size={20} /></span>
+          <strong>{isOwner ? 'No tasks yet' : 'Nothing assigned to you yet'}</strong>
+          <p>{isOwner ? (activeStaff.length ? 'Create a task, link it to a project and assign it to a team member.' : 'Invite your team first, then create and assign tasks.') : 'Tasks your manager assigns to you will appear here.'}</p>
+          {isOwner && <button type="button" className="button button-primary" onClick={() => activeStaff.length ? setShowTaskForm(true) : setShowTeamDialog(true)} disabled={activeStaff.length > 0 && !projects.length}>{activeStaff.length ? <><Plus size={15} />Add task</> : <><UserRoundPlus size={15} />Invite staff</>}</button>}
+        </div> : <div className="task-kanban-board">
           {statusOptions.map((status) => {
             const columnTasks = visibleTasks.filter((task) => task.status === status.value)
             return <section className={`task-kanban-column task-kanban-${status.value}`} key={status.value} aria-labelledby={`task-kanban-${status.value}`}>
@@ -533,8 +534,8 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
               </div>
             </section>
           })}
-        </div>
-        {!visibleTasks.length && <p className="task-kanban-filter-empty">{overdueOnly ? 'No overdue tasks match these filters.' : tasks.length ? 'No tasks match these filters.' : isOwner ? 'No tasks yet. Add a task and assign it to a team member.' : 'No tasks have been assigned to you yet.'}</p>}
+        </div>}
+        {tasks.length > 0 && !visibleTasks.length && <p className="task-kanban-filter-empty">{overdueOnly ? 'No overdue tasks match these filters.' : tasks.length ? 'No tasks match these filters.' : isOwner ? 'No tasks yet. Add a task and assign it to a team member.' : 'No tasks have been assigned to you yet.'}</p>}
       </section> : <section className="task-calendar-panel surface-card" aria-label="Task calendar">
         <div className="task-calendar-heading">
           <div><h2>{monthLabel}</h2></div>
@@ -809,28 +810,43 @@ function TeamDialog({ staff, onClose, onChanged }: {
     }
   }
 
-  return createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSubmitting && !workingUserId) onClose() }}>
-    <section className="project-modal task-team-dialog" role="dialog" aria-modal="true" aria-labelledby="task-team-title">
-      <div className="modal-heading"><div><div className="section-kicker">Workspace team</div><h2 id="task-team-title">Manage staff</h2></div><button type="button" className="icon-button" aria-label="Close" disabled={isSubmitting || Boolean(workingUserId)} onClick={onClose}><X size={18} /></button></div>
-      <p className="modal-intro">Invite the liaison officer, engineer, and architect. Each role has one team account, and staff can access only their assigned tasks.</p>
-      <section className="task-team-list" aria-label="Current staff">
+  const busy = isSubmitting || Boolean(workingUserId)
+  const roleIcon = (role: StaffTitle) => role === 'liaison_officer' ? <ClipboardCheck size={17} /> : role === 'engineer' ? <HardHat size={17} /> : <Ruler size={17} />
+  const roleHint: Record<StaffTitle, string> = { liaison_officer: 'Permits, client and site coordination', engineer: 'Structural and site supervision', architect: 'Design and plans' }
+  const assignedCount = staff.filter((member) => ['liaison_officer', 'engineer', 'architect'].includes(member.title)).length
+
+  return createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
+    <section className="project-modal task-team-dialog ic-dialog tm-dialog" role="dialog" aria-modal="true" aria-labelledby="task-team-title">
+      <div className="modal-heading"><div><div className="section-kicker">Workspace team · {assignedCount} of 3 roles filled</div><h2 id="task-team-title">Manage staff</h2></div><button type="button" className="icon-button" aria-label="Close" disabled={busy} onClick={onClose}><X size={18} /></button></div>
+      <p className="ic-intro">One account per role. Staff only see the tasks assigned to them.</p>
+
+      <section className="tm-roles" aria-label="Team roles">
         {(['liaison_officer', 'engineer', 'architect'] as StaffTitle[]).map((role) => {
           const member = staff.find((item) => item.title === role)
-          return <div className="task-team-member" key={role}>
-            <span className="task-team-avatar">{role === 'liaison_officer' ? 'L' : role === 'engineer' ? 'E' : 'A'}</span>
-            <span className="task-team-identity"><strong>{member?.name ?? titleLabels[role]}</strong><small>{member ? member.email : 'Role available'}</small></span>
-            {member ? <><span className={`task-team-status ${member.status}`}>{member.status === 'accepted' ? 'Active' : 'Pending'}</span><button type="button" className="text-button compact-button" disabled={Boolean(workingUserId) || isSubmitting} onClick={() => { void resend(member) }}><Mail size={14} />{workingUserId === member.userId ? 'Sending…' : member.status === 'pending' ? 'Resend' : 'Sign-in link'}</button><button type="button" className="text-button compact-button task-revoke-access" disabled={Boolean(workingUserId) || isSubmitting} onClick={() => { void revoke(member) }}>{workingUserId === member.userId ? 'Revoking…' : 'Revoke access'}</button></> : <span className="task-team-status available">Available</span>}
+          const isSelected = !member && selectedTitle === role && freeTitles.length > 0
+          return <div className={`tm-role${member ? ' is-filled' : ''}${isSelected ? ' is-selected' : ''}`} key={role}>
+            <span className="tm-role-icon" aria-hidden="true">{roleIcon(role)}</span>
+            <span className="tm-role-copy">
+              <small>{titleLabels[role]}</small>
+              {member ? <><strong>{member.name}</strong><em className={member.status === 'accepted' ? 'is-active' : 'is-pending'}>{member.email} · {member.status === 'accepted' ? 'Active' : 'Invitation pending'}</em></> : <strong className="is-open">Open · {roleHint[role]}</strong>}
+            </span>
+            {member
+              ? <span className="ic-actions">
+                <button type="button" className="ic-icon-action" disabled={busy} onClick={() => { void resend(member) }} title={member.status === 'pending' ? 'Resend invitation' : 'Send sign-in link'} aria-label={member.status === 'pending' ? `Resend invitation to ${member.name}` : `Send sign-in link to ${member.name}`}>{workingUserId === member.userId ? <RefreshCw size={15} /> : <Mail size={15} />}</button>
+                <button type="button" className="ic-icon-action is-danger" disabled={busy} onClick={() => { void revoke(member) }} title="Remove access" aria-label={`Remove access for ${member.name}`}><UserRoundX size={15} /></button>
+              </span>
+              : <button type="button" className={`tm-pick${isSelected ? ' is-selected' : ''}`} onClick={() => setTitle(role)} aria-pressed={isSelected}>{isSelected ? 'Selected' : 'Invite'}</button>}
           </div>
         })}
       </section>
-      {freeTitles.length ? <form className="task-invite-form" onSubmit={(event) => { void submit(event) }}>
-        <h3><UserRoundPlus size={16} />Invite an approved team member</h3>
-        <div className="form-row"><label className="form-field">Full name<input autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} required /></label><label className="form-field">Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label></div>
-        <label className="form-field">Team role<select value={selectedTitle} onChange={(event) => setTitle(event.target.value as StaffTitle)}>{freeTitles.map((role) => <option key={role} value={role}>{titleLabels[role]}</option>)}</select></label>
+
+      {freeTitles.length ? <form className="tm-form" onSubmit={(event) => { void submit(event) }}>
+        <h3><UserRoundPlus size={16} />Invite {titleLabels[selectedTitle].toLowerCase()}</h3>
+        <div className="form-row"><label className="form-field">Full name<input autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} placeholder="e.g. Juan Dela Cruz" required /></label><label className="form-field">Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required /></label></div>
         {error && <p className="form-error" role="alert">{error}</p>}
         {result && <p className="document-success" role="status">{result}</p>}
-        <div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose} disabled={isSubmitting || Boolean(workingUserId)}>Close</button><button type="submit" className="button button-primary" disabled={isSubmitting || Boolean(workingUserId)}><Mail size={15} />{isSubmitting ? 'Sending…' : 'Send invitation'}</button></div>
-      </form> : <div className="task-team-complete"><strong>All three team roles are assigned.</strong><p>Use the resend action to send a new invitation or sign-in link.</p>{error && <p className="form-error" role="alert">{error}</p>}{result && <p className="document-success" role="status">{result}</p>}<div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose}>Close</button></div></div>}
+        <div className="tm-form-actions"><button type="submit" className="button button-primary" disabled={busy}><Send size={15} />{isSubmitting ? 'Sending…' : 'Send invite'}</button></div>
+      </form> : <div className="tm-complete"><CheckCircle2 size={18} /><span><strong>All three roles are filled.</strong> Use ✉ to resend an invite or sign-in link.</span>{error && <p className="form-error" role="alert">{error}</p>}{result && <p className="document-success" role="status">{result}</p>}</div>}
     </section>
   </div>, document.body)
 }

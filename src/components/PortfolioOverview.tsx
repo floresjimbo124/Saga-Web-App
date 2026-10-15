@@ -358,6 +358,11 @@ export function PortfolioOverview({
       <div className="portfolio-welcome"><h1>{greetingText}{ownerName ? `, ${ownerName}` : ''}</h1><p>{activeCount} active project{activeCount === 1 ? '' : 's'} · {money.format(receivable)} to collect{pendingApprovals.length ? ` · ${pendingApprovals.length} change order${pendingApprovals.length === 1 ? '' : 's'} awaiting approval` : ''}</p></div>
       <div className="heading-actions"><button className="button button-secondary dashboard-expense-button" onClick={() => setShowDashboardExpense(true)} disabled={!projects.length || isLoading}><Plus size={17} />Add new expense</button><button className="button button-primary" onClick={() => setShowModal(true)}><Plus size={17} />New project</button></div>
     </section>
+    {actionItems.length > 0 && <section className="dashboard-action-pills" aria-label="Needs your attention">
+      {actionItems.map((item) => <button type="button" key={item.key} className={`dashboard-action-pill is-${item.tone}`} onClick={item.onClick} title={item.detail}>
+        <i aria-hidden="true" /><strong>{item.label}</strong><span>{item.detail}</span><ArrowRight size={12} />
+      </button>)}
+    </section>}
     <section className="mobile-dashboard-stats" aria-label="Project summary">
       <div><span className="mobile-dashboard-stat-icon"><FolderKanban size={15} /></span><strong>{projects.length}</strong><small>Total projects</small></div>
       <div><span className="mobile-dashboard-stat-icon"><Activity size={15} /></span><strong>{activeCount}</strong><small>In progress</small></div>
@@ -367,7 +372,7 @@ export function PortfolioOverview({
     <section className="mobile-project-overview surface-card" aria-labelledby="mobile-project-overview-title">
       <div className="mobile-dashboard-section-heading">
         <h2 id="mobile-project-overview-title">Project Overview</h2>
-        <span>This Month</span>
+        <span>All projects</span>
       </div>
       <div className="mobile-progress-summary">
         <div><span>Overall Progress</span><TrendingUp size={16} /></div>
@@ -417,11 +422,6 @@ export function PortfolioOverview({
       })}</div> : <p className="mobile-recent-activity-empty">No recent activity yet.</p>}
     </section>
     {loadError && <div className="sample-banner" role="alert"><CircleAlert size={15} /><span><strong>Could not load SAGACT data.</strong> {loadError}</span><button className="text-button" onClick={refreshWorkspace}>Retry</button></div>}
-    {actionItems.length > 0 && <section className="dashboard-action-pills" aria-label="Needs your attention">
-      {actionItems.map((item) => <button type="button" key={item.key} className={`dashboard-action-pill is-${item.tone}`} onClick={item.onClick} title={item.detail}>
-        <i aria-hidden="true" /><strong>{item.label}</strong><span>{item.detail}</span><ArrowRight size={12} />
-      </button>)}
-    </section>}
     <section className="metric-grid desktop-portfolio-metrics" aria-label="Portfolio totals">
       <Metric icon={<FileText size={16} />} label="Total billed" value={money.format(billed)} foot="Incl. approved change orders" tone="green" />
       <Metric icon={<ArrowDownLeft size={16} />} label="Collected" value={money.format(collected)} foot={`${billed ? Math.round(collected / billed * 100) : 0}% of billed`} tone="blue" />

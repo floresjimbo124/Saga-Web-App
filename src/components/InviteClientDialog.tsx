@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Mail, RefreshCw, UserRoundX, X } from 'lucide-react'
+import { Mail, RefreshCw, Send, UserRoundX, X } from 'lucide-react'
 import { inviteClientToProject, loadClientAccess, resendClientInvitation, revokeClientAccess, type ClientAccessAccount } from '../data/client-access'
 import { useToast } from './toast-context'
 
@@ -103,28 +103,43 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
     }
   }
 
-  return createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSubmitting && !workingUserId) onClose() }}>
-    <section className="project-modal invite-client-dialog" role="dialog" aria-modal="true" aria-labelledby="invite-client-title">
-      <div className="modal-heading"><div><div className="section-kicker">Client access</div><h2 id="invite-client-title">Manage {clientName}</h2></div><button className="icon-button" type="button" aria-label="Close" disabled={isSubmitting || Boolean(workingUserId)} onClick={onClose}><X size={18} /></button></div>
-      <p className="modal-intro">Invite a client contact to view shared billing, receipts, project status, and documents for {projectName}.</p>
-      <section className="client-access-list" aria-labelledby="client-access-list-title">
-        <div className="card-heading-row"><h3 id="client-access-list-title">Linked accounts</h3><span className="client-access-count">{accounts.length}</span></div>
-        {isLoadingAccounts ? <p className="client-access-empty">Loading client accounts…</p> : accounts.length ? <div className="client-access-rows">{accounts.map((account) => {
-          const isWorking = workingUserId === account.userId
-          const isConfirmingRevoke = revokeCandidate?.userId === account.userId
-          return <article className="client-access-row" key={account.userId}>
-            <span className="client-access-account"><strong>{account.email}</strong><small>{account.status === 'pending' ? 'Invitation pending' : 'Access active'}</small></span>
-            <span className={`status-badge ${account.status === 'pending' ? 'status-on-hold' : 'health-on-track'}`}><span />{account.status === 'pending' ? 'Pending' : 'Active'}</span>
-            <div className="client-access-actions">{isConfirmingRevoke ? <><span className="client-access-confirm">Revoke access?</span><button type="button" className="text-button compact-button client-access-revoke-confirm" disabled={isWorking} onClick={() => { void revoke(account) }}>{isWorking ? 'Revoking…' : 'Confirm'}</button><button type="button" className="text-button compact-button" disabled={isWorking} onClick={() => setRevokeCandidate(null)}>Cancel</button></> : <><button type="button" className="text-button compact-button" disabled={Boolean(workingUserId)} onClick={() => { void resend(account) }}>{isWorking ? <RefreshCw size={14} /> : <Mail size={14} />}{isWorking ? 'Sending…' : account.status === 'pending' ? 'Resend' : 'Send sign-in link'}</button><button type="button" className="text-button compact-button client-access-revoke" disabled={Boolean(workingUserId)} onClick={() => setRevokeCandidate(account)}><UserRoundX size={14} />Revoke</button></>}</div>
-          </article>
-        })}</div> : <p className="client-access-empty">No accounts have access yet.</p>}
-      </section>
-      <form onSubmit={(event) => { void submit(event) }}>
-        <label className="form-field">Client email<input type="email" autoFocus autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required /></label>
+  const busy = isSubmitting || Boolean(workingUserId)
+  return createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose() }}>
+    <section className="project-modal invite-client-dialog ic-dialog" role="dialog" aria-modal="true" aria-labelledby="invite-client-title">
+      <div className="modal-heading">
+        <div><div className="section-kicker">Client access · {projectName}</div><h2 id="invite-client-title">Invite {clientName}</h2></div>
+        <button className="icon-button" type="button" aria-label="Close" disabled={busy} onClick={onClose}><X size={18} /></button>
+      </div>
+      <p className="ic-intro">Clients can view project status, billing, receipts and shared documents. They can’t edit anything.</p>
+
+      <form className="ic-form" onSubmit={(event) => { void submit(event) }}>
+        <label htmlFor="ic-email">Email address</label>
+        <div className="ic-input-row">
+          <span className="ic-input"><Mail size={16} aria-hidden="true" /><input id="ic-email" type="email" autoFocus autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required /></span>
+          <button type="submit" className="button button-primary" disabled={busy}><Send size={15} />{isSubmitting ? 'Sending…' : 'Send invite'}</button>
+        </div>
         {error && <p className="form-error" role="alert">{error}</p>}
         {result && <p className="document-success" role="status">{result}</p>}
-        <div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose} disabled={isSubmitting || Boolean(workingUserId)}>Close</button><button type="submit" className="button button-primary" disabled={isSubmitting || Boolean(workingUserId)}><Mail size={15} />{isSubmitting ? 'Sending…' : 'Send invitation'}</button></div>
       </form>
+
+      <section className="ic-people" aria-labelledby="client-access-list-title">
+        <h3 id="client-access-list-title">People with access <span>{isLoadingAccounts ? '' : accounts.length}</span></h3>
+        {isLoadingAccounts
+          ? <div className="ic-skeleton" aria-label="Loading client accounts"><i /><i /></div>
+          : accounts.length ? <div className="ic-rows">{accounts.map((account) => {
+            const isWorking = workingUserId === account.userId
+            const isConfirmingRevoke = revokeCandidate?.userId === account.userId
+            const pending = account.status === 'pending'
+            return <article className="ic-row" key={account.userId}>
+              <span className="ic-avatar" aria-hidden="true">{account.email.charAt(0).toUpperCase()}</span>
+              <span className="ic-account"><strong>{account.email}</strong><small className={pending ? 'is-pending' : 'is-active'}>{pending ? 'Invitation pending' : 'Has access'}</small></span>
+              <div className="ic-actions">{isConfirmingRevoke
+                ? <><span className="client-access-confirm">Remove access?</span><button type="button" className="text-button compact-button client-access-revoke-confirm" disabled={isWorking} onClick={() => { void revoke(account) }}>{isWorking ? 'Removing…' : 'Remove'}</button><button type="button" className="text-button compact-button" disabled={isWorking} onClick={() => setRevokeCandidate(null)}>Cancel</button></>
+                : <><button type="button" className="ic-icon-action" disabled={Boolean(workingUserId)} onClick={() => { void resend(account) }} title={pending ? 'Resend invitation' : 'Send sign-in link'} aria-label={pending ? `Resend invitation to ${account.email}` : `Send sign-in link to ${account.email}`}>{isWorking ? <RefreshCw size={15} /> : <Mail size={15} />}</button><button type="button" className="ic-icon-action is-danger" disabled={Boolean(workingUserId)} onClick={() => setRevokeCandidate(account)} title="Remove access" aria-label={`Remove access for ${account.email}`}><UserRoundX size={15} /></button></>}</div>
+            </article>
+          })}</div>
+          : <p className="ic-empty">No one has access yet. Send an invite above.</p>}
+      </section>
     </section>
   </div>, document.body)
 }

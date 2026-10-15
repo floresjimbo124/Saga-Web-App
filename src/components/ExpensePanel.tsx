@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowDownLeft, ArrowUpRight, Camera, Pencil, Plus, RefreshCw, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Camera, Pencil, Plus, Receipt, RefreshCw, X } from 'lucide-react'
 import { createExpenseReceiptUrl, setProjectExpenseReceipt, uploadExpenseReceipt, type PortfolioExpense, type ProjectExpenseCategory } from '../data/portfolio'
 import { ExpenseEntryDialog } from './ExpenseEntryDialog'
 import { QuickExpenseSheet } from './QuickExpenseSheet'
@@ -109,26 +109,44 @@ export function ExpensePanel({ projectId, contractId, projectName, expenses, inf
   })).filter((category) => category.total > 0)
 
   return <>
-    <section className="surface-card tab-content expense-panel">
-      <div className="card-heading-row"><h2>Expenses</h2><div className="expense-heading-actions">{contractId
-        ? <button type="button" className="button button-primary" onClick={() => setShowForm(true)}><Plus size={15} />Add expense</button>
-        : <><button type="button" className="button button-secondary" onClick={() => setShowForm(true)}>Add several</button><button type="button" className="button button-primary" onClick={() => setShowQuick(true)}><Camera size={15} />Add expense</button></>}</div></div>
-      <div className="expense-summary" aria-label="Project cash flow totals">
-        <div className="expense-summary-item"><span><ArrowDownLeft size={14} />Inflow</span><strong>{money.format(inflow)}</strong></div>
-        <div className="expense-summary-item"><span><ArrowUpRight size={14} />Outflow</span><strong>{money.format(totalOutflow)}</strong></div>
-        <div className="expense-summary-item"><span>Net cash</span><strong className={net < 0 ? 'expense-net-negative' : 'expense-net-positive'}>{money.format(net)}</strong></div>
+    <section className="surface-card tab-content expense-panel ex-panel">
+      <header className="ex-header">
+        <div><h2>Expenses</h2><p>{expenses.length ? `${expenses.length} expense${expenses.length === 1 ? '' : 's'} recorded` : 'Track materials, labor and other project costs'}</p></div>
+        <div className="expense-heading-actions">{contractId
+          ? <button type="button" className="button button-primary" onClick={() => setShowForm(true)}><Plus size={15} />Add expense</button>
+          : <><button type="button" className="button button-secondary" onClick={() => setShowForm(true)}><Plus size={15} />Add several</button><button type="button" className="button button-primary" onClick={() => setShowQuick(true)}><Camera size={15} />Add expense</button></>}</div>
+      </header>
+
+      <div className="ex-stats" aria-label="Project cash flow totals">
+        <div><span><ArrowDownLeft size={14} />Inflow</span><strong>{money.format(inflow)}</strong><small>Payments collected</small></div>
+        <div><span><ArrowUpRight size={14} />Outflow</span><strong>{money.format(totalOutflow)}</strong><small>{inflow > 0 ? `${Math.round(totalOutflow / inflow * 100)}% of inflow` : 'Recorded expenses'}</small></div>
+        <div className={net < 0 ? 'is-negative' : 'is-positive'}><span>Net cash</span><strong>{money.format(net)}</strong><small>{net < 0 ? 'Spending exceeds collections' : 'Cash on hand for this project'}</small></div>
       </div>
 
-      <div className="expense-category-summary" aria-label="Expense totals by category">
-        <div className="section-kicker expense-register-heading">Expenses by category</div>
-        {categoryTotals.length ? <div className="expense-category-list">{categoryTotals.map((category) => <div key={category.value} className="expense-category-row"><span>{category.label}</span><strong>{money.format(category.total)}</strong></div>)}</div> : <div className="empty-state small">No category totals yet.</div>}
-      </div>
+      {expenses.length ? <>
+        <div className="ex-section">
+          <div className="ex-section-heading"><h3>By category</h3></div>
+          <div className="ex-category-bar" aria-hidden="true">{categoryTotals.map((category, index) => <i key={category.value} className={`tone-${index % 6}`} style={{ width: `${category.total / totalOutflow * 100}%` }} />)}</div>
+          <div className="ex-category-list">{categoryTotals.map((category, index) => <div key={category.value} className="ex-category-row">
+            <span><i className={`tone-${index % 6}`} />{category.label}</span>
+            <small>{Math.round(category.total / totalOutflow * 100)}%</small>
+            <strong>{money.format(category.total)}</strong>
+          </div>)}</div>
+        </div>
 
-      <div className="expense-register-toolbar">
-        <div className="section-kicker expense-register-heading">Expense register</div>
-        {missingCount > 0 && <button type="button" className={`expense-missing-filter${showMissingOnly ? ' is-active' : ''}`} onClick={() => setShowMissingOnly((value) => !value)} aria-pressed={showMissingOnly}>{missingCount} without receipt</button>}
-      </div>
-      {visibleExpenses.length ? <div className="expense-register-list">{visibleExpenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} onEdit={(item) => { setEditingExpense(item); setShowForm(true) }} onOpenReceipt={setReceiptUrl} onReceiptChanged={onChanged} />)}</div> : <div className="empty-state">{showMissingOnly ? 'Every expense has a receipt.' : 'No expenses recorded for this project yet.'}</div>}
+        <div className="ex-section">
+          <div className="ex-section-heading">
+            <h3>Expense register</h3>
+            {missingCount > 0 && <button type="button" className={`expense-missing-filter${showMissingOnly ? ' is-active' : ''}`} onClick={() => setShowMissingOnly((value) => !value)} aria-pressed={showMissingOnly}>{missingCount} without receipt</button>}
+          </div>
+          {visibleExpenses.length ? <div className="expense-register-list ex-register">{visibleExpenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} onEdit={(item) => { setEditingExpense(item); setShowForm(true) }} onOpenReceipt={setReceiptUrl} onReceiptChanged={onChanged} />)}</div> : <div className="empty-state">Every expense has a receipt.</div>}
+        </div>
+      </> : <div className="pr-empty">
+        <span className="pr-empty-icon" aria-hidden="true"><Receipt size={20} /></span>
+        <strong>No expenses yet</strong>
+        <p>Snap a receipt or enter costs to see spending by category.</p>
+        <button type="button" className="button button-primary" onClick={() => contractId ? setShowForm(true) : setShowQuick(true)}><Camera size={15} />Add first expense</button>
+      </div>}
     </section>
     {showQuick && <QuickExpenseSheet projects={[{ id: projectId, name: projectName }]} initialProjectId={projectId} onClose={() => setShowQuick(false)} onSaved={() => { setShowQuick(false); onChanged() }} />}
     {receiptUrl && createPortal(<div className="modal-backdrop expense-receipt-viewer" onMouseDown={(event) => { if (event.target === event.currentTarget) setReceiptUrl('') }}>

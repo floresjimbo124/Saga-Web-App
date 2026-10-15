@@ -1,17 +1,17 @@
-import { ArrowRight, TrendingDown, TrendingUp } from 'lucide-react'
+import { TrendingDown, TrendingUp } from 'lucide-react'
 import { calculateProfitRisk } from '../finance/profit-risk'
 import { calculateCostPace } from '../finance/cost-pace'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
 
-export function ProjectProfitCard({ contractValue, recordedCosts, costBudget, estimatedCostToComplete, progressPercent, onOpenForecast, onOpenExpenses }: {
+export function ProjectProfitCard({ contractValue, recordedCosts, costBudget, estimatedCostToComplete, progressPercent, onOpenForecast }: {
   contractValue: number
   recordedCosts: number
   costBudget: number | null
   estimatedCostToComplete: number | null
   progressPercent: number
   onOpenForecast: () => void
-  onOpenExpenses: () => void
+  onOpenExpenses?: () => void
 }) {
   const forecast = calculateProfitRisk({ contractValue, recordedCosts, costBudget, estimatedCostToComplete })
   const pace = calculateCostPace({ costBudget, recordedCosts, progressPercent })
@@ -50,9 +50,5 @@ export function ProjectProfitCard({ contractValue, recordedCosts, costBudget, es
       </div>
     </div>
 
-    {(!isRated || recordedCosts === 0) && <div className="project-profit-setup">
-      {!isRated && <button type="button" onClick={onOpenForecast}>Set cost budget &amp; estimate to complete <ArrowRight size={13} /></button>}
-      {recordedCosts === 0 && <button type="button" onClick={onOpenExpenses}>No expenses recorded yet — add expenses <ArrowRight size={13} /></button>}
-    </div>}
   </section>
 }

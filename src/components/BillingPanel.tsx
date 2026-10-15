@@ -125,6 +125,10 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
     }, setVoidError, 'update')
   }
 
+  const issuedBillings = billings.filter((billing) => billing.status === 'issued')
+  const issuedCount = issuedBillings.length
+  const billedTotal = downPaymentAmount + issuedBillings.reduce((sum, billing) => sum + billing.amount, 0)
+
   return <>
   {isCreateBillingOpen && createPortal(<div className="modal-backdrop billing-create-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setIsCreateBillingOpen(false) }}>
     <section className="project-modal billing-create-dialog" role="dialog" aria-modal="true" aria-labelledby="create-billing-title">
@@ -161,16 +165,18 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       </form>
     </section>
   </div>, document.body)}
-  <section className="surface-card tab-content billing-panel">
+  <section className="surface-card tab-content billing-panel bl-panel">
     <div className="card-heading-row billing-panel-heading">
       <div><h2>{contractId ? 'Contract progress billing' : 'Progress billing'}</h2><p>{progress}% complete · {money.format(earned)} earned</p></div>
       <button type="button" className="button button-primary" onClick={() => { setProgressInput(null); setError(''); setIsCreateBillingOpen(true) }} disabled={!isSetupComplete}><Plus size={15} />Create billing</button>
     </div>
-    {isSetupComplete
-      ? <p className="calculation-note billing-panel-ceiling">Billable ceiling: <strong>{money.format(ceiling)}</strong></p>
-      : <p className="calculation-note">Set up the contract amount before issuing a billing.</p>}
+    {isSetupComplete ? <div className="ex-stats bl-stats" aria-label="Billing summary">
+      <div><span>Earned to date</span><strong>{money.format(earned)}</strong><small>{progress}% of work complete</small></div>
+      <div><span>Billed so far</span><strong>{money.format(billedTotal)}</strong><small>Down payment + {issuedCount} billing{issuedCount === 1 ? '' : 's'}</small></div>
+      <div><span>Billable ceiling</span><strong>{money.format(ceiling)}</strong><small>Most you can bill before retention</small></div>
+    </div> : <p className="calculation-note">Set up the contract amount before issuing a billing.</p>}
     {message && <p className="calculation-note" role="status">{message}</p>}
-    <div className="section-kicker">Billings issued</div>
+    <div className="bl-list-heading"><h3>Billings issued</h3></div>
     {billings.length || downPaymentAmount > 0 ? <div className="billing-register-list billing-timeline" role="list" aria-label="Issued billings">
       {downPaymentAmount > 0 && <div className="payment-detail-row billing-register-row" role="listitem">
         <span className="activity-copy"><strong>Contract down payment{downPaymentPercent === undefined ? '' : ` · ${downPaymentPercent}%`}</strong><small>Part of contract</small></span>

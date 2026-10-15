@@ -122,7 +122,7 @@ export async function createProjectMilestonePhotoUrl(storagePath: string) {
 
 export async function createProjectMilestone(input: SaveProjectMilestoneInput) {
   validateMilestone(input)
-  const { error } = await requireSupabase().from('project_milestones').insert({
+  const { data, error } = await requireSupabase().from('project_milestones').insert({
     organization_id: SAGACT_ORGANIZATION_ID,
     project_id: input.projectId,
     name: input.name.trim(),
@@ -132,8 +132,9 @@ export async function createProjectMilestone(input: SaveProjectMilestoneInput) {
     completion_percent: input.completionPercent,
     status: input.status,
     client_visible: input.clientVisible,
-  })
+  }).select('id').single()
   if (error) throw new Error(error.message)
+  return (data as { id: string }).id
 }
 
 export async function updateProjectMilestone(milestoneId: string, input: SaveProjectMilestoneInput) {

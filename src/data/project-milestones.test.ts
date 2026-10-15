@@ -40,6 +40,7 @@ function queryFor(error: { message: string } | null = null, data: unknown = null
     then: (resolve: (result: { error: typeof error }) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve({ error }).then(resolve, reject),
     maybeSingle: () => Promise.resolve({ data, error }),
+    single: () => Promise.resolve({ data, error }),
   }
   return query
 }

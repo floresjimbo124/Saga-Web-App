@@ -41,7 +41,44 @@ function formatTimeAdjustment(days: number) {
   return `${Math.abs(days)} calendar day${Math.abs(days) === 1 ? '' : 's'} ${days > 0 ? 'added' : 'deducted'}`
 }
 
-export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName, clientName, location, contractAmount, specialDiscount, changeOrders, onChanged }: {
+export function ContractImpactCard({ contractAmount, specialDiscount, changeOrders, changeOrderOutstanding, footnote, onOpenChangeOrders }: {
+  contractAmount: number
+  changeOrderOutstanding?: number
+  footnote?: string
+  specialDiscount: number
+  changeOrders: ProjectChangeOrder[]
+  onOpenChangeOrders?: () => void
+}) {
+  const sumOf = (status: ProjectChangeOrder['status']) => changeOrders.filter((order) => order.status === status).reduce((sum, order) => sum + order.amount, 0)
+  const approvedTotal = sumOf('approved')
+  const pendingTotal = sumOf('pending_approval')
+  const draftTotal = sumOf('draft')
+  const approvedCount = changeOrders.filter((order) => order.status === 'approved').length
+  return <aside className="co-impact" aria-label="Contract impact">
+    <div className="co-impact-heading">
+      <h3>Contract impact</h3>
+      {onOpenChangeOrders && <button type="button" onClick={onOpenChangeOrders}>Change orders ›</button>}
+    </div>
+    <dl>
+      <div><dt>Original contract</dt><dd>{money.format(contractAmount)}</dd></div>
+      <div><dt>Special discount</dt><dd>− {money.format(specialDiscount)}</dd></div>
+      <div><dt>Approved changes{approvedCount ? ` (${approvedCount})` : ''}</dt><dd>+ {money.format(approvedTotal)}</dd></div>
+      <div className="is-total"><dt>Revised contract</dt><dd>{money.format(contractAmount - specialDiscount + approvedTotal)}</dd></div>
+    </dl>
+    {changeOrderOutstanding !== undefined && approvedTotal > 0 && <div className="co-impact-status">
+      <div className="co-impact-status-head"><span>Change orders total</span><strong>{money.format(approvedTotal)}</strong></div>
+      <div className="co-impact-meter" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.max(0, (approvedTotal - changeOrderOutstanding) / approvedTotal * 100))}%` }} /></div>
+      <div className="co-impact-status-foot"><span><i className="is-paid" />Collected {money.format(approvedTotal - changeOrderOutstanding)}</span><span className={changeOrderOutstanding > 0 ? 'is-due' : ''}><i className="is-due" />To collect {money.format(changeOrderOutstanding)}</span></div>
+    </div>}
+    {(pendingTotal > 0 || draftTotal > 0) && <ul className="co-impact-other">
+      {pendingTotal > 0 && <li><span>Awaiting sign-off</span><span>{money.format(pendingTotal)}</span></li>}
+      {draftTotal > 0 && <li><span>Drafts</span><span>{money.format(draftTotal)}</span></li>}
+    </ul>}
+    {footnote && <p className="co-impact-foot">{footnote}</p>}
+  </aside>
+}
+
+export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName, clientName, location, changeOrders, onChanged }: {
   projectId: string
   projectPrefix: string
   projectName: string
@@ -56,17 +93,13 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingOrder, setEditingOrder] = useState<ProjectChangeOrder | null>(null)
   const [previewingOrderId, setPreviewingOrderId] = useState('')
+  const [viewingOrderId, setViewingOrderId] = useState('')
   const [rows, setRows] = useState<ChangeOrderItemDraft[]>([newItemDraft(1)])
   const [timeAdjustmentInput, setTimeAdjustmentInput] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const total = rows.reduce((sum, row) => sum + (Number.isFinite(parseMoneyInput(row.cost)) ? parseMoneyInput(row.cost) : 0), 0)
-  const approvedTotal = changeOrders.filter((order) => order.status === 'approved').reduce((sum, order) => sum + order.amount, 0)
-  const pendingTotal = changeOrders.filter((order) => order.status === 'pending_approval').reduce((sum, order) => sum + order.amount, 0)
-  const draftTotal = changeOrders.filter((order) => order.status === 'draft').reduce((sum, order) => sum + order.amount, 0)
-  const rejectedTotal = changeOrders.filter((order) => order.status === 'rejected').reduce((sum, order) => sum + order.amount, 0)
-  const voidTotal = changeOrders.filter((order) => order.status === 'void').reduce((sum, order) => sum + order.amount, 0)
 
   const updateRow = (id: number, updates: Partial<ChangeOrderItemDraft>) => {
     setRows((current) => current.map((row) => row.id === id ? { ...row, ...updates } : row))
@@ -229,44 +262,70 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
     }
   }
 
-  return <section className="surface-card tab-content project-change-order-panel">
-    <div className="card-heading-row"><h2>Change orders</h2><span className="project-milestone-count">{changeOrders.length} order{changeOrders.length === 1 ? '' : 's'}</span></div>
-    <div className="change-order-totals">
-      <div><span>Original contract</span><strong>{money.format(contractAmount)}</strong></div>
-      <div><span>Special discount</span><strong>− {money.format(specialDiscount)}</strong></div>
-      <div><span>Approved extras</span><strong>{money.format(approvedTotal)}</strong></div>
-      <div><span>Pending approval</span><strong>{money.format(pendingTotal)}</strong></div>
-      <div><span>Drafts</span><strong>{money.format(draftTotal)}</strong></div>
-      <div><span>Rejected</span><strong>{money.format(rejectedTotal)}</strong></div>
-      <div><span>Void</span><strong>{money.format(voidTotal)}</strong></div>
-      <div><span>Current contract total</span><strong>{money.format(contractAmount - specialDiscount + approvedTotal)}</strong></div>
+  const viewingOrder = changeOrders.find((order) => order.id === viewingOrderId) ?? null
+  const shortDate = (value: string) => {
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(date)
+  }
+  const daysLabel = (days: number) => days === 0 ? 'No time change' : `${days > 0 ? '+' : '−'}${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'}`
+
+  return <section className="tab-content project-change-order-panel co-layout is-single">
+    <div className="surface-card co-main">
+      <header className="co-header">
+        <div><h2>Change orders</h2><p>{changeOrders.length} order{changeOrders.length === 1 ? '' : 's'}</p></div>
+        <button type="button" className="button button-primary change-order-open-dialog" onClick={openCreateDialog}><Plus size={15} />New change order</button>
+      </header>
+      {error && !isCreateOpen && !viewingOrder && <p className="form-error" role="alert">{error}</p>}
+      {message && <p className="document-success change-order-success" role="status">{message}</p>}
+      {changeOrders.length ? <div className="co-table" role="table" aria-label="Change orders">
+        <div className="co-table-head" role="row"><span role="columnheader">No.</span><span role="columnheader">Description</span><span role="columnheader">Status</span><span role="columnheader">Amount</span></div>
+        {changeOrders.map((order) => <button type="button" role="row" key={order.id} className={`co-table-row is-${order.status}`} onClick={() => { setError(''); setViewingOrderId(order.id) }} aria-label={`Open ${formatChangeOrderNumber(projectPrefix, order.orderNumber)}`}>
+          <span className="co-number" role="cell">{formatChangeOrderNumber(projectPrefix, order.orderNumber)}</span>
+          <span className="co-desc" role="cell"><strong>{order.title}</strong><small>{order.items.length} item{order.items.length === 1 ? '' : 's'} · {daysLabel(order.contractTimeAdjustmentDays)} · {shortDate(order.createdAt)}</small></span>
+          <span role="cell"><span className={`co-status is-${order.status}`}>{statusLabels[order.status]}</span></span>
+          <strong className="co-amount" role="cell">{money.format(order.amount)}</strong>
+        </button>)}
+      </div> : <div className="pr-empty">
+        <strong>No change orders yet</strong>
+        <p>Create one when the client asks for extra work or a scope change.</p>
+      </div>}
     </div>
-    <div className="change-order-create-action">
-      <button type="button" className="button button-primary change-order-open-dialog" onClick={openCreateDialog}><Plus size={15} />Create a change order</button>
-    </div>
-    {error && !isCreateOpen && <p className="form-error" role="alert">{error}</p>}
-    {message && <p className="document-success change-order-success" role="status">{message}</p>}
-    <div className="section-kicker change-order-history-heading">Change-order history</div>
-    {changeOrders.length ? <div className="change-order-list">{changeOrders.map((order) => (
-      <div className="change-order-item" key={order.id}>
-        <article className={`change-order-row${order.status === 'draft' ? ' change-order-row-draft' : ''}`}>
-          <div className="change-order-copy">
-            <strong>{order.title}</strong>
-            <span className="change-order-number">{formatChangeOrderNumber(projectPrefix, order.orderNumber)}</span>
-            <small>{order.items.length} item{order.items.length === 1 ? '' : 's'} · {formatTimeAdjustment(order.contractTimeAdjustmentDays)}</small>
-            <small>Created {formatDate(order.createdAt)}{order.decidedAt ? ` · Decided ${formatDate(order.decidedAt)}` : ''}</small>
-            <span className={`change-order-status change-order-status-${order.status}`}>{statusLabels[order.status]}</span>
-            {order.decisionNote && <p className="change-order-decision-note">Client note: {order.decisionNote}</p>}
-          </div>
-          <strong className="change-order-amount">{money.format(order.amount)}</strong>
-          {order.status === 'draft' && <div className="change-order-draft-actions">
-            <button type="button" className="button button-secondary" onClick={() => openEditDialog(order)} disabled={isSaving}><Pencil size={14} />Edit draft</button>
-            <button type="button" className="button button-secondary" onClick={() => { void previewDraftPdf(order) }} disabled={isSaving || previewingOrderId === order.id}><Eye size={14} />{previewingOrderId === order.id ? 'Preparing…' : 'View PDF'}</button>
-            <button type="button" className="button button-secondary" onClick={() => { void submitForApproval(order) }} disabled={isSaving}><Send size={14} />{isSaving ? 'Submitting…' : 'Submit to client'}</button>
-          </div>}
-        </article>
-      </div>
-    ))}</div> : <p className="client-empty-note">No change orders yet.</p>}
+
+
+    {viewingOrder && createPortal(<div className="modal-backdrop payroll-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSaving) setViewingOrderId('') }}>
+      <section className="project-modal payroll-worker-drawer co-drawer" role="dialog" aria-modal="true" aria-labelledby="co-drawer-title">
+        <div className="modal-heading">
+          <div><div className="section-kicker">{formatChangeOrderNumber(projectPrefix, viewingOrder.orderNumber)}</div><h2 id="co-drawer-title">{viewingOrder.title}</h2></div>
+          <button className="icon-button" type="button" onClick={() => setViewingOrderId('')} aria-label="Close" disabled={isSaving}><X size={18} /></button>
+        </div>
+        <div className="co-drawer-summary">
+          <span className={`co-status is-${viewingOrder.status}`}>{statusLabels[viewingOrder.status]}</span>
+          <strong>{money.format(viewingOrder.amount)}</strong>
+        </div>
+        <dl className="co-drawer-facts">
+          <div><dt>Contract time</dt><dd>{formatTimeAdjustment(viewingOrder.contractTimeAdjustmentDays)}</dd></div>
+          <div><dt>Created</dt><dd>{formatDate(viewingOrder.createdAt)}</dd></div>
+          {viewingOrder.decidedAt && <div><dt>Decided</dt><dd>{formatDate(viewingOrder.decidedAt)}</dd></div>}
+        </dl>
+        <div className="co-drawer-items">
+          <div className="section-kicker">Items</div>
+          {viewingOrder.items.map((item, index) => <div className="co-drawer-item" key={index}>
+            <div><strong>{item.item}</strong>{item.description && <p>{item.description}</p>}{item.remarks && <small>{item.remarks}</small>}</div>
+            <span>{money.format(item.cost)}</span>
+          </div>)}
+        </div>
+        {viewingOrder.decisionNote && <p className="co-note">Client note: {viewingOrder.decisionNote}</p>}
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="milestone-drawer-actions">
+          <button type="button" className="button button-secondary" onClick={() => { void previewDraftPdf(viewingOrder) }} disabled={isSaving || previewingOrderId === viewingOrder.id}><Eye size={14} />{previewingOrderId === viewingOrder.id ? 'Preparing…' : 'View PDF'}</button>
+          <span />
+          {viewingOrder.status === 'draft' && <>
+            <button type="button" className="button button-secondary" onClick={() => { setViewingOrderId(''); openEditDialog(viewingOrder) }} disabled={isSaving}><Pencil size={14} />Edit draft</button>
+            <button type="button" className="button button-primary" onClick={() => { void submitForApproval(viewingOrder).then(() => setViewingOrderId('')) }} disabled={isSaving}><Send size={14} />{isSaving ? 'Submitting…' : 'Submit to client'}</button>
+          </>}
+        </div>
+      </section>
+    </div>, document.body)}
     {isCreateOpen && createPortal(<div className="modal-backdrop change-order-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeCreateDialog() }}>
       <section className="project-modal change-order-dialog" role="dialog" aria-modal="true" aria-labelledby="change-order-dialog-title">
         <div className="modal-heading">
