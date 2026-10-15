@@ -17301,3 +17301,14 @@ button.tk-stat > small { color: #4f7a57; font-weight: 600; }
   .mobile-recent-activity-row strong { font-size: 13.5px; }
   .mobile-recent-activity-row small { font-size: 12px; }
 }
+
+/* Invited account setup */
+.auth-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.auth-field-control.is-readonly { background: #f3f4ef; }
+.auth-field-control.is-readonly input { color: #5d6b60; cursor: default; }
+.auth-password-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: -2px 0 0; padding: 0; list-style: none; }
+.auth-password-checks li { display: inline-flex; align-items: center; gap: 5px; color: #8a958b; font-size: 12px; transition: color 150ms ease; }
+.auth-password-checks li svg { opacity: .35; }
+.auth-password-checks li.is-met { color: #3f6a48; }
+.auth-password-checks li.is-met svg { opacity: 1; }
+@media (max-width: 360px) { .auth-name-row { grid-template-columns: 1fr; } }

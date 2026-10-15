@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ArrowRight, CircleAlert, Eye, EyeOff, LockKeyhole, LogOut, Mail, UserRound } from 'lucide-react'
+import { ArrowRight, Check, CircleAlert, Eye, EyeOff, LockKeyhole, LogOut, Mail, UserRound } from 'lucide-react'
 import { isSupabaseConfigured, SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
 import { ClientPortalApp } from '../components/ClientPortalApp'
 import { StaffTaskApp } from '../components/StaffTaskApp'
@@ -321,19 +321,41 @@ function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
   const [lastName, setLastName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [invitedEmail, setInvitedEmail] = useState('')
+  const [isStaff, setIsStaff] = useState(false)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    void supabase?.auth.getUser().then(({ data }) => {
+      const user = data.user
+      if (!active || !user) return
+      setInvitedEmail(user.email ?? '')
+      const metadata = user.user_metadata as { full_name?: unknown; staff_title?: unknown; first_name?: unknown; last_name?: unknown }
+      setIsStaff(typeof metadata.staff_title === 'string')
+      const fullName = typeof metadata.full_name === 'string' ? metadata.full_name.trim() : ''
+      const first = typeof metadata.first_name === 'string' ? metadata.first_name : fullName.split(/\s+/).slice(0, -1).join(' ') || fullName
+      const last = typeof metadata.last_name === 'string' ? metadata.last_name : fullName.includes(' ') ? fullName.split(/\s+/).slice(-1)[0] : ''
+      setFirstName((current) => current || first)
+      setLastName((current) => current || last)
+    })
+    return () => { active = false }
+  }, [])
+
+  const longEnough = password.length >= 8
+  const matches = confirmation.length > 0 && password === confirmation
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!supabase) return
-    if (password.length < 8) {
-      setError('Choose a password with at least 8 characters.')
-      return
-    }
-
     if (!firstName.trim() || !lastName.trim()) {
       setError('Enter your first and last name.')
+      return
+    }
+    if (!longEnough) {
+      setError('Choose a password with at least 8 characters.')
       return
     }
     if (password !== confirmation) {
@@ -353,9 +375,8 @@ function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
       })
       if (updateError) throw updateError
       onComplete()
-    } catch (setupError) {
-      const details = setupError instanceof Error ? ` ${setupError.message}` : ''
-      setError(`Could not save your password. The invitation link may have expired; ask your workspace owner to resend it.${details}`)
+    } catch {
+      setError('We couldn’t create your account. This invitation link may have expired — ask SAGACT to resend it.')
     } finally {
       setIsSubmitting(false)
     }
@@ -365,13 +386,26 @@ function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
     <section className="auth-panel auth-signin-panel auth-account-panel" aria-labelledby="password-setup-title">
       <AuthCardBrand />
       <div className="auth-heading">
-        <h1 id="password-setup-title">Create your password</h1>
+        <h1 id="password-setup-title">Create your account</h1>
+        <p>{isStaff ? 'You’ve been invited to the SAGACT team workspace.' : 'You’ve been invited to the SAGACT client portal.'}</p>
       </div>
       <form className="auth-form auth-signin-form auth-account-form" onSubmit={(event) => { void handleSubmit(event) }}>
-        <label className="auth-field"><span>First name</span><span className="auth-field-control"><UserRound size={16} aria-hidden="true" /><input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required /></span></label>
-        <label className="auth-field"><span>Last name</span><span className="auth-field-control"><UserRound size={16} aria-hidden="true" /><input type="text" autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} required /></span></label>
-        <label className="auth-field"><span>Password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></span></label>
-        <label className="auth-field"><span>Confirm password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="new-password" minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required /></span></label>
+        {invitedEmail && <div className="auth-field">
+          <span>Email address</span>
+          <span className="auth-field-control is-readonly"><Mail size={16} aria-hidden="true" /><input type="email" value={invitedEmail} readOnly aria-readonly="true" tabIndex={-1} /></span>
+        </div>}
+        <div className="auth-name-row">
+          <label className="auth-field"><span>First name</span><span className="auth-field-control"><UserRound size={16} aria-hidden="true" /><input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="First name" required /></span></label>
+          <label className="auth-field"><span>Last name</span><span className="auth-field-control"><UserRound size={16} aria-hidden="true" /><input type="text" autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Last name" required /></span></label>
+        </div>
+        <label className="auth-field"><span>Password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Create a password" required />
+          <button className="auth-password-toggle" type="button" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+        </span></label>
+        <label className="auth-field"><span>Confirm password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder="Re-enter your password" required /></span></label>
+        <ul className="auth-password-checks" aria-live="polite">
+          <li className={longEnough ? 'is-met' : ''}><Check size={13} aria-hidden="true" />At least 8 characters</li>
+          <li className={matches ? 'is-met' : ''}><Check size={13} aria-hidden="true" />Passwords match</li>
+        </ul>
         {error && <p className="auth-error" role="alert">{error}</p>}
         <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Creating account…' : 'Create account'}{!isSubmitting && <ArrowRight size={16} />}
