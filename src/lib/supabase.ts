@@ -12,6 +12,6 @@ const sharedScope = globalThis as SupabaseGlobal
 
 export const supabase = isSupabaseConfigured
   ? (sharedScope.__sagactSupabaseClient ??= createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { storage: window.sessionStorage },
+    auth: { storage: typeof window === 'undefined' ? undefined : window.sessionStorage },
   }))
   : null

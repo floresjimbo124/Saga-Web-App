@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Suspense, lazy, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+
+const ClientPortalApp = lazy(() => import('../components/ClientPortalApp').then((module) => ({ default: module.ClientPortalApp })))
 import type { Session } from '@supabase/supabase-js'
 import { ArrowRight, Check, CircleAlert, Eye, EyeOff, LockKeyhole, LogOut, Mail, UserRound } from 'lucide-react'
 import { isSupabaseConfigured, SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
-import { ClientPortalApp } from '../components/ClientPortalApp'
 import { StaffTaskApp } from '../components/StaffTaskApp'
 import { resolveWorkspaceAccessRoute } from './workspace-access'
 import { clearSavedWorkspaceNavigation } from './workspace-navigation'
@@ -222,7 +223,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       />
     }
     const firstName = session.user.user_metadata.first_name
-    return <ClientPortalApp userId={session.user.id} firstName={typeof firstName === 'string' ? firstName : ''} />
+    return <Suspense fallback={<AuthLoading message="Opening your projects" />}><ClientPortalApp userId={session.user.id} firstName={typeof firstName === 'string' ? firstName : ''} /></Suspense>
   }
   if (currentAccess.status !== 'owner') return <AccessDenied error={currentAccess.error ?? ''} />
 

@@ -17450,3 +17450,54 @@ button.tk-stat > small { color: #4f7a57; font-weight: 600; }
   .mobile-profile-sign-out { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 1px solid #efcdc8; border-radius: 12px; color: #a5463f; background: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
   .mobile-profile-sign-out:hover { background: #fbeeec; }
 }
+
+/* Ready to bill */
+.bl-stats.has-ready { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bl-ready.is-ready { background: #f1f6ef; }
+.bl-ready.is-ready strong { color: #2c5a41; }
+.pulse-todo li.is-good svg:first-child { color: #4f7a57; }
+@media (max-width: 900px) { .bl-stats.has-ready { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bl-stats.has-ready > div:nth-child(3) { border-left: 0; } .bl-stats.has-ready > div:nth-child(n+3) { border-top: 1px solid #ecede6; } }
+@media (max-width: 640px) { .bl-stats.has-ready { grid-template-columns: 1fr; } }
+.field-optional { margin-left: 4px; color: #8a958b; font-size: 11.5px; font-weight: 500; }
+.setup-hint { margin: -4px 0 0; color: #9a6420; font-size: 12px; }
+.setup-preview.is-warning { color: #a5463f; background: #fbeeec; }
+.setup-preview.is-warning strong { color: #a5463f; }
+
+/* Activity history */
+@media (max-width: 640px) { .primary-nav.grouped-nav > .nav-item-desktop-only { display: none; } }
+.act-page { display: grid; gap: 18px; }
+.act-intro { margin: 6px 0 0; color: #768578; font-size: 14px; }
+.act-filter select { min-height: 38px; }
+.act-errors { padding: 14px 16px; border: 1px solid #efcdc8; border-radius: 12px; background: #fdf5f4; }
+.act-errors-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #a5463f; font-size: 13.5px; }
+.act-errors-head span { color: #8a958b; font-size: 12px; }
+.act-errors ul { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.act-errors li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: #fff; font-size: 13px; }
+.act-errors li span { overflow: hidden; color: #2d4234; text-overflow: ellipsis; white-space: nowrap; }
+.act-errors li small { color: #8a958b; font-size: 11.5px; }
+.act-groups { display: grid; gap: 22px; }
+.act-group h2 { margin: 0 0 8px; color: #768578; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.act-list { margin: 0; padding: 0; overflow: hidden; border: 1px solid #e6e8e1; border-radius: 12px; background: #fff; list-style: none; }
+.act-item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #f1f2ec; }
+.act-item:last-child { border-bottom: 0; }
+.act-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--act-ink); background: var(--act-soft); }
+.act-item.tone-money { --act-ink: #2c5a41; --act-soft: #e3ede1; }
+.act-item.tone-billing { --act-ink: #46677b; --act-soft: #e7eff4; }
+.act-item.tone-change { --act-ink: #8f5d1f; --act-soft: #f6e8d3; }
+.act-item.tone-schedule { --act-ink: #5d6b60; --act-soft: #eef1ec; }
+.act-item.tone-cost { --act-ink: #8a6a4a; --act-soft: #f3ece3; }
+.act-item.tone-danger { --act-ink: #a5463f; --act-soft: #fbeeec; }
+.act-item.tone-neutral { --act-ink: #5d6b60; --act-soft: #f1f2ee; }
+.act-copy { display: grid; gap: 2px; min-width: 0; }
+.act-copy strong { color: #1f3a2c; font-size: 14px; font-weight: 600; }
+.act-detail { color: #5d6b60; font-size: 13px; }
+.act-copy small { color: #8a958b; font-size: 12px; }
+.act-project { padding: 0; border: 0; color: #2c5a41; background: none; font: inherit; font-weight: 600; cursor: pointer; }
+.act-project:hover { text-decoration: underline; }
+.act-item time { color: #8a958b; font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.act-more { display: flex; justify-content: center; }
+@media (max-width: 640px) {
+  .act-item { grid-template-columns: 30px minmax(0, 1fr); padding: 12px; }
+  .act-icon { width: 30px; height: 30px; }
+  .act-item time { grid-column: 2; }
+}

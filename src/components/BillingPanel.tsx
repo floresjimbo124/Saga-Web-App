@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useBillingReadiness } from '../data/insights'
 import { createPortal } from 'react-dom'
 import { Download, Eye, Plus, X } from 'lucide-react'
 import {
@@ -31,6 +32,8 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
 }) {
   const { showToast } = useToast()
   const [billings, setBillings] = useState<ProjectBilling[]>([])
+  const readiness = useBillingReadiness(projectId, `${progress}:${billings.length}:${billings.filter((billing) => billing.status === 'issued').length}`)
+  const showReadiness = !contractId && readiness !== null
   const [progressInput, setProgressInput] = useState<string | null>(null)
   const [dueDate, setDueDate] = useState('')
   const [message, setMessage] = useState('')
@@ -170,10 +173,11 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       <div><h2>{contractId ? 'Contract progress billing' : 'Progress billing'}</h2><p>{progress}% complete · {money.format(earned)} earned</p></div>
       <button type="button" className="button button-primary" onClick={() => { setProgressInput(null); setError(''); setIsCreateBillingOpen(true) }} disabled={!isSetupComplete}><Plus size={15} />Create billing</button>
     </div>
-    {isSetupComplete ? <div className="ex-stats bl-stats" aria-label="Billing summary">
+    {isSetupComplete ? <div className={`ex-stats bl-stats${showReadiness ? ' has-ready' : ''}`} aria-label="Billing summary">
       <div><span>Earned to date</span><strong>{money.format(earned)}</strong><small>{progress}% of work complete</small></div>
       <div><span>Billed so far</span><strong>{money.format(billedTotal)}</strong><small>Down payment + {issuedCount} billing{issuedCount === 1 ? '' : 's'}</small></div>
       <div><span>Billable ceiling</span><strong>{money.format(ceiling)}</strong><small>Most you can bill before retention</small></div>
+      {showReadiness && <div className={readiness.readyAmount > 0 ? 'bl-ready is-ready' : 'bl-ready'}><span>Ready to bill</span><strong>{money.format(readiness.readyAmount)}</strong><small>{readiness.readyAmount > 0 ? 'Create a billing to send this now' : readiness.progressNeededPercent !== null ? `Bill again once progress passes ${Math.ceil(readiness.progressNeededPercent)}%` : 'Everything billable is covered'}</small></div>}
     </div> : <p className="calculation-note">Set up the contract amount before issuing a billing.</p>}
     {message && <p className="calculation-note" role="status">{message}</p>}
     <div className="bl-list-heading"><h3>Billings issued</h3></div>

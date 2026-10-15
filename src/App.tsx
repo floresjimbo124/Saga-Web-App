@@ -1,41 +1,33 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
   ArrowDownLeft, ArrowLeft, ArrowRight, BriefcaseBusiness, Camera, Crop, Download, Eye,
   CalendarDays, Check, ChevronRight, CircleAlert, CircleDollarSign, ClipboardList, Pencil,
   FileText, House, LayoutDashboard, LogOut, Plus, RefreshCw, Settings2, Trash2, UserPlus, WalletCards, X,
-  Receipt, UserRound,
+  History, Receipt, UserRound,
 } from 'lucide-react'
 import { calculateProjectFinance } from './finance/project-finance'
 import { calculateProfitRisk } from './finance/profit-risk'
 import { getProjectDeadlineStatus } from './finance/project-deadline'
 import { isRetentionDue } from './finance/retention-due'
 import type { ReceivableAgingItem } from './finance/receivables-aging'
-import { createProject as createProjectRecord, loadPortfolio, updateProjectSetup as saveProjectSetupRecord, updateProjectState, type PortfolioPayment, type PortfolioProject, type ProjectHealthStatus, type ProjectStatus } from './data/portfolio'
+import { createProject as createProjectRecord, loadPortfolio, updateProjectCostForecast, updateProjectSetup as saveProjectSetupRecord, updateProjectState, type PortfolioPayment, type PortfolioProject, type ProjectHealthStatus, type ProjectStatus } from './data/portfolio'
 import { supabase } from './lib/supabase'
 import { PaymentEntryDialog } from './components/PaymentEntryDialog'
-import { BillingPanel } from './components/BillingPanel'
-import { ExpensePanel } from './components/ExpensePanel'
 import { QuickExpenseSheet } from './components/QuickExpenseSheet'
 import { AccountMenu } from './components/AccountMenu'
 import { ProjectProfitCard } from './components/ProjectProfitCard'
-import { AllExpensesPanel } from './components/AllExpensesPanel'
 import { loadProjectTasks } from './data/tasks'
-import { ProjectDocumentPanel } from './components/ProjectDocumentPanel'
 import { InviteClientDialog } from './components/InviteClientDialog'
-import { ProjectForecastPanel } from './components/ProjectForecastPanel'
-import { ProjectMilestonePanel } from './components/ProjectMilestonePanel'
 import { ContractImpactCard, ProjectChangeOrderPanel } from './components/ProjectChangeOrderPanel'
 import { ProjectPulse } from './components/ProjectPulse'
+import { useBillingReadiness } from './data/insights'
 import { StatusMenu, type StatusMenuOption } from './components/StatusMenu'
-import { CountUp, EmptyArt, ProgressRing } from './components/Motion'
+import { CountUp, EmptyArt, ProgressRing, SkeletonRows } from './components/Motion'
 import { createProjectCoverPhotoUrl, deleteProjectCoverPhoto, uploadProjectCoverPhoto, validateProjectCoverPhoto } from './data/project-cover'
 import { ProjectCoverCropDialog } from './components/ProjectCoverCropDialog'
-import { PayrollPanel } from './components/PayrollPanel'
-import { TaskManagementPanel } from './components/TaskManagementPanel'
 import { NotificationCenter } from './components/NotificationCenter'
 import { MoneyInput } from './components/MoneyInput'
-import { downloadPaymentReceiptPdf, openPaymentReceiptPdf } from './lib/payment-receipt-pdf'
 import { formatPaymentType } from './lib/payment-type'
 import { formatChangeOrderNumber } from './lib/change-order-number'
 import { formatBillingNumber } from './lib/billing-number'
@@ -46,9 +38,19 @@ import { useToast } from './components/toast-context'
 import { workspaceNavigationStorageKey } from './auth/workspace-navigation'
 import './App.css'
 
+const BillingPanel = lazy(() => import('./components/BillingPanel').then((module) => ({ default: module.BillingPanel })))
+const ExpensePanel = lazy(() => import('./components/ExpensePanel').then((module) => ({ default: module.ExpensePanel })))
+const AllExpensesPanel = lazy(() => import('./components/AllExpensesPanel').then((module) => ({ default: module.AllExpensesPanel })))
+const ProjectDocumentPanel = lazy(() => import('./components/ProjectDocumentPanel').then((module) => ({ default: module.ProjectDocumentPanel })))
+const ProjectForecastPanel = lazy(() => import('./components/ProjectForecastPanel').then((module) => ({ default: module.ProjectForecastPanel })))
+const ProjectMilestonePanel = lazy(() => import('./components/ProjectMilestonePanel').then((module) => ({ default: module.ProjectMilestonePanel })))
+const PayrollPanel = lazy(() => import('./components/PayrollPanel').then((module) => ({ default: module.PayrollPanel })))
+const TaskManagementPanel = lazy(() => import('./components/TaskManagementPanel').then((module) => ({ default: module.TaskManagementPanel })))
+const ActivityPanel = lazy(() => import('./components/ActivityPanel').then((module) => ({ default: module.ActivityPanel })))
+
 type Project = PortfolioProject
 type Payment = PortfolioPayment
-type WorkspaceView = 'portfolio' | 'payroll' | 'tasks' | 'expenses'
+type WorkspaceView = 'portfolio' | 'payroll' | 'tasks' | 'expenses' | 'activity'
 type MobileNavigationPage = 'home' | 'projects' | 'updates' | 'profile'
 type ProjectDetailTab = 'Overview' | 'Milestones' | 'Change orders' | 'Billings' | 'Payments' | 'Expenses' | 'Forecast' | 'Documents'
 const projectDetailTabs: ProjectDetailTab[] = ['Overview', 'Milestones', 'Change orders', 'Billings', 'Payments', 'Expenses', 'Forecast', 'Documents']
@@ -58,7 +60,7 @@ function readWorkspaceNavigation(): { view: WorkspaceView; selectedId: string | 
     if (!stored) return { view: 'portfolio', selectedId: null, projectTab: 'Overview' }
     const state = JSON.parse(stored) as { view?: unknown; selectedId?: unknown; projectTab?: unknown }
     return {
-      view: state.view === 'payroll' ? 'payroll' : state.view === 'tasks' ? 'tasks' : state.view === 'expenses' ? 'expenses' : 'portfolio',
+      view: state.view === 'activity' ? 'activity' : state.view === 'payroll' ? 'payroll' : state.view === 'tasks' ? 'tasks' : state.view === 'expenses' ? 'expenses' : 'portfolio',
       selectedId: typeof state.selectedId === 'string' ? state.selectedId : null,
       projectTab: projectDetailTabs.find((tab) => tab === state.projectTab) ?? 'Overview',
     }
@@ -142,6 +144,7 @@ function App() {
   const [client, setClient] = useState('')
   const [location, setLocation] = useState('')
   const [contract, setContract] = useState('')
+  const [costBudget, setCostBudget] = useState('')
   const [downPaymentPercent, setDownPaymentPercent] = useState('0')
   const [retentionRate, setRetentionRate] = useState('5')
   const [retentionMethod, setRetentionMethod] = useState<'final_schedule' | 'per_billing'>('final_schedule')
@@ -366,6 +369,8 @@ function App() {
     if (projects.some((project) => project.prefix === prefix)) { setFormError(`${prefix} is already in use. Receipt prefixes lock after the first number is issued.`); return }
     const amount = parseMoneyInput(contract)
     if (!Number.isFinite(amount) || amount <= 0) { setFormError('Enter a contract amount greater than zero.'); return }
+    const budget = costBudget.trim() ? parseMoneyInput(costBudget) : null
+    if (budget !== null && (!Number.isFinite(budget) || budget < 0)) { setFormError('Enter a valid cost budget, or leave it blank to set it later.'); return }
     setFormError('')
     setIsCreatingProject(true)
     try {
@@ -379,11 +384,18 @@ function App() {
         retentionRatePercent: Number(retentionRate),
         retentionMethod,
       })
+      if (budget !== null && budget > 0) {
+        try {
+          await updateProjectCostForecast({ projectId, costBudget: budget, estimatedCostToComplete: budget })
+        } catch {
+          showToast('Project created, but the cost budget could not be saved. Set it in the Forecast tab.', 'update')
+        }
+      }
       setSelectedId(projectId)
       setView('portfolio')
       setProjectTab('Overview')
       setShowModal(false)
-      setName(''); setClient(''); setLocation(''); setContract(''); setDownPaymentPercent('0'); setRetentionRate('5'); setRetentionMethod('final_schedule')
+      setName(''); setClient(''); setLocation(''); setContract(''); setCostBudget(''); setDownPaymentPercent('0'); setRetentionRate('5'); setRetentionMethod('final_schedule')
       showToast('Project created.')
       refreshWorkspace()
     } catch (error) {
@@ -417,6 +429,7 @@ function App() {
         <span className="nav-group-label">Workspace</span>
         <button className={`nav-item ${view === 'portfolio' && mobileNavigationPage !== 'profile' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('portfolio'); setSelectedId(null); setProjectTab('Overview') }}><LayoutDashboard size={17} /><span>Portfolio</span></button>
         <button className={`nav-item ${view === 'tasks' && mobileNavigationPage !== 'profile' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }}><ClipboardList size={17} /><span>Tasks</span>{taskAttentionCount > 0 && <em className="nav-count" title="Blocked or due within 7 days">{taskAttentionCount}</em>}</button>
+        <button className={`nav-item nav-item-desktop-only ${view === 'activity' && mobileNavigationPage !== 'profile' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('activity'); setSelectedId(null); setProjectTab('Overview') }}><History size={17} /><span>Activity</span></button>
         <span className="nav-group-label">Finance</span>
         <button className={`nav-item ${view === 'expenses' && mobileNavigationPage !== 'profile' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('expenses'); setSelectedId(null); setProjectTab('Overview') }}><Receipt size={17} /><span>Expenses</span>{missingReceiptCount > 0 && <em className="nav-count is-warning" title="Expenses without a receipt">{missingReceiptCount}</em>}</button>
         <button className={`nav-item ${view === 'payroll' && mobileNavigationPage !== 'profile' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('payroll'); setSelectedId(null); setProjectTab('Overview') }}><WalletCards size={17} /><span>Payroll</span></button>
@@ -469,7 +482,7 @@ function App() {
 
     <div className="app-main">
       <header className="topbar">
-        <div className="breadcrumbs"><span>SAGACT</span><ChevronRight size={13} /><strong>{mobileNavigationPage === 'profile' ? 'Profile' : view === 'payroll' ? 'Payroll' : view === 'tasks' ? 'Tasks' : view === 'expenses' ? 'Expenses' : selected?.name ?? 'Portfolio'}</strong></div>
+        <div className="breadcrumbs"><span>SAGACT</span><ChevronRight size={13} /><strong>{mobileNavigationPage === 'profile' ? 'Profile' : view === 'activity' ? 'Activity' : view === 'payroll' ? 'Payroll' : view === 'tasks' ? 'Tasks' : view === 'expenses' ? 'Expenses' : selected?.name ?? 'Portfolio'}</strong></div>
         <div className="topbar-right">
           <span className="topbar-date"><CalendarDays size={14} />{new Intl.DateTimeFormat('en-PH', { weekday: 'short', month: 'short', day: 'numeric' }).format(currentDate)}</span>
           <NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} onOpenTask={openTaskCommentNotification} />
@@ -479,7 +492,7 @@ function App() {
 
       <main className="page-content">
         <div key={`${view}:${selectedId ?? 'portfolio'}`} className="view-transition">
-        {mobileNavigationPage === 'profile' ? <MobileOwnerProfile name={profileName} title={profileTitle} email={profileEmail} onSignOut={() => { void supabase?.auth.signOut() }} /> : view === 'expenses' ? <AllExpensesPanel projects={projects.map((project) => ({ id: project.id, name: project.name, expenses: project.expenses }))} onChanged={() => refreshWorkspace(false)} /> : view === 'payroll' ? <PayrollPanel projects={projects} onChanged={() => refreshWorkspace(false)} /> : view === 'tasks' ? <TaskManagementPanel isOwner currentUserId="" projects={projects.map((project) => ({ id: project.id, name: project.name }))} notificationTaskId={pendingTaskNotificationId} onNotificationTaskClosed={() => setPendingTaskNotificationId('')} /> : selected ? <ProjectDetail project={selected} tab={projectTab} setTab={setProjectTab} payments={payments.filter((payment) => payment.projectId === selected.id)} receivables={receivables.filter((item) => item.projectId === selected.id)} onBack={() => { setSelectedId(null); setProjectTab('Overview') }} onSetup={() => openProjectSetup(selected)} onChanged={() => refreshWorkspace(false)} onProjectStateChange={saveProjectStateOptimistically} /> : <PortfolioOverview ownerName={profileName === 'Project Manager' ? '' : profileName.split(' ')[0]} projects={projects} payments={payments} receivables={receivables} filtered={filtered} currentDate={currentDate} loadError={loadError} attentionCount={attentionCount} billed={billed} collected={collected} totalExpenses={totalExpenses} receivable={receivable} retention={retention} search={search} statusFilter={statusFilter} healthFilter={healthFilter} profitRiskFilter={profitRiskFilter} dateFilter={dateFilter} monthCashIn={monthCashIn} cashBars={cashBars} isLoading={isLoading} setSearch={setSearch} setStatusFilter={setStatusFilter} setHealthFilter={setHealthFilter} setProfitRiskFilter={setProfitRiskFilter} setDateFilter={setDateFilter} setShowDashboardExpense={setShowDashboardExpense} setShowModal={setShowModal} onViewTasks={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }} onUploadUpdate={(projectId) => { setMobileNavigationPage('projects'); setSelectedId(projectId); setView('portfolio'); setProjectTab('Milestones') }} isProjectsPage={mobileNavigationPage === 'projects'} refreshWorkspace={refreshWorkspace} openProject={openProject} />}
+        <Suspense fallback={<SkeletonRows rows={5} label="Loading" />}>{mobileNavigationPage === 'profile' ? <MobileOwnerProfile name={profileName} title={profileTitle} email={profileEmail} onOpenActivity={() => { setMobileNavigationPage('home'); setView('activity'); setSelectedId(null) }} onSignOut={() => { void supabase?.auth.signOut() }} /> : view === 'activity' ? <ActivityPanel onOpenProject={openProject} /> : view === 'expenses' ? <AllExpensesPanel projects={projects.map((project) => ({ id: project.id, name: project.name, expenses: project.expenses }))} onChanged={() => refreshWorkspace(false)} /> : view === 'payroll' ? <PayrollPanel projects={projects} onChanged={() => refreshWorkspace(false)} /> : view === 'tasks' ? <TaskManagementPanel isOwner currentUserId="" projects={projects.map((project) => ({ id: project.id, name: project.name }))} notificationTaskId={pendingTaskNotificationId} onNotificationTaskClosed={() => setPendingTaskNotificationId('')} /> : selected ? <ProjectDetail project={selected} tab={projectTab} setTab={setProjectTab} payments={payments.filter((payment) => payment.projectId === selected.id)} receivables={receivables.filter((item) => item.projectId === selected.id)} onBack={() => { setSelectedId(null); setProjectTab('Overview') }} onSetup={() => openProjectSetup(selected)} onChanged={() => refreshWorkspace(false)} onProjectStateChange={saveProjectStateOptimistically} /> : <PortfolioOverview ownerName={profileName === 'Project Manager' ? '' : profileName.split(' ')[0]} projects={projects} payments={payments} receivables={receivables} filtered={filtered} currentDate={currentDate} loadError={loadError} attentionCount={attentionCount} billed={billed} collected={collected} totalExpenses={totalExpenses} receivable={receivable} retention={retention} search={search} statusFilter={statusFilter} healthFilter={healthFilter} profitRiskFilter={profitRiskFilter} dateFilter={dateFilter} monthCashIn={monthCashIn} cashBars={cashBars} isLoading={isLoading} setSearch={setSearch} setStatusFilter={setStatusFilter} setHealthFilter={setHealthFilter} setProfitRiskFilter={setProfitRiskFilter} setDateFilter={setDateFilter} setShowDashboardExpense={setShowDashboardExpense} setShowModal={setShowModal} onViewTasks={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }} onUploadUpdate={(projectId) => { setMobileNavigationPage('projects'); setSelectedId(projectId); setView('portfolio'); setProjectTab('Milestones') }} isProjectsPage={mobileNavigationPage === 'projects'} refreshWorkspace={refreshWorkspace} openProject={openProject} />}</Suspense>
         </div>
       </main>
       <footer className="page-footer" aria-hidden="true" />
@@ -501,6 +514,8 @@ function App() {
               <label className="form-field">Contract amount<MoneyInput min="1" step="1" value={contract} onChange={setContract} placeholder="0" required /></label>
               <label className="form-field">Down payment<span className="setup-suffix-input"><input type="number" min="0" max="100" step="0.5" value={downPaymentPercent} onChange={(event) => setDownPaymentPercent(event.target.value)} required /><span>%</span></span></label>
             </div>
+            <label className="form-field">Cost budget <span className="field-optional">optional · recommended</span><MoneyInput min="0" step="1" value={costBudget} onChange={setCostBudget} placeholder="What you expect the whole build to cost" /></label>
+            {(() => { const amount = parseMoneyInput(contract); const budget = parseMoneyInput(costBudget); return Number.isFinite(amount) && amount > 0 && Number.isFinite(budget) && budget > 0 ? <p className={`setup-preview${budget >= amount ? ' is-warning' : ''}`}><span>Expected profit</span><strong>{setupMoney.format(amount - budget)} · {Math.round((amount - budget) / amount * 100)}% margin</strong></p> : <p className="setup-hint">Add a budget so the project can show profit and overspending from day one.</p> })()}
             {(() => { const amount = parseMoneyInput(contract); const percent = Number(downPaymentPercent); return Number.isFinite(amount) && amount > 0 && Number.isFinite(percent) && percent > 0 ? <p className="setup-preview"><span>Down payment amount</span><strong>{setupMoney.format(amount * percent / 100)}</strong></p> : null })()}
             <div className="form-field"><span>Retention rate</span><div className="setup-segment" role="radiogroup" aria-label="Retention rate">{([{ value: '5', label: '5%', hint: 'Default' }, { value: '10', label: '10%', hint: 'Client request' }] as const).map((option) => <button key={option.value} type="button" role="radio" aria-checked={retentionRate === option.value} className={retentionRate === option.value ? 'is-selected' : ''} onClick={() => setRetentionRate(option.value)}><strong>{option.label}</strong><small>{option.hint}</small></button>)}</div></div>
             <div className="form-field"><span>Retention method</span><div className="setup-choice" role="radiogroup" aria-label="Retention method">
@@ -697,6 +712,7 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
   const paymentHistory = payments
   const projectExpenses = project.expenses
   const finance = financeForProject(project)
+  const billingReadiness = useBillingReadiness(project.id, `${project.progress}:${project.billed}:${project.collected}`)
   const approvedChangeOrderTotal = project.changeOrders
     .filter((order) => order.status === 'approved')
     .reduce((total, order) => total + order.amount, 0)
@@ -767,6 +783,7 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
   const viewAcknowledgementReceipt = async (payment: Payment) => {
     setReceiptError('')
     try {
+      const { openPaymentReceiptPdf } = await import('./lib/payment-receipt-pdf')
       await openPaymentReceiptPdf(receiptDetails(payment))
     } catch {
       setReceiptError('Could not preview the acknowledgement receipt.')
@@ -775,6 +792,7 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
   const downloadAcknowledgementReceipt = async (payment: Payment) => {
     setReceiptError('')
     try {
+      const { downloadPaymentReceiptPdf } = await import('./lib/payment-receipt-pdf')
       await downloadPaymentReceiptPdf(receiptDetails(payment))
     } catch {
       setReceiptError('Could not download the acknowledgement receipt.')
@@ -810,10 +828,10 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
   </section>
     {projectStateError && <p className="form-error" role="alert">{projectStateError}</p>}
     <div className="detail-tabs" role="tablist" aria-label="Project sections">{projectDetailTabs.map((item) => <button key={item} className={tab === item ? 'tab is-selected' : 'tab'} onClick={() => setTab(item)} role="tab" aria-selected={tab === item}>{item}</button>)}</div>
-    <div key={tab} className="detail-tab-transition">
+    <Suspense fallback={<SkeletonRows rows={4} label="Loading" />}><div key={tab} className="detail-tab-transition">
     {(profitRisk.level === 'high' || profitRisk.level === 'critical') && <div className={`project-risk-callout risk-${profitRisk.level}`} role="status"><CircleAlert size={17} /><span><strong>Profit risk: {profitRisk.label}.</strong> {profitRisk.detail}.</span><button type="button" onClick={() => setTab('Forecast')}>Review forecast <ArrowRight size={14} /></button></div>}
     {tab === 'Overview' && <>
-      <ProjectPulse progress={project.progress} startDate={project.startDate ?? project.createdAt} deadline={project.deadline} isClosed={project.status === 'completed' || project.status === 'closed'} milestones={project.milestones} costBudget={project.costBudget} recordedCosts={project.outflow} outstanding={due} pendingChangeOrders={project.changeOrders.filter((order) => order.status === 'pending_approval').length} onOpenTab={setTab} />
+      <ProjectPulse progress={project.progress} startDate={project.startDate ?? project.createdAt} deadline={project.deadline} isClosed={project.status === 'completed' || project.status === 'closed'} milestones={project.milestones} costBudget={project.costBudget} recordedCosts={project.outflow} outstanding={due} pendingChangeOrders={project.changeOrders.filter((order) => order.status === 'pending_approval').length} receivables={receivables} readiness={billingReadiness} onOpenTab={setTab} />
       <section className="surface-card detail-progress-card"><div className="card-heading-row"><h2>Project health</h2><ProgressRing value={project.progress} /></div><div className="detail-progress-track"><span style={{ width: `${project.progress}%` }} /></div><div className="progress-caption"><span>Work accomplished</span><strong>{money.format(finance.earnedToDate)} earned</strong></div><div className="milestone-callout"><span className="milestone-icon"><CalendarDays size={16} /></span><span><small>Next milestone</small><strong>{project.milestone}</strong></span><ChevronRight size={16} /></div></section>
       <ProjectProfitCard contractValue={finance.contractValue} recordedCosts={project.outflow} costBudget={project.costBudget} estimatedCostToComplete={project.estimatedCostToComplete} progressPercent={project.progress} onOpenForecast={() => setTab('Forecast')} onOpenExpenses={() => setTab('Expenses')} />
       <section className="detail-financial-section fin-section" aria-labelledby="detail-financial-heading">
@@ -892,11 +910,11 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
     {tab === 'Expenses' && <ExpensePanel projectId={project.id} projectName={project.name} expenses={projectExpenses} inflow={project.collected} onChanged={onChanged} />}
     {tab === 'Forecast' && <ProjectForecastPanel projectId={project.id} contractValue={finance.contractValue} recordedCosts={project.outflow} costBudget={project.costBudget} estimatedCostToComplete={project.estimatedCostToComplete} onChanged={onChanged} />}
     {tab === 'Documents' && <ProjectDocumentPanel projectId={project.id} />}
-    </div>
+    </div></Suspense>
   </div>
 }
 
-function MobileOwnerProfile({ name, title, email, onSignOut }: { name: string; title: string; email: string; onSignOut: () => void }) {
+function MobileOwnerProfile({ name, title, email, onSignOut, onOpenActivity }: { name: string; title: string; email: string; onSignOut: () => void; onOpenActivity: () => void }) {
   const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState(false)
   const [password, setPassword] = useState('')
   const [passwordConfirmation, setPasswordConfirmation] = useState('')
@@ -983,6 +1001,13 @@ function MobileOwnerProfile({ name, title, email, onSignOut }: { name: string; t
       <button className="mobile-profile-setting-row" type="button" onClick={() => setIsAccountSettingsOpen(true)} role="listitem">
         <span className="mobile-profile-setting-icon" aria-hidden="true"><Settings2 size={17} /></span>
         <span>Account Settings</span>
+        <ChevronRight className="mobile-profile-setting-chevron" size={16} aria-hidden="true" />
+      </button>
+    </section>
+    <section className="mobile-profile-settings surface-card" aria-label="Workspace" role="list">
+      <button className="mobile-profile-setting-row" type="button" onClick={onOpenActivity} role="listitem">
+        <span className="mobile-profile-setting-icon" aria-hidden="true"><History size={17} /></span>
+        <span>Activity history</span>
         <ChevronRight className="mobile-profile-setting-chevron" size={16} aria-hidden="true" />
       </button>
     </section>
