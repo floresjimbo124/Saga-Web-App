@@ -19,7 +19,6 @@ import { ProjectSetupDialog } from './app/ProjectSetupDialog'
 import { ProjectDetail } from './app/ProjectDetail'
 import { MobileOwnerProfile } from './app/OwnerProfile'
 import { projectDetailTabs, setupMoney, financeForProject, retentionDueForProject, type Project, type Payment, type ProjectDetailTab } from './app/project-shared'
-import './App.css'
 
 const AllExpensesPanel = lazy(() => import('./components/AllExpensesPanel').then((module) => ({ default: module.AllExpensesPanel })))
 const PayrollPanel = lazy(() => import('./components/PayrollPanel').then((module) => ({ default: module.PayrollPanel })))
