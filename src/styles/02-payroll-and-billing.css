@@ -1,32 +1,6 @@
-.receivable-line > span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
 
-.receivable-line strong {
-  color: #526153;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.small-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
 
 .overdue-dot { background: #c59c4a; }
-.retention-dot { background: #82978b; }
-
-.retention-explainer {
-  display: block;
-  margin-top: 7px;
-  color: #92988e;
-  font-size: 11px;
-  line-height: 1.5;
-}
 
 .detail-activity-card {
   grid-column: 1 / -1;
@@ -44,248 +18,14 @@
   margin-bottom: 16px;
 }
 
-.demo-tag {
-  padding: 5px 7px;
-  border: 1px solid #e9e0c8;
-  border-radius: 3px;
-  color: #8e784b;
-  background: #faf5e9;
-  font-family: var(--mono);
-  font-size: 10px;
-}
-
-.simple-table {
-  margin-top: 15px;
-  border: 1px solid #ebe9df;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.simple-table-head,
-.simple-table-row {
-  min-height: 40px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  align-items: center;
-  gap: 10px;
-  padding: 0 12px;
-}
-
-.simple-table-head {
-  color: #898f86;
-  background: #f8f7f1;
-  font-family: var(--mono);
-  font-size: 11px;
-  text-transform: uppercase;
-}
-
-.simple-table-row {
-  border-top: 1px solid #eeece4;
-  color: #6d786e;
-  font-size: 11px;
-}
-
-.simple-table-row strong {
-  color: #465a4b;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.table-status {
-  color: #927640;
-}
-
 .calculation-note {
   margin-top: 12px;
   color: #898f85;
   font-size: 11px;
 }
 
-.billing-current-progress {
-  margin: 14px 0;
-  color: #718075;
-  font-size: 11px;
-}
-
-.billing-current-progress strong {
-  color: var(--forest-deep);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.billing-calculation {
-  margin-top: 16px;
-  border: 1px solid #e8e7dd;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.billing-calculation > div {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 9px 13px;
-  border-bottom: 1px solid #eeece4;
-  color: #737e74;
-  font-size: 12px;
-}
-
-.billing-calculation > div:last-child {
-  border-bottom: 0;
-}
-
-.billing-calculation strong {
-  color: #405746;
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 500;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.billing-calculation .billing-calculation-total {
-  color: #365641;
-  background: #f0f4ec;
-  font-weight: 600;
-}
-
-.billing-calculation-total strong {
-  color: #31583d;
-  font-size: 17px;
-  font-weight: 600;
-}
-
 .tab-content > .button {
   margin-left: auto;
-}
-
-.expense-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 16px 0 20px;
-  border: 1px solid #e8e7dd;
-  border-radius: 4px;
-  background: #fbfaf5;
-}
-
-.expense-summary-item {
-  min-width: 0;
-  display: grid;
-  gap: 7px;
-  padding: 12px 14px;
-  border-right: 1px solid #e8e7dd;
-}
-
-.expense-summary-item:last-child {
-  border-right: 0;
-}
-
-.expense-summary-item span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #788179;
-  font-size: 12px;
-}
-
-.expense-summary-item strong {
-  overflow-wrap: anywhere;
-  color: #405746;
-  font-family: var(--mono);
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.expense-summary-item .expense-net-negative {
-  color: #a34242;
-}
-
-.expense-summary-item .expense-net-positive {
-  color: #426d4d;
-}
-
-.expense-category-summary {
-  margin: 0 0 12px;
-  container-type: inline-size;
-}
-
-.expense-category-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 0;
-  margin-top: 8px;
-  border: 1px solid #e8e7dd;
-  border-radius: 4px;
-  background: transparent;
-}
-
-.expense-category-row {
-  min-width: 0;
-  width: auto;
-  grid-column: auto;
-  display: grid;
-  align-content: center;
-  gap: 7px;
-  padding: 12px 14px;
-  outline: 1px solid #e8e7dd;
-  outline-offset: -1px;
-  color: #53655a;
-  font-size: 14px;
-}
-
-.expense-category-row + .expense-category-row {
-  padding-left: 14px;
-  border-left: 0;
-}
-
-@container (max-width: 680px) {
-  .expense-category-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@container (max-width: 340px) {
-  .expense-category-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.expense-category-row span {
-  color: #5f7265;
-  font-size: 14px;
-}
-
-.expense-category-row strong {
-  color: #405746;
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-@media (max-width: 640px) {
-  .expense-category-row,
-  .expense-category-row + .expense-category-row {
-    padding: 10px;
-    border-radius: 0;
-  }
-
-  .expense-category-row span {
-    overflow-wrap: anywhere;
-    font-size: 12px;
-    line-height: 1.35;
-  }
-
-  .expense-category-row strong {
-    overflow-wrap: anywhere;
-    font-size: 12px;
-  }
-}
-
-.expense-register-heading {
-  margin: 0 0 4px;
 }
 
 .expense-register-list { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #b8c4b6 transparent; }
@@ -360,23 +100,10 @@
   justify-content: flex-start;
 }
 
-.payroll-employees-toolbar > .card-heading-row {
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.payroll-management-card:first-child > .card-heading-row {
-  justify-content: space-between;
-}
-
 .payroll-weekly-section > .card-heading-row > div,
 .payroll-management-card > .card-heading-row > div {
   display: grid;
   gap: 5px;
-}
-
-.payroll-management-card:first-child > .card-heading-row > .button {
-  flex: 0 0 auto;
 }
 
 .payroll-weekly-section > .card-heading-row p,
@@ -384,73 +111,6 @@
   color: #768578;
   font-size: 13px;
   line-height: 1.5;
-}
-
-.payroll-management-card > .card-heading-row h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.payroll-week-toolbar {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid #e2e5df;
-  border-radius: 5px;
-  background: #f7f8f5;
-}
-
-.payroll-week-toolbar > strong {
-  color: #405345;
-  font-size: 14px;
-  text-align: center;
-}
-
-.payroll-finalize-action {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 14px;
-  border: 1px solid #dce4d9;
-  border-radius: 5px;
-  background: #f3f6f0;
-}
-
-.payroll-finalize-copy {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.payroll-finalize-action strong {
-  color: #405345;
-  font-size: 13px;
-}
-
-.payroll-finalize-action small {
-  color: #768578;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.payroll-finalize-buttons {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 8px;
-}
-
-.payroll-finalize-buttons > .button {
-  flex: 0 0 auto;
-}
-
-.payroll-finalize-hint {
-  margin: -8px 0 0;
-  color: #8a7447;
-  font-size: 12px;
 }
 
 .payroll-week-list,
@@ -780,39 +440,6 @@
   background: #fffefa;
 }
 
-.payroll-person-card {
-  border: 1px solid #e6e7df;
-  border-radius: 5px;
-  background: #fffefa;
-}
-
-.payroll-person-heading {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  min-height: 54px;
-  padding: 10px 14px;
-  color: #fffefa;
-  border-bottom: 1px solid #123329;
-  border-radius: 4px 4px 0 0;
-  background: #183d33;
-}
-
-.payroll-person-heading strong {
-  font-size: 18px;
-}
-
-.payroll-person-heading small {
-  color: #d0ddd5;
-  font-size: 14px;
-}
-
-.payroll-person-card .payroll-week-row {
-  border: 0;
-  border-radius: 0;
-}
-
 .payroll-history-row > span,
 .payroll-advance-record-view > span {
   display: grid;
@@ -902,14 +529,6 @@
   font: inherit;
 }
 
-.payroll-deduction-balance {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px 10px;
-}
-
 .payroll-pay-summary {
   display: grid;
   grid-column: 1 / -1;
@@ -967,24 +586,6 @@
 .payroll-form-error {
   grid-column: 1 / -1;
   margin: 0;
-}
-
-.payroll-week-totals {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 18px;
-  padding-top: 11px;
-  border-top: 1px solid #e2e5df;
-  color: #768578;
-  font-size: 15px;
-}
-
-.payroll-week-totals strong {
-  margin-left: 5px;
-  color: #405345;
-  font-family: var(--mono);
-  font-size: 16px;
 }
 
 .payroll-history-heading {
@@ -1052,13 +653,6 @@
   font-weight: 600;
 }
 
-.payroll-management-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: 16px;
-}
-
 .payroll-employee-row {
   grid-template-columns: minmax(0, 1.5fr) minmax(110px, 1fr) auto auto;
   padding: 10px;
@@ -1084,9 +678,6 @@
 }
 
 @media (max-width: 1000px) {
-  .payroll-management-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 
   .payroll-week-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1265,55 +856,6 @@
     overflow-y: auto;
   }
 
-  .payroll-employees-toolbar > .card-heading-row {
-    align-items: center;
-    gap: 12px;
-  }
-
-  .payroll-employees-toolbar > .card-heading-row > div {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .payroll-employees-toolbar > .card-heading-row > .button {
-    align-self: center;
-    flex-shrink: 0;
-  }
-
-  .payroll-employees-toolbar > .card-heading-row p {
-    display: none;
-  }
-
-  .payroll-week-toolbar {
-    grid-template-columns: auto 1fr auto;
-    gap: 5px;
-    padding: 8px;
-  }
-
-  .payroll-week-toolbar .button {
-    gap: 4px;
-    padding-inline: 7px;
-    font-size: 11px;
-  }
-
-  .payroll-week-toolbar > strong {
-    font-size: 11px;
-  }
-
-  .payroll-finalize-action {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .payroll-finalize-buttons {
-    width: 100%;
-  }
-
-  .payroll-finalize-buttons > .button {
-    flex: 1;
-    justify-content: center;
-  }
-
   .payroll-week-row,
   .payroll-employee-row {
     grid-template-columns: minmax(0, 1fr);
@@ -1412,11 +954,6 @@
     flex: 1;
   }
 
-  .payroll-week-totals {
-    justify-content: flex-start;
-    gap: 9px 14px;
-  }
-
   .payroll-history-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1480,39 +1017,11 @@
   height: 30px;
 }
 
-.document-placeholder {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 17px;
-  padding: 14px;
-  border: 1px dashed #d9ded3;
-  border-radius: 4px;
-  color: #768578;
-}
-
-.document-placeholder > span {
-  flex: 1;
-  display: grid;
-  gap: 3px;
-}
-
-.document-placeholder strong {
-  color: #4d6151;
-  font-size: 11px;
-}
-
-.document-placeholder small {
-  color: #8b9288;
-  font-size: 11px;
-}
-
 .document-manager { display: grid; gap: 14px; }
 .document-count { color: #768578; font-size: 12px; font-weight: 700; }
 .document-upload-form { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto; gap: 12px; align-items: end; padding: 16px; border: 1px solid #d9ded3; border-radius: 6px; background: #f7f8f5; }
 .document-upload-form .form-field { margin: 0; }
 .document-share-option, .document-visibility { display: inline-flex; align-items: center; gap: 7px; color: #768578; font-size: 12px; white-space: nowrap; }
-.document-share-option { min-height: 40px; }
 .document-share-option input, .document-visibility input { accent-color: #426d4d; }
 .document-upload-button { min-height: 40px; white-space: nowrap; }
 .document-upload-note { margin: 0; color: #768578; font-size: 11px; line-height: 1.4; }
@@ -1569,19 +1078,8 @@
 .aging-empty { display: flex; align-items: center; gap: 8px; padding: 12px 8px; color: #768578; font-size: 12px; }
 .aging-note { margin: 0; color: #818a80; font-size: 11px; }
 .invite-client-dialog { max-height: calc(100vh - 40px); overflow-y: auto; }
-.client-access-list { display: grid; gap: 8px; margin-bottom: 17px; padding: 13px; border: 1px solid #e2e5df; border-radius: 5px; background: #fbfaf5; }
-.client-access-list h3 { margin: 0; color: #405345; font-size: 12px; font-weight: 600; }
-.client-access-count { color: #768578; font-size: 11px; }
-.client-access-rows { display: grid; max-height: 220px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #b8c4b6 transparent; }
-.client-access-row { display: grid; grid-template-columns: minmax(120px, 1fr) auto auto; gap: 10px; align-items: center; min-width: 0; padding: 10px 2px; border-bottom: 1px solid #e6e8e2; }
-.client-access-row:last-child { border-bottom: 0; }
-.client-access-account { display: grid; gap: 4px; min-width: 0; }
-.client-access-account strong { overflow-wrap: anywhere; color: #405345; font-size: 11px; }
-.client-access-account small { color: #818a80; font-size: 11px; }
-.client-access-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 7px; }
 .client-access-confirm { color: #8e3535; font-size: 11px; }
 .client-access-revoke, .client-access-revoke-confirm { color: #a34242; }
-.client-access-empty { margin: 0; color: #818a80; font-size: 11px; }
 .project-forecast-panel { display: grid; gap: 16px; }
 .forecast-intro { margin: -5px 0 0; color: #768578; font-size: 12px; line-height: 1.5; }
 .forecast-form { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto; gap: 12px; align-items: end; padding: 16px; border: 1px solid #d9ded3; border-radius: 5px; background: #f7f8f5; }
@@ -1614,7 +1112,6 @@
 
 @media (max-width: 760px) {
   .document-upload-form { grid-template-columns: minmax(0, 1fr) minmax(130px, 0.8fr); }
-  .document-upload-form .document-share-option { grid-column: 1; }
   .document-upload-button { grid-column: 2; }
   .document-row { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; }
   .document-visibility { grid-column: 2; grid-row: 2; }
@@ -1647,133 +1144,6 @@
   .aging-totals { width: 100%; justify-content: flex-start; }
   .aging-totals > span { text-align: left; }
   .aging-bucket { padding: 9px 8px; }
-  .client-access-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-  .client-access-actions { grid-column: 1 / -1; justify-content: flex-start; }
-}
-
-.portal-preview > .eyebrow {
-  margin-bottom: 12px;
-}
-
-.portal-preview > .sample-banner {
-  display: none;
-}
-
-.portal-header {
-  margin-bottom: 20px;
-}
-
-.portal-header h1 {
-  margin-top: 4px;
-}
-
-.portal-preview-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 9px;
-  border: 1px solid #dfe5db;
-  border-radius: 4px;
-  color: #59755d;
-  background: #f2f5ee;
-  font-size: 11px;
-}
-
-.portal-project-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 17px 0 13px;
-}
-
-.portal-project {
-  display: block;
-  padding: 17px;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 130ms ease, transform 130ms ease;
-}
-
-.portal-project:hover {
-  transform: translateY(-1px);
-  border-color: #c5d0c3;
-}
-
-.portal-project-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  color: #839083;
-}
-
-.portal-project h2 {
-  margin: 2px 0 15px;
-  color: var(--forest-deep);
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.portal-progress-label {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 7px;
-  color: #7c867d;
-  font-size: 11px;
-}
-
-.portal-progress-label strong {
-  color: #4b684e;
-  font-family: var(--mono);
-  font-weight: 500;
-}
-
-.portal-milestone {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 14px;
-  color: #778479;
-  font-size: 11px;
-}
-
-.portal-statement {
-  margin-top: 13px;
-}
-
-.portal-statement-lines {
-  margin-top: 12px;
-}
-
-.portal-statement-lines > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-  padding: 10px 0;
-  border-top: 1px solid #eeece3;
-  color: #737d73;
-  font-size: 11px;
-}
-
-.portal-statement-lines strong {
-  color: #405746;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.portal-statement-lines .collected-text {
-  color: #5c795d;
-}
-
-.portal-statement-lines .statement-retention {
-  color: #907541;
-}
-
-.portal-statement-lines .statement-retention strong {
-  color: #907541;
 }
 
 .client-portal-shell {
@@ -1884,19 +1254,6 @@
   padding-left: 15px;
 }
 
-.client-sidebar-project-dot {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 7px;
-  border: 1px solid #b8c9bd;
-  border-radius: 50%;
-}
-
-.client-sidebar-project-item.is-active .client-sidebar-project-dot {
-  border-color: var(--gold-light);
-  background: var(--gold-light);
-}
-
 .client-portal-topbar {
   min-height: 62px;
   display: flex;
@@ -1964,15 +1321,6 @@
 
 .client-portal-topbar.has-project .notification-button .notification-count {
   border-color: var(--forest);
-}
-
-.client-portal-topbar.has-project .client-sign-out {
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #fffdf7;
-}
-
-.client-portal-topbar.has-project .client-sign-out:hover {
-  background: rgba(255, 255, 255, 0.08);
 }
 
 .client-project-mobile-header {
