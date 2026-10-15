@@ -62,7 +62,7 @@ export function ExpensePanel({ projectId, contractId, projectName, expenses, inf
       </div>
 
       <div className="expense-category-summary" aria-label="Expense totals by category">
-        <div className="section-kicker expense-register-heading">Expense by category</div>
+        <div className="section-kicker expense-register-heading">Expenses by category</div>
         {categoryTotals.length ? <div className="expense-category-list">{categoryTotals.map((category) => <div key={category.value} className="expense-category-row"><span>{category.label}</span><strong>{money.format(category.total)}</strong></div>)}</div> : <div className="empty-state small">No category totals yet.</div>}
       </div>
 

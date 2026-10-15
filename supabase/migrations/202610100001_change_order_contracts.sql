@@ -87,7 +87,7 @@ begin
   from public.projects p
   join public.client_user_access a
     on a.organization_id = p.organization_id
-   and a.client_id = p.client_id
+   and a.project_id = p.id
    and a.user_id = (select auth.uid())
   where co.id = p_change_order_id
     and p.id = co.project_id

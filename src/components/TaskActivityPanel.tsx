@@ -102,8 +102,7 @@ export function TaskActivityPanel({ taskId, currentUserId, staffNames }: {
 
   const authorName = (authorId: string | null) => {
     if (!authorId) return 'Former member'
-    if (authorId === currentUserId) return 'You'
-    return staffNames.get(authorId) ?? 'Workspace owner'
+    return staffNames.get(authorId) ?? activities.find((activity) => activity.authorId === authorId)?.authorName ?? (authorId === currentUserId ? 'You' : 'Workspace member')
   }
 
   return <section className="task-activity-panel" aria-labelledby="task-activity-title">

@@ -47,8 +47,11 @@ function validateMilestone(input: SaveProjectMilestoneInput) {
   if (input.startDate && input.plannedDate && input.startDate > input.plannedDate) {
     throw new Error('End date cannot be before the start date.')
   }
-  if (!Number.isInteger(input.completionPercent) || input.completionPercent < 0 || input.completionPercent > 100) {
-    throw new Error('Milestone completion must be a whole number from 0 to 100.')
+  if (!Number.isFinite(input.completionPercent)
+    || input.completionPercent < 0
+    || input.completionPercent > 100
+    || Math.round(input.completionPercent * 100) / 100 !== input.completionPercent) {
+    throw new Error('Milestone completion must be from 0 to 100 with up to two decimal places.')
   }
 }
 

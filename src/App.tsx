@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  ArrowDownLeft, ArrowLeft, ArrowRight, BriefcaseBusiness, Camera, Download, Eye,
-  CalendarDays, Check, ChevronRight, CircleAlert, CircleDollarSign, ClipboardList,
+  ArrowDownLeft, ArrowLeft, ArrowRight, BriefcaseBusiness, Camera, Crop, Download, Eye,
+  CalendarDays, Check, ChevronRight, CircleAlert, CircleDollarSign, ClipboardList, Pencil,
   FileText, House, LayoutDashboard, LogOut, Plus, RefreshCw, Settings2, Trash2, UserPlus, Users, WalletCards, X,
   UserRound,
 } from 'lucide-react'
@@ -22,16 +22,21 @@ import { InviteClientDialog } from './components/InviteClientDialog'
 import { ProjectForecastPanel } from './components/ProjectForecastPanel'
 import { ProjectMilestonePanel } from './components/ProjectMilestonePanel'
 import { ProjectChangeOrderPanel } from './components/ProjectChangeOrderPanel'
-import { createProjectCoverPhotoUrl, deleteProjectCoverPhoto, uploadProjectCoverPhoto } from './data/project-cover'
+import { createProjectCoverPhotoUrl, deleteProjectCoverPhoto, uploadProjectCoverPhoto, validateProjectCoverPhoto } from './data/project-cover'
+import { ProjectCoverCropDialog } from './components/ProjectCoverCropDialog'
 import { PayrollPanel } from './components/PayrollPanel'
 import { TaskManagementPanel } from './components/TaskManagementPanel'
 import { NotificationCenter } from './components/NotificationCenter'
 import { MoneyInput } from './components/MoneyInput'
 import { downloadPaymentReceiptPdf, openPaymentReceiptPdf } from './lib/payment-receipt-pdf'
+import { formatPaymentType } from './lib/payment-type'
+import { formatChangeOrderNumber } from './lib/change-order-number'
+import { formatBillingNumber } from './lib/billing-number'
 import { PortfolioOverview } from './components/PortfolioOverview'
 import { Metric } from './components/ProjectStatusBadges'
 import { parseMoneyInput } from './lib/money-input'
 import { useToast } from './components/toast-context'
+import { workspaceNavigationStorageKey } from './auth/workspace-navigation'
 import './App.css'
 
 type Project = PortfolioProject
@@ -40,11 +45,9 @@ type WorkspaceView = 'portfolio' | 'portal' | 'payroll' | 'tasks'
 type MobileNavigationPage = 'home' | 'projects' | 'updates' | 'profile'
 type ProjectDetailTab = 'Overview' | 'Milestones' | 'Change orders' | 'Billings' | 'Payments' | 'Expenses' | 'Forecast' | 'Documents'
 const projectDetailTabs: ProjectDetailTab[] = ['Overview', 'Milestones', 'Change orders', 'Billings', 'Payments', 'Expenses', 'Forecast', 'Documents']
-const workspaceStateKey = 'sagact:workspace-navigation'
-
 function readWorkspaceNavigation(): { view: WorkspaceView; selectedId: string | null; projectTab: ProjectDetailTab } {
   try {
-    const stored = window.localStorage.getItem(workspaceStateKey)
+    const stored = window.sessionStorage.getItem(workspaceNavigationStorageKey)
     if (!stored) return { view: 'portfolio', selectedId: null, projectTab: 'Overview' }
     const state = JSON.parse(stored) as { view?: unknown; selectedId?: unknown; projectTab?: unknown }
     return {
@@ -135,15 +138,19 @@ function App() {
   const [loadError, setLoadError] = useState('')
   const [isCreatingProject, setIsCreatingProject] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  useEffect(() => { if (!isLoading) setHasLoadedOnce(true) }, [isLoading])
   const [profileName, setProfileName] = useState('Project Manager')
+  const [profileTitle, setProfileTitle] = useState('Project Manager')
   const [profileEmail, setProfileEmail] = useState('')
+  const [pendingTaskNotificationId, setPendingTaskNotificationId] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const selected = projects.find((project) => project.id === selectedId)
   const clients = [...new Set(projects.map((project) => project.client))]
   const billed = projects.reduce((sum, project) => sum + project.billed, 0)
   const collected = projects.reduce((sum, project) => sum + project.collected, 0)
   const totalExpenses = projects.reduce((sum, project) => sum + project.outflow, 0)
-  const receivable = projects.reduce((sum, project) => sum + financeForProject(project).receivablesDue + retentionDueForProject(project), 0)
+  const receivable = receivables.reduce((sum, item) => sum + item.outstandingAmount, 0) + projects.reduce((sum, project) => sum + retentionDueForProject(project), 0)
   const retention = projects.reduce((sum, project) => sum + Math.max(0, project.retention - retentionDueForProject(project)), 0)
   const attentionCount = projects.filter((project) => project.healthStatus === 'needs_attention').length
   const currentDate = appLoadedDate
@@ -165,6 +172,13 @@ function App() {
   })
   const maxPaymentBucket = Math.max(...paymentBuckets, 0)
   const cashBars = paymentBuckets.map((amount) => maxPaymentBucket > 0 ? Math.max(8, Math.round(amount / maxPaymentBucket * 100)) : 0)
+  const openTaskCommentNotification = (taskId: string) => {
+    setPendingTaskNotificationId(taskId)
+    setMobileNavigationPage('updates')
+    setView('tasks')
+    setSelectedId(null)
+    setProjectTab('Overview')
+  }
   useEffect(() => {
     let active = true
     void loadPortfolio()
@@ -205,12 +219,14 @@ function App() {
       if (!user) return
       const metadataName = user.user_metadata.full_name
       const metadataFirstName = user.user_metadata.first_name
+      const metadataTitle = user.user_metadata.job_title
       const name = typeof metadataName === 'string' && metadataName.trim()
         ? metadataName.trim()
         : typeof metadataFirstName === 'string' && metadataFirstName.trim()
           ? metadataFirstName.trim()
           : user.email?.split('@')[0] ?? 'Project Manager'
       setProfileName(name)
+      setProfileTitle(typeof metadataTitle === 'string' && metadataTitle.trim() ? metadataTitle.trim() : 'Project Manager')
       setProfileEmail(user.email ?? '')
     }).catch((error: unknown) => {
       if (active) console.error('Could not load the owner profile.', error)
@@ -219,7 +235,7 @@ function App() {
   }, [])
   useEffect(() => {
     try {
-      window.localStorage.setItem(workspaceStateKey, JSON.stringify({ view, selectedId, projectTab }))
+      window.sessionStorage.setItem(workspaceNavigationStorageKey, JSON.stringify({ view, selectedId, projectTab }))
     } catch {
       console.warn('Could not save the current workspace location.')
     }
@@ -359,16 +375,20 @@ function App() {
   return <div className={`app-shell${mobileNavigationPage === 'projects' ? ' is-mobile-projects-page' : ''}${mobileNavigationPage === 'profile' ? ' is-mobile-profile-page' : ''}${selected && view === 'portfolio' ? ' is-mobile-project-detail' : ''}`} aria-busy={isLoading}>
     {showSetupModal && setupProject && <ProjectSetupDialog project={setupProject} client={setupClient} setClient={setSetupClient} contract={setupContract} setContract={setSetupContract} discount={setupDiscount} setDiscount={setSetupDiscount} startDate={setupStartDate} setStartDate={setSetupStartDate} deadline={setupDeadline} setDeadline={setSetupDeadline} downPayment={setupDownPayment} setDownPayment={setSetupDownPayment} retentionRate={setupRetentionRate} setRetentionRate={setSetupRetentionRate} retentionMethod={setupRetentionMethod} setRetentionMethod={setSetupRetentionMethod} error={setupError} saving={isSavingSetup} onSubmit={saveProjectSetup} onClose={() => setShowSetupModal(false)} />}
     {showDashboardExpense && <ExpenseEntryDialog projects={projects.map((project) => ({ id: project.id, name: project.name }))} onClose={() => setShowDashboardExpense(false)} onSaved={() => { setShowDashboardExpense(false); refreshWorkspace(false) }} />}
-    {isLoading && <div className="workspace-loading" role="status" aria-live="polite" aria-label="Loading SAGACT workspace"><span className="loading-brand">SAGACT<span>.</span></span><span className="loading-spinner"><RefreshCw size={25} /></span><strong>Loading your workspace</strong><span className="loading-caption">Preparing your project overview</span><span className="loading-progress"><span /></span></div>}
+    {isLoading && (hasLoadedOnce
+      ? <div className="workspace-loading" role="status" aria-live="polite" aria-label="Loading SAGACT workspace"><span className="loading-brand">SAGACT<span>.</span></span><span className="loading-spinner"><RefreshCw size={25} /></span><strong>Loading your workspace</strong><span className="loading-caption">Preparing your project overview</span><span className="loading-progress"><span /></span></div>
+      : <div className="workspace-loading auth-loading" role="status" aria-live="polite" aria-label="Loading SAGACT workspace"><span className="auth-loading-mark"><img src="/sagact-mark.svg" alt="" /></span><span className="loading-brand">SAGACT<span>.</span></span><strong>Preparing your workspace</strong><span className="loading-progress"><span /></span></div>)}
     <aside className="sidebar">
       <div className="mobile-project-detail-header">
         <button type="button" onClick={() => { setSelectedId(null); setProjectTab('Overview') }} aria-label="Back to projects"><ArrowLeft size={19} /></button>
         <strong>Project Details</strong>
-        <div className="mobile-owner-header-actions"><NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} /></div>
+        <div className="mobile-owner-header-actions">
+          <NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} onOpenTask={openTaskCommentNotification} />
+        </div>
       </div>
       <div className="brand-lockup"><span className="brand-mark"><img src="/sagact-mark.svg" alt="" /></span><span>SAGACT<span className="brand-period">.</span></span></div>
       <div className="mobile-owner-header-actions">
-        <NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} />
+        <NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} onOpenTask={openTaskCommentNotification} />
       </div>
       <nav className="primary-nav" aria-label="Main navigation">
         <button className={`nav-item ${view === 'portfolio' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('portfolio'); setSelectedId(null); setProjectTab('Overview') }}><LayoutDashboard size={17} /><span>Portfolio</span></button>
@@ -418,12 +438,20 @@ function App() {
     <div className="app-main">
       <header className="topbar">
         <div className="breadcrumbs"><span>SAGACT</span><ChevronRight size={13} /><strong>{view === 'portal' ? 'Client portal' : view === 'payroll' ? 'Payroll' : view === 'tasks' ? 'Tasks' : selected?.name ?? 'Portfolio'}</strong></div>
-        <div className="topbar-right"><span className="topbar-date"><CalendarDays size={14} />{new Intl.DateTimeFormat('en-PH', { weekday: 'short', month: 'short', day: 'numeric' }).format(currentDate)}</span><button className={`icon-button refresh-button ${isLoading ? 'is-loading' : ''}`} aria-label={isLoading ? 'Refreshing workspace' : 'Refresh workspace'} title={isLoading ? 'Refreshing workspace' : 'Workspace ready'} onClick={() => refreshWorkspace()} disabled={isLoading}><RefreshCw className="refresh-glyph" size={16} /><span className="sr-only" role="status" aria-live="polite">{isLoading ? 'Refreshing workspace' : 'Workspace ready'}</span></button><NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} /><button className="icon-button topbar-sign-out" type="button" aria-label="Sign out" title="Sign out" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={16} /></button></div>
+        <div className="topbar-right">
+          <span className="topbar-date"><CalendarDays size={14} />{new Intl.DateTimeFormat('en-PH', { weekday: 'short', month: 'short', day: 'numeric' }).format(currentDate)}</span>
+          <button className={`icon-button refresh-button ${isLoading ? 'is-loading' : ''}`} aria-label={isLoading ? 'Refreshing workspace' : 'Refresh workspace'} title={isLoading ? 'Refreshing workspace' : 'Workspace ready'} onClick={() => refreshWorkspace()} disabled={isLoading}>
+            <RefreshCw className="refresh-glyph" size={16} />
+            <span className="sr-only" role="status" aria-live="polite">{isLoading ? 'Refreshing workspace' : 'Workspace ready'}</span>
+          </button>
+          <NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} onOpenTask={openTaskCommentNotification} />
+          <button className="icon-button topbar-sign-out" type="button" aria-label="Sign out" title="Sign out" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={16} /></button>
+        </div>
       </header>
 
       <main className="page-content">
         <div key={`${view}:${selectedId ?? 'portfolio'}`} className="view-transition">
-        {mobileNavigationPage === 'profile' ? <MobileOwnerProfile name={profileName} email={profileEmail} onSignOut={() => { void supabase?.auth.signOut() }} /> : view === 'portal' ? <ClientPortal projects={projects} onOpenProject={openProject} /> : view === 'payroll' ? <PayrollPanel projects={projects} onChanged={() => refreshWorkspace(false)} /> : view === 'tasks' ? <TaskManagementPanel isOwner currentUserId="" projects={projects.map((project) => ({ id: project.id, name: project.name }))} /> : selected ? <ProjectDetail project={selected} tab={projectTab} setTab={setProjectTab} payments={payments.filter((payment) => payment.projectId === selected.id)} onBack={() => { setSelectedId(null); setProjectTab('Overview') }} onSetup={() => openProjectSetup(selected)} onChanged={() => refreshWorkspace(false)} onProjectStateChange={saveProjectStateOptimistically} /> : <PortfolioOverview projects={projects} payments={payments} receivables={receivables} filtered={filtered} currentDate={currentDate} loadError={loadError} attentionCount={attentionCount} billed={billed} collected={collected} totalExpenses={totalExpenses} receivable={receivable} retention={retention} search={search} statusFilter={statusFilter} healthFilter={healthFilter} profitRiskFilter={profitRiskFilter} dateFilter={dateFilter} monthCashIn={monthCashIn} cashBars={cashBars} isLoading={isLoading} setSearch={setSearch} setStatusFilter={setStatusFilter} setHealthFilter={setHealthFilter} setProfitRiskFilter={setProfitRiskFilter} setDateFilter={setDateFilter} setShowDashboardExpense={setShowDashboardExpense} setShowModal={setShowModal} onViewTasks={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }} onUploadUpdate={(projectId) => { setMobileNavigationPage('projects'); setSelectedId(projectId); setView('portfolio'); setProjectTab('Milestones') }} isProjectsPage={mobileNavigationPage === 'projects'} refreshWorkspace={refreshWorkspace} openProject={openProject} />}
+        {mobileNavigationPage === 'profile' ? <MobileOwnerProfile name={profileName} title={profileTitle} email={profileEmail} onSignOut={() => { void supabase?.auth.signOut() }} /> : view === 'portal' ? <ClientPortal projects={projects} onOpenProject={openProject} /> : view === 'payroll' ? <PayrollPanel projects={projects} onChanged={() => refreshWorkspace(false)} /> : view === 'tasks' ? <TaskManagementPanel isOwner currentUserId="" projects={projects.map((project) => ({ id: project.id, name: project.name }))} notificationTaskId={pendingTaskNotificationId} onNotificationTaskClosed={() => setPendingTaskNotificationId('')} /> : selected ? <ProjectDetail project={selected} tab={projectTab} setTab={setProjectTab} payments={payments.filter((payment) => payment.projectId === selected.id)} receivables={receivables.filter((item) => item.projectId === selected.id)} onBack={() => { setSelectedId(null); setProjectTab('Overview') }} onSetup={() => openProjectSetup(selected)} onChanged={() => refreshWorkspace(false)} onProjectStateChange={saveProjectStateOptimistically} /> : <PortfolioOverview ownerName={profileName === 'Project Manager' ? '' : profileName.split(' ')[0]} projects={projects} payments={payments} receivables={receivables} filtered={filtered} currentDate={currentDate} loadError={loadError} attentionCount={attentionCount} billed={billed} collected={collected} totalExpenses={totalExpenses} receivable={receivable} retention={retention} search={search} statusFilter={statusFilter} healthFilter={healthFilter} profitRiskFilter={profitRiskFilter} dateFilter={dateFilter} monthCashIn={monthCashIn} cashBars={cashBars} isLoading={isLoading} setSearch={setSearch} setStatusFilter={setStatusFilter} setHealthFilter={setHealthFilter} setProfitRiskFilter={setProfitRiskFilter} setDateFilter={setDateFilter} setShowDashboardExpense={setShowDashboardExpense} setShowModal={setShowModal} onViewTasks={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }} onUploadUpdate={(projectId) => { setMobileNavigationPage('projects'); setSelectedId(projectId); setView('portfolio'); setProjectTab('Milestones') }} isProjectsPage={mobileNavigationPage === 'projects'} refreshWorkspace={refreshWorkspace} openProject={openProject} />}
         </div>
       </main>
       <footer className="page-footer" aria-hidden="true" />
@@ -466,6 +494,7 @@ function ProjectDetailCover({ projectId, projectName, storagePath, onChanged }: 
   const [loadedPhoto, setLoadedPhoto] = useState<{ storagePath: string; url: string } | null>(null)
   const [error, setError] = useState('')
   const [isWorking, setIsWorking] = useState(false)
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const photoInput = useRef<HTMLInputElement>(null)
   const photoUrl = loadedPhoto?.storagePath === storagePath ? loadedPhoto.url : ''
 
@@ -488,12 +517,33 @@ function ProjectDetailCover({ projectId, projectName, storagePath, onChanged }: 
     try {
       const newPath = await uploadProjectCoverPhoto(projectId, file, storagePath)
       setLoadedPhoto({ storagePath: newPath, url: await createProjectCoverPhotoUrl(newPath) })
-      showToast('Project cover photo updated.')
+      showToast(
+        storagePath ? 'Project cover photo updated.' : 'Project cover photo added.',
+        storagePath ? 'update' : 'create',
+      )
       onChanged()
+      setCropFile(null)
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Could not update the project cover photo.')
     } finally {
       if (photoInput.current) photoInput.current.value = ''
+      setIsWorking(false)
+    }
+  }
+
+  const adjustCover = async () => {
+    if (!photoUrl || isWorking) return
+    setError('')
+    setIsWorking(true)
+    try {
+      const response = await fetch(photoUrl)
+      if (!response.ok) throw new Error('Could not load the current project photo for cropping.')
+      const blob = await response.blob()
+      const extension = storagePath?.split('.').pop() ?? 'jpg'
+      setCropFile(new File([blob], `project-cover.${extension}`, { type: blob.type }))
+    } catch (adjustError) {
+      setError(adjustError instanceof Error ? adjustError.message : 'Could not open the crop editor.')
+    } finally {
       setIsWorking(false)
     }
   }
@@ -505,7 +555,7 @@ function ProjectDetailCover({ projectId, projectName, storagePath, onChanged }: 
     try {
       await deleteProjectCoverPhoto(projectId, storagePath)
       setLoadedPhoto(null)
-      showToast('Project cover photo removed.')
+      showToast('Project cover photo removed.', 'delete')
       onChanged()
     } catch (removeError) {
       setError(removeError instanceof Error ? removeError.message : 'Could not remove the project cover photo.')
@@ -518,27 +568,42 @@ function ProjectDetailCover({ projectId, projectName, storagePath, onChanged }: 
     {photoUrl
       ? <img src={photoUrl} alt={`${projectName} project cover`} />
       : <div className="project-detail-cover-empty"><Camera size={24} /><strong>Add a project photo</strong><span>JPG, PNG, or WebP · Up to 10 MB</span></div>}
+    {photoUrl && <button type="button" className="project-detail-cover-adjust" aria-label="Adjust project photo crop" title="Adjust photo crop" disabled={isWorking} onClick={() => { void adjustCover() }}><Crop size={14} />Adjust crop</button>}
     <label className="project-detail-cover-upload">
       <Camera size={14} />{isWorking ? 'Saving…' : storagePath ? 'Change photo' : 'Upload photo'}
       <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" aria-label={`Upload cover photo for ${projectName}`} disabled={isWorking} onChange={(event) => {
         const file = event.currentTarget.files?.[0]
-        if (file) void uploadCover(file)
+        if (!file) return
+        try {
+          validateProjectCoverPhoto(file)
+          setError('')
+          setCropFile(file)
+        } catch (validationError) {
+          setError(validationError instanceof Error ? validationError.message : 'Could not use the selected project photo.')
+          event.currentTarget.value = ''
+        }
       }} />
     </label>
     {storagePath && <button type="button" className="project-detail-cover-remove" aria-label="Remove project cover photo" title="Remove project cover photo" disabled={isWorking} onClick={() => { void removeCover() }}><Trash2 size={14} /></button>}
     {error && <p className="project-detail-cover-error" role="alert">{error}</p>}
+    {cropFile && <ProjectCoverCropDialog file={cropFile} saving={isWorking} error={error} onCancel={() => { if (!isWorking) { setCropFile(null); setError('') } }} onSave={(file) => { void uploadCover(file) }} />}
   </div>
 }
 
-function ProjectDetail({ project, tab, setTab, payments, onBack, onSetup, onChanged, onProjectStateChange }: { project: Project; tab: ProjectDetailTab; setTab: (tab: ProjectDetailTab) => void; payments: Payment[]; onBack: () => void; onSetup: () => void; onChanged: () => void; onProjectStateChange: (projectId: string, status: ProjectStatus, healthStatus: ProjectHealthStatus) => Promise<void> }) {
+function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, onSetup, onChanged, onProjectStateChange }: { project: Project; tab: ProjectDetailTab; setTab: (tab: ProjectDetailTab) => void; payments: Payment[]; receivables: ReceivableAgingItem[]; onBack: () => void; onSetup: () => void; onChanged: () => void; onProjectStateChange: (projectId: string, status: ProjectStatus, healthStatus: ProjectHealthStatus) => Promise<void> }) {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [paymentToEdit, setPaymentToEdit] = useState<Payment | null>(null)
   const [showInviteClient, setShowInviteClient] = useState(false)
   const [receiptError, setReceiptError] = useState('')
   const [projectStateError, setProjectStateError] = useState('')
   const [isSavingProjectState, setIsSavingProjectState] = useState(false)
-  const projectPayments = payments.filter((payment) => payment.contractId === null)
-  const projectExpenses = project.expenses.filter((expense) => expense.contractId === null)
+  const paymentHistory = payments
+  const projectExpenses = project.expenses
   const finance = financeForProject(project)
+  const originalContractValue = Math.round(Math.max(0, project.contract - project.specialDiscount))
+  const approvedChangeOrderTotal = project.changeOrders
+    .filter((order) => order.status === 'approved')
+    .reduce((total, order) => total + order.amount, 0)
   const originalFinance = calculateProjectFinance({
     contractAmount: project.contract,
     specialDiscount: project.specialDiscount,
@@ -557,7 +622,13 @@ function ProjectDetail({ project, tab, setTab, payments, onBack, onSetup, onChan
   })
   const retentionDue = retentionDueForProject(project)
   const retentionHeld = Math.max(0, project.retention - retentionDue)
-  const due = finance.receivablesDue + retentionDue
+  const billingReceivable = receivables
+    .filter((item) => item.kind !== 'change-order' && item.kind !== 'retention')
+    .reduce((total, item) => total + item.outstandingAmount, 0)
+  const changeOrderReceivable = receivables
+    .filter((item) => item.kind === 'change-order')
+    .reduce((total, item) => total + item.outstandingAmount, 0)
+  const due = billingReceivable + changeOrderReceivable + retentionDue
   const deadlineStatus = getProjectDeadlineStatus(project.deadline, project.status)
   const deadlineBadgeText = deadlineStatus.daysRemaining !== null && project.deadline
     ? `${new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(`${project.deadline}T12:00:00`))} · ${Math.abs(deadlineStatus.daysRemaining)} day${Math.abs(deadlineStatus.daysRemaining) === 1 ? '' : 's'} ${deadlineStatus.daysRemaining < 0 ? 'overdue' : 'left'}`
@@ -574,16 +645,29 @@ function ProjectDetail({ project, tab, setTab, payments, onBack, onSetup, onChan
       setIsSavingProjectState(false)
     }
   }
-  const receiptDetails = (payment: Payment) => ({
-    projectName: project.name,
-    payerName: payment.payer,
-    receiptNumber: payment.receiptNumber ?? '',
-    amount: payment.amount,
-    receivedDate: payment.date,
-    paymentType: payment.paymentType,
-    paymentMode: payment.paymentMode,
-    reference: payment.paymentReference,
-  })
+  const changeOrderForPayment = (payment: Payment) =>
+    payment.paymentType === 'change_order'
+      ? project.changeOrders.find((order) => order.contractId === payment.contractId)
+      : undefined
+  const receiptDetails = (payment: Payment) => {
+    const changeOrder = changeOrderForPayment(payment)
+    return {
+      projectName: project.name,
+      payerName: payment.payer,
+      receiptNumber: payment.receiptNumber ?? '',
+      amount: payment.amount,
+      receivedDate: payment.date,
+      paymentType: payment.paymentType,
+      changeOrderLabel: changeOrder
+        ? `${formatChangeOrderNumber(project.prefix, changeOrder.orderNumber)} · ${changeOrder.title}`
+        : undefined,
+      billingAllocations: payment.billingAllocations.map((allocation) => ({
+        billingNumber: formatBillingNumber(allocation.billingNumber),
+      })),
+      paymentMode: payment.paymentMode,
+      reference: payment.paymentReference,
+    }
+  }
   const viewAcknowledgementReceipt = async (payment: Payment) => {
     setReceiptError('')
     try {
@@ -638,8 +722,9 @@ function ProjectDetail({ project, tab, setTab, payments, onBack, onSetup, onChan
         <div className="detail-financial-heading"><h2 id="detail-financial-heading">Financial overview</h2></div>
         <div className="detail-financial-content">
           <div className="detail-metrics detail-financial-metrics">
-            <Metric icon={<BriefcaseBusiness size={16} />} label="Contract value" value={money.format(finance.contractValue)} foot={`${project.downPaymentPercent}% down payment · ${project.retentionRate}% retention`} tone="neutral" />
-            <Metric icon={<FileText size={16} />} label="Billed to date" value={money.format(project.billed)} foot={`${finance.contractValue ? Math.round(project.billed / finance.contractValue * 100) : 0}% of contract incl. down payment`} tone="blue" />
+            <Metric icon={<BriefcaseBusiness size={16} />} label="Original contract" value={money.format(originalContractValue)} foot={`${project.downPaymentPercent}% down payment · ${project.retentionRate}% retention`} tone="neutral" />
+            <Metric icon={<FileText size={16} />} label="Approved change orders" value={money.format(approvedChangeOrderTotal)} foot="Tracked separately from original contract" tone="neutral" />
+            <Metric icon={<FileText size={16} />} label="Billed to date" value={money.format(project.billed)} foot={`${finance.contractValue ? Math.round(project.billed / finance.contractValue * 100) : 0}% of total incl. approved changes`} tone="blue" />
             <Metric icon={<CircleDollarSign size={16} />} label="Collected" value={money.format(project.collected)} foot={`${preciseMoney.format(due)} receivable`} tone="green" />
             <Metric icon={<WalletCards size={16} />} label="Retention held" value={money.format(retentionHeld)} foot="Release conditions pending" tone="neutral" />
           </div>
@@ -649,26 +734,42 @@ function ProjectDetail({ project, tab, setTab, payments, onBack, onSetup, onChan
         </div>
       </section>
       <div className="detail-content-grid detail-supporting-grid">
-        <section className="surface-card receivable-card"><h2>Balance to follow up</h2><div className={`receivable-status ${due <= 0 ? 'is-settled' : 'has-balance'}`} role="status">{due <= 0 ? <Check size={15} /> : <CircleAlert size={15} />}<span>{due <= 0 ? 'Fully settled' : `${preciseMoney.format(due)} outstanding`}</span></div><div className="receivable-divider" /><div className="receivable-line"><span><span className="small-status-dot overdue-dot" />Billing receivable</span><strong>{money.format(finance.receivablesDue)}</strong></div><div className="receivable-line"><span><span className="small-status-dot retention-dot" />Retention release due</span><strong>{money.format(retentionDue)}</strong></div><small className="retention-explainer">Retention becomes receivable one month after project completion.</small></section>
-        <section className="surface-card detail-activity-card"><div className="card-heading-row"><div><h2>Payments received</h2></div><button className="text-button compact-button" onClick={() => setTab('Payments')}>All payments <ArrowRight size={13} /></button></div>{projectPayments.length ? <div className="detail-recent-payments-list">{projectPayments.map((payment) => <div className="payment-detail-row" key={payment.id}><span className="activity-icon"><ArrowDownLeft size={15} /></span><span className="activity-copy"><strong>{payment.payer}</strong><small>{shortDate(payment.date)} · {payment.mode} · {payment.reference}</small></span><strong className="activity-amount">{money.format(payment.amount)}</strong></div>)}</div> : <div className="empty-state">No payments recorded yet.</div>}</section>
+        <section className="surface-card receivable-card"><h2>Balance to follow up</h2><div className={`receivable-status ${due <= 0 ? 'is-settled' : 'has-balance'}`} role="status">{due <= 0 ? <Check size={15} /> : <CircleAlert size={15} />}<span>{due <= 0 ? 'Fully settled' : `${preciseMoney.format(due)} outstanding`}</span></div><div className="receivable-divider" /><div className="receivable-line"><span><span className="small-status-dot overdue-dot" />Billing receivable</span><strong>{money.format(billingReceivable)}</strong></div>{approvedChangeOrderTotal > 0 && <div className="receivable-line"><span><span className="small-status-dot overdue-dot" />Change-order receivable</span><strong>{money.format(changeOrderReceivable)}</strong></div>}<div className="receivable-line"><span><span className="small-status-dot retention-dot" />Retention release due</span><strong>{money.format(retentionDue)}</strong></div><small className="retention-explainer">Retention becomes receivable one month after project completion.</small></section>
+        <section className="surface-card detail-activity-card"><div className="card-heading-row"><div><h2>Payments received</h2></div><button className="text-button compact-button" onClick={() => setTab('Payments')}>All payments <ArrowRight size={13} /></button></div>{paymentHistory.length ? <div className="detail-recent-payments-list">{paymentHistory.map((payment) => <div className="payment-detail-row" key={payment.id}><span className="activity-icon"><ArrowDownLeft size={15} /></span><span className="activity-copy"><strong>{payment.payer}</strong><small>{shortDate(payment.date)} · {payment.billingAllocations.length ? `${payment.billingAllocations.map((allocation) => `Billing #${formatBillingNumber(allocation.billingNumber)}`).join(', ')} · ${formatPaymentType(payment.paymentType)}` : formatPaymentType(payment.paymentType)} · {payment.reference}</small></span><strong className="activity-amount">{money.format(payment.amount)}</strong></div>)}</div> : <div className="empty-state">No payments recorded yet.</div>}</section>
       </div>
     </>}
-    {tab === 'Billings' && <BillingPanel projectId={project.id} projectName={project.name} clientName={project.client} location={project.location} progress={project.progress} earned={originalFinance.earnedToDate} ceiling={originalFinance.billableCeiling} isSetupComplete={project.isSetupComplete} onChanged={onChanged} />}
+    {tab === 'Billings' && <BillingPanel projectId={project.id} projectName={project.name} clientName={project.client} location={project.location} progress={project.progress} earned={originalFinance.earnedToDate} ceiling={originalFinance.billableCeiling} isSetupComplete={project.isSetupComplete} downPaymentAmount={Math.round(Math.max(0, project.contract - project.specialDiscount) * project.downPaymentPercent / 100)} downPaymentPercent={project.downPaymentPercent} onChanged={onChanged} />}
     {tab === 'Milestones' && <ProjectMilestonePanel projectId={project.id} milestones={project.milestones} onChanged={onChanged} />}
-    {tab === 'Change orders' && <ProjectChangeOrderPanel projectId={project.id} projectPrefix={project.prefix} projectName={project.name} clientName={project.client} location={project.location} contractAmount={project.contract} specialDiscount={project.specialDiscount} retentionRatePercent={project.retentionRate} changeOrders={project.changeOrders} payments={payments} expenses={project.expenses} onChanged={onChanged} />}
+    {tab === 'Change orders' && <ProjectChangeOrderPanel projectId={project.id} projectPrefix={project.prefix} projectName={project.name} clientName={project.client} location={project.location} contractAmount={project.contract} specialDiscount={project.specialDiscount} changeOrders={project.changeOrders} onChanged={onChanged} />}
     {tab === 'Payments' && <section className="surface-card tab-content payment-register-card">
       <div className="card-heading-row"><h2>Received payments</h2><button className="button button-primary" onClick={() => setShowPaymentDialog(true)}><Plus size={15} />Log payment</button></div>
-      {showPaymentDialog && <PaymentEntryDialog project={project} onClose={() => setShowPaymentDialog(false)} onSaved={onChanged} />}
+      {(showPaymentDialog || paymentToEdit) && <PaymentEntryDialog
+        project={project}
+        payment={paymentToEdit ?? undefined}
+        changeOrderContracts={project.changeOrders
+          .flatMap((order) => order.status === 'approved' && order.contractId
+            ? [{ id: order.contractId, label: `${formatChangeOrderNumber(project.prefix, order.orderNumber)} · ${order.title}` }]
+            : [])}
+        onClose={() => { setShowPaymentDialog(false); setPaymentToEdit(null) }}
+        onSaved={onChanged}
+      />}
       {receiptError && <p className="form-error" role="alert">{receiptError}</p>}
-      {projectPayments.length ? <div className="payment-register-list">{projectPayments.map((payment) => <div className="payment-detail-row" key={payment.id}>
-        <span className="activity-icon"><ArrowDownLeft size={15} /></span>
-        <span className="activity-copy"><strong>{payment.payer}</strong><small>{shortDate(payment.date)} · {payment.mode} · {payment.reference}</small></span>
-        <strong className="activity-amount">{money.format(payment.amount)}</strong>
-        {payment.receiptNumber && <button type="button" className="text-button compact-button" aria-label={`View acknowledgement receipt ${payment.receiptNumber}`} title="View acknowledgement receipt" onClick={() => { void viewAcknowledgementReceipt(payment) }}><Eye size={14} />View</button>}
-        {payment.receiptNumber && <button type="button" className="text-button compact-button" aria-label={`Download acknowledgement receipt ${payment.receiptNumber}`} title="Download acknowledgement receipt" onClick={() => { void downloadAcknowledgementReceipt(payment) }}><Download size={14} /></button>}
-      </div>)}</div> : <div className="empty-state">No payments recorded for this project.</div>}
+      {paymentHistory.length ? <div className="payment-register-list">{paymentHistory.map((payment) => {
+        const changeOrder = changeOrderForPayment(payment)
+        const changeOrderLabel = changeOrder
+          ? formatChangeOrderNumber(project.prefix, changeOrder.orderNumber)
+          : null
+        return <div className="payment-detail-row" key={payment.id}>
+          <span className="activity-icon"><ArrowDownLeft size={15} /></span>
+          <span className="activity-copy"><strong>{payment.payer}</strong><small>{shortDate(payment.date)} · {payment.billingAllocations.length ? `${payment.billingAllocations.map((allocation) => `Billing #${formatBillingNumber(allocation.billingNumber)} (${money.format(allocation.amount)})`).join(', ')} · ${formatPaymentType(payment.paymentType)}` : formatPaymentType(payment.paymentType)}{changeOrderLabel ? ` · ${changeOrderLabel}` : ''} · {payment.reference}</small></span>
+          <strong className="activity-amount">{money.format(payment.amount)}</strong>
+          <button type="button" className="text-button compact-button" aria-label={`Edit payment ${payment.receiptNumber ?? ''}`} title="Edit payment" onClick={() => { setShowPaymentDialog(false); setPaymentToEdit(payment) }}><Pencil size={14} />Edit</button>
+          {payment.receiptNumber && <button type="button" className="text-button compact-button" aria-label={`View acknowledgement receipt ${payment.receiptNumber}`} title="View acknowledgement receipt" onClick={() => { void viewAcknowledgementReceipt(payment) }}><Eye size={14} />View</button>}
+          {payment.receiptNumber && <button type="button" className="text-button compact-button" aria-label={`Download acknowledgement receipt ${payment.receiptNumber}`} title="Download acknowledgement receipt" onClick={() => { void downloadAcknowledgementReceipt(payment) }}><Download size={14} /></button>}
+        </div>
+      })}</div> : <div className="empty-state">No payments recorded for this project.</div>}
     </section>}
-    {tab === 'Expenses' && <ExpensePanel projectId={project.id} projectName={project.name} expenses={projectExpenses} inflow={projectPayments.reduce((total, payment) => total + payment.amount, 0)} onChanged={onChanged} />}
+    {tab === 'Expenses' && <ExpensePanel projectId={project.id} projectName={project.name} expenses={projectExpenses} inflow={project.collected} onChanged={onChanged} />}
     {tab === 'Forecast' && <ProjectForecastPanel projectId={project.id} contractValue={finance.contractValue} recordedCosts={project.outflow} costBudget={project.costBudget} estimatedCostToComplete={project.estimatedCostToComplete} onChanged={onChanged} />}
     {tab === 'Documents' && <ProjectDocumentPanel projectId={project.id} />}
     </div>
@@ -680,7 +781,7 @@ function ClientPortal({ projects, onOpenProject }: { projects: Project[]; onOpen
   return <div className="portal-preview"><div className="eyebrow"><span className="eyebrow-rule" />Client access <span className="eyebrow-date">Preview</span></div><section className="portal-header"><div><h1>Client portal</h1><p>A client-safe view of project progress and shared documents.</p></div><span className="portal-preview-pill"><Users size={14} />Preview mode</span></section><div className="sample-banner"><CircleAlert size={15} /><span>This is a visual preview only. Client sign-in and database access rules are not connected.</span></div><div className="portal-project-grid">{projects.map((item) => <button key={item.id} className="portal-project surface-card" onClick={() => onOpenProject(item.id)}><div className="portal-project-top"><span className={`detail-avatar avatar-${item.prefix.toLowerCase()}`}>{item.name.slice(0, 1)}</span><ChevronRight size={16} /></div><div className="section-kicker">{item.client}</div><h2>{item.name}</h2><div className="portal-progress-label"><span>Progress</span><strong>{item.progress}%</strong></div><div className="progress-track"><span style={{ width: `${item.progress}%` }} /></div><div className="portal-milestone"><CalendarDays size={14} />{item.milestone}</div></button>)}</div><section className="surface-card portal-statement"><div className="card-heading-row"><div><div className="section-kicker">Client statement preview</div><h2>{project?.name} · Billing summary</h2></div><FileText size={18} /></div><div className="portal-statement-lines"><div><span>Billings to date</span><strong>{money.format(project?.billed ?? 0)}</strong></div><div><span>Payments received</span><strong className="collected-text">− {money.format(project?.collected ?? 0)}</strong></div><div><span>Balance due</span><strong>{money.format(project ? financeForProject(project).receivablesDue : 0)}</strong></div><div className="statement-retention"><span>Retention held (not yet due)</span><strong>{money.format(project?.retention ?? 0)}</strong></div></div></section></div>
 }
 
-function MobileOwnerProfile({ name, email, onSignOut }: { name: string; email: string; onSignOut: () => void }) {
+function MobileOwnerProfile({ name, title, email, onSignOut }: { name: string; title: string; email: string; onSignOut: () => void }) {
   const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState(false)
   const [password, setPassword] = useState('')
   const [passwordConfirmation, setPasswordConfirmation] = useState('')
@@ -758,7 +859,7 @@ function MobileOwnerProfile({ name, email, onSignOut }: { name: string; email: s
     <section className="mobile-profile-identity surface-card" aria-label="Account identity">
       <span className="mobile-profile-identity-copy">
         <strong>{name}</strong>
-        <span>Project Manager</span>
+        <span>{title}</span>
         {email && <small>{email}</small>}
       </span>
     </section>

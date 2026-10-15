@@ -15,7 +15,7 @@ import { useToast } from './toast-context'
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
 const dateFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: '2-digit', year: 'numeric' })
 
-export function BillingPanel({ projectId, contractId, projectName, clientName, location, progress, earned, ceiling, isSetupComplete, onChanged }: {
+export function BillingPanel({ projectId, contractId, projectName, clientName, location, progress, earned, ceiling, isSetupComplete, downPaymentAmount = 0, downPaymentPercent, onChanged }: {
   projectId: string
   contractId?: string
   projectName: string
@@ -25,6 +25,8 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
   earned: number
   ceiling: number
   isSetupComplete: boolean
+  downPaymentAmount?: number
+  downPaymentPercent?: number
   onChanged: () => void
 }) {
   const { showToast } = useToast()
@@ -169,7 +171,16 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       : <p className="calculation-note">Set up the contract amount before issuing a billing.</p>}
     {message && <p className="calculation-note" role="status">{message}</p>}
     <div className="section-kicker">Billings issued</div>
-    {billings.length ? <div className="billing-register-list billing-timeline" role="list" aria-label="Issued billings">{billings.map((billing) => <div className={`payment-detail-row billing-register-row${billing.status === 'void' ? ' is-void' : ''}`} key={billing.id} role="listitem">
+    {billings.length || downPaymentAmount > 0 ? <div className="billing-register-list billing-timeline" role="list" aria-label="Issued billings">
+      {downPaymentAmount > 0 && <div className="payment-detail-row billing-register-row" role="listitem">
+        <span className="activity-copy"><strong>Contract down payment{downPaymentPercent === undefined ? '' : ` · ${downPaymentPercent}%`}</strong><small>Part of contract</small></span>
+        <strong className="activity-amount">{money.format(downPaymentAmount)}</strong>
+        <span className="billing-row-actions">
+          <button type="button" className="text-button compact-button" aria-label="Preview contract down-payment billing" onClick={() => { void openBillingPdf({ projectName, clientName, location, billingType: 'down-payment', amount: downPaymentAmount, downPaymentPercent, progressPercent: 0, issuedAt: new Date().toISOString(), dueAt: null }).catch(() => setError('Could not preview the down-payment billing PDF.')) }}><Eye size={14} />View</button>
+          <button type="button" className="text-button compact-button" aria-label="Download contract down-payment billing" title="Download down-payment billing PDF" onClick={() => { void downloadBillingPdf({ projectName, clientName, location, billingType: 'down-payment', amount: downPaymentAmount, downPaymentPercent, progressPercent: 0, issuedAt: new Date().toISOString(), dueAt: null }).catch(() => setError('Could not download the down-payment billing PDF.')) }}><Download size={14} /></button>
+        </span>
+      </div>}
+      {billings.map((billing) => <div className={`payment-detail-row billing-register-row${billing.status === 'void' ? ' is-void' : ''}`} key={billing.id} role="listitem">
       <span className="activity-copy"><strong>Billing #{formatBillingNumber(billing.billingNumber)} · {billing.progressPercent}% complete{billing.status === 'void' ? ' · VOID' : ''}</strong><small>{billing.issuedAt ? dateFormat.format(new Date(billing.issuedAt)) : 'Not issued'}{billing.dueAt ? ` · due ${dateFormat.format(new Date(`${billing.dueAt}T12:00:00`))}` : ''}{billing.voidReason ? ` · ${billing.voidReason}` : ''}</small></span>
       <strong className="activity-amount">{money.format(billing.amount)}</strong>
       <span className="billing-row-actions">
@@ -177,7 +188,8 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       {billing.status === 'issued' && <button type="button" className="text-button compact-button" aria-label={`Download billing ${formatBillingNumber(billing.billingNumber)}`} title="Download billing PDF" onClick={() => { void downloadBillingPdf({ projectName, clientName, location, billingNumber: billing.billingNumber, amount: billing.amount, progressPercent: billing.progressPercent, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }).catch(() => setError('Could not download the billing PDF.')) }}><Download size={14} /></button>}
       {billing.status === 'issued' && <button type="button" className="text-button compact-button" onClick={() => { setVoidReason(''); setVoidError(''); setBillingToVoid(billing) }} disabled={busy}>Void</button>}
       </span>
-    </div>)}</div> : <div className="empty-state">No billings issued yet.</div>}
+    </div>)}
+    </div> : <div className="empty-state">No billings issued yet.</div>}
   </section>
   </>
 }

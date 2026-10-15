@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ArrowRight, CircleAlert, LockKeyhole, LogOut, Mail, UserRound } from 'lucide-react'
+import { ArrowRight, CircleAlert, Eye, EyeOff, LockKeyhole, LogOut, Mail, UserRound } from 'lucide-react'
 import { isSupabaseConfigured, SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
 import { ClientPortalApp } from '../components/ClientPortalApp'
 import { StaffTaskApp } from '../components/StaffTaskApp'
 import { resolveWorkspaceAccessRoute } from './workspace-access'
+import { clearSavedWorkspaceNavigation } from './workspace-navigation'
+import { clearSavedStaffNavigation } from './staff-navigation'
 import { clearPasswordSetupCallback, hasPendingInvitePasswordSetup } from './invite-password-setup'
 import { clearPasswordRecoveryCallback, hasFailedPasswordRecovery, hasPendingPasswordRecovery } from './password-recovery'
 
@@ -28,6 +30,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
     let active = true
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'SIGNED_OUT') {
+        clearSavedWorkspaceNavigation()
+        clearSavedStaffNavigation(window.sessionStorage)
+      }
       setSession(nextSession)
       setSessionReady(true)
       setSessionError('')
@@ -154,7 +160,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (!sessionReady) {
-    return <AuthLoading message={session ? 'Verifying workspace access' : 'Checking your session'} />
+    return <AuthLoading message="Preparing your workspace" />
   }
 
   if (passwordRecoveryFailed) {
@@ -182,7 +188,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   const currentAccess = accessResult?.userId === session.user.id ? accessResult : null
   if (!currentAccess) {
-    return <AuthLoading message="Verifying workspace access" />
+    return <AuthLoading message="Preparing your workspace" />
   }
 
   if (currentAccess.status === 'client' || currentAccess.status === 'staff') {
@@ -209,6 +215,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }
     if (currentAccess.status === 'staff') {
       return <StaffTaskApp
+        key={session.user.id}
         userId={session.user.id}
         displayName={currentAccess.staffName ?? (typeof session.user.user_metadata.full_name === 'string' ? session.user.user_metadata.full_name : '')}
         staffTitle={currentAccess.staffTitle ?? ''}
@@ -228,6 +235,7 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
   const [error, setError] = useState(initialError)
   const [message, setMessage] = useState('')
   const [forgotPassword, setForgotPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -263,12 +271,19 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
     }
   }
 
+  const toggleForgotPassword = () => {
+    setForgotPassword((current) => !current)
+    setPassword('')
+    setError('')
+    setMessage('')
+  }
+
   return <AuthLayout className="auth-signin-screen" contentClassName="auth-signin-content">
     <section className="auth-panel auth-signin-panel" aria-labelledby="auth-title">
       <AuthCardBrand />
       <div className="auth-heading">
         <h1 id="auth-title">{forgotPassword ? 'Reset your password' : 'Welcome back'}</h1>
-        <p>{forgotPassword ? 'Enter your email address and we’ll send you a reset link.' : 'Log in to your account.'}</p>
+        {forgotPassword && <p>Enter your email address and we’ll send you a reset link.</p>}
       </div>
 
       {configurationMissing ? <div className="auth-notice" role="status"><CircleAlert size={17} /><span>Supabase isn’t configured. Add the project URL and public key to <code>.env.local</code>, then restart the dev server.</span></div> : <>
@@ -277,28 +292,23 @@ function SignInScreen({ configurationMissing = false, initialError = '' }: { con
             <span>Email address</span>
             <span className="auth-field-control"><Mail size={16} aria-hidden="true" /><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email address" required /></span>
           </label>
-          {!forgotPassword && <label className="auth-field">
-            <span>Password</span>
-            <span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" required /></span>
-          </label>}
+          {!forgotPassword && <div className="auth-field">
+            <span className="auth-label-row"><label htmlFor="auth-password">Password</label><button className="auth-mode-toggle" type="button" onClick={toggleForgotPassword}>Forgot password?</button></span>
+            <span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input id="auth-password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" required />
+              <button className="auth-password-toggle" type="button" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+            </span>
+          </div>}
           {error && <p className="auth-error" role="alert">{error}</p>}
           {message && <p className="auth-success" role="status">{message}</p>}
-          <div className="auth-account-actions">
-            <button className="auth-mode-toggle" type="button" onClick={() => {
-              setForgotPassword((current) => !current)
-              setPassword('')
-              setError('')
-              setMessage('')
-            }}>
-              {forgotPassword ? 'Back to sign in' : 'Forgot password?'}
-            </button>
-          </div>
           <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
             {isSubmitting
               ? forgotPassword ? 'Sending reset link…' : 'Signing in…'
               : forgotPassword ? 'Send reset link' : 'Sign in'}
             {!isSubmitting && (forgotPassword ? <Mail size={16} /> : <ArrowRight size={16} />)}
           </button>
+          {forgotPassword && <div className="auth-account-actions">
+            <button className="auth-mode-toggle" type="button" onClick={toggleForgotPassword}>Back to sign in</button>
+          </div>}
         </form>
       </>}
       {configurationMissing && <div className="auth-dev-mode">Development mode</div>}
@@ -351,13 +361,13 @@ function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
     }
   }
 
-  return <AuthLayout className="auth-account-screen" contentClassName="auth-account-content">
-    <section className="auth-panel auth-account-panel" aria-labelledby="password-setup-title">
+  return <AuthLayout className="auth-signin-screen auth-account-screen" contentClassName="auth-signin-content auth-account-content">
+    <section className="auth-panel auth-signin-panel auth-account-panel" aria-labelledby="password-setup-title">
       <AuthCardBrand />
       <div className="auth-heading">
         <h1 id="password-setup-title">Create your password</h1>
       </div>
-      <form className="auth-form auth-account-form" onSubmit={(event) => { void handleSubmit(event) }}>
+      <form className="auth-form auth-signin-form auth-account-form" onSubmit={(event) => { void handleSubmit(event) }}>
         <label className="auth-field"><span>First name</span><span className="auth-field-control"><UserRound size={16} aria-hidden="true" /><input type="text" autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} required /></span></label>
         <label className="auth-field"><span>Last name</span><span className="auth-field-control"><UserRound size={16} aria-hidden="true" /><input type="text" autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} required /></span></label>
         <label className="auth-field"><span>Password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></span></label>
@@ -406,8 +416,8 @@ function PasswordRecoveryScreen({ sessionAvailable, onComplete, onCancel }: {
     }
   }
 
-  return <AuthLayout>
-    <section className="auth-panel" aria-labelledby="password-recovery-title">
+  return <AuthLayout className="auth-signin-screen" contentClassName="auth-signin-content">
+    <section className="auth-panel auth-signin-panel" aria-labelledby="password-recovery-title">
       <AuthCardBrand />
       <div className="auth-heading">
         <h1 id="password-recovery-title">{sessionAvailable ? 'Reset your password' : 'Password reset link unavailable'}</h1>
@@ -415,9 +425,9 @@ function PasswordRecoveryScreen({ sessionAvailable, onComplete, onCancel }: {
           ? 'Choose a new password for your account.'
           : 'This password reset link is invalid, expired, or already used. Request a new link to continue.'}</p>
       </div>
-      {sessionAvailable ? <form className="auth-form" onSubmit={(event) => { void handleSubmit(event) }}>
-        <label className="auth-field">New password<input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-        <label className="auth-field">Confirm new password<input type="password" autoComplete="new-password" minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required /></label>
+      {sessionAvailable ? <form className="auth-form auth-signin-form" onSubmit={(event) => { void handleSubmit(event) }}>
+        <label className="auth-field"><span>New password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" required /></span></label>
+        <label className="auth-field"><span>Confirm new password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="new-password" minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder="Re-enter password" required /></span></label>
         {error && <p className="auth-error" role="alert">{error}</p>}
         <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Saving password…' : 'Set new password'}{!isSubmitting && <ArrowRight size={16} />}
@@ -431,10 +441,11 @@ function PasswordRecoveryScreen({ sessionAvailable, onComplete, onCancel }: {
 function AuthLayout({ children, className = '', contentClassName = '' }: { children: ReactNode; className?: string; contentClassName?: string }) {
   return <main className={`auth-screen ${className}`.trim()}>
     <aside className="auth-story">
+      <div className="auth-story-brand"><span><img src="/sagact-mark.svg" alt="" /></span><span>SAGACT<span>.</span></span></div>
       <div className="auth-story-copy">
-        <h2>Accessible Architecture for every Juan</h2>
         <span className="auth-story-rule" />
-      </div>
+        <h2>Accessible Architecture for every Juan</h2>      </div>
+      <footer className="auth-story-footer">© {new Date().getFullYear()} SAGACT · Manila, Philippines</footer>
     </aside>
     <section className={`auth-content ${contentClassName}`.trim()}>
       {children}
@@ -448,9 +459,9 @@ function AuthCardBrand() {
 }
 
 function AuthLoading({ message }: { message: string }) {
-  return <main className="workspace-loading" role="status" aria-live="polite"><span className="loading-brand">SAGACT<span>.</span></span><span className="loading-spinner"><LockKeyhole size={24} /></span><strong>{message}</strong><span className="loading-progress"><span /></span></main>
+  return <main className="workspace-loading auth-loading" role="status" aria-live="polite"><span className="auth-loading-mark"><img src="/sagact-mark.svg" alt="" /></span><span className="loading-brand">SAGACT<span>.</span></span><strong>{message}</strong><span className="loading-progress"><span /></span></main>
 }
 
 function AccessDenied({ error }: { error: string }) {
-  return <AuthLayout><section className="auth-panel access-panel"><AuthCardBrand /><div className="auth-heading"><h1>Project access required</h1><p>{error || 'This account is not linked to a shared client project. Ask your project contact to restore access or send a new invitation.'}</p></div><button className="button button-secondary auth-submit" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={15} />Sign out</button></section></AuthLayout>
+  return <AuthLayout className="auth-signin-screen" contentClassName="auth-signin-content"><section className="auth-panel auth-signin-panel access-panel"><AuthCardBrand /><div className="auth-heading"><h1>Project access required</h1><p>{error || 'This account is not linked to a shared client project. Ask your project contact to restore access or send a new invitation.'}</p></div><button className="button button-secondary auth-submit" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={15} />Sign out</button></section></AuthLayout>
 }

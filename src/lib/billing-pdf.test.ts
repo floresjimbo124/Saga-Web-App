@@ -20,4 +20,19 @@ describe('createBillingPdf', () => {
     expect(output).toContain('/XObject')
   })
 
+  it('creates a contract down-payment billing without assigning a progress billing number', async () => {
+    const pdf = await createBillingPdf({
+      projectName: 'Harbor Office',
+      clientName: 'Northwind Builders',
+      location: 'Cebu City',
+      billingType: 'down-payment',
+      amount: 400000,
+      downPaymentPercent: 40,
+      issuedAt: '2026-10-01T00:00:00.000Z',
+      dueAt: null,
+    })
+
+    expect(pdf.output().startsWith('%PDF-')).toBe(true)
+  })
+
 })

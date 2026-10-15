@@ -4,6 +4,7 @@ import { calculateProjectFinance } from '../finance/project-finance'
 import { calculateReceivablesAging } from '../finance/receivables-aging'
 import { getRetentionDueDate, isRetentionDue } from '../finance/retention-due'
 import type { ProjectMilestone } from './project-milestones'
+import type { PaymentType } from '../lib/payment-type'
 
 export type ProjectStatus = 'planning' | 'active' | 'on_hold' | 'completed' | 'closed'
 export type ProjectHealthStatus = 'on_track' | 'needs_attention'
@@ -93,10 +94,11 @@ export type PortfolioPayment = {
   amount: number
   mode: string
   receiptNumber: string | null
-  paymentType: 'down_payment' | 'progress' | 'retention_release' | 'other'
+  paymentType: PaymentType
   paymentMode: 'cash' | 'bank_transfer' | 'check' | 'card' | 'other'
   paymentReference: string
   reference: string
+  billingAllocations: { billingNumber: number; amount: number }[]
 }
 
 export type CreateProjectInput = {
@@ -259,8 +261,22 @@ export async function loadPortfolio() {
     }
   }
   const billedByProject = new Map<string, number>()
+  const billingNumbersById = new Map((billingResult.data ?? []).map((billing) => [billing.id, billing.billing_number]))
+  const approvedChangeOrderContractIds = new Set([...allChangeOrdersByProject.values()].flat()
+    .filter((order) => order.status === 'approved' && order.contractId)
+    .map((order) => order.contractId))
   for (const billing of billingResult.data ?? []) {
+    if (billing.contract_id && approvedChangeOrderContractIds.has(billing.contract_id)) continue
     billedByProject.set(billing.project_id, (billedByProject.get(billing.project_id) ?? 0) + Number(billing.amount_for_billing))
+  }
+
+  const allocationsByPayment = new Map<string, { billingNumber: number; amount: number }[]>()
+  for (const allocation of allocationResult.data ?? []) {
+    const billingNumber = billingNumbersById.get(allocation.billing_id)
+    if (billingNumber === undefined) continue
+    const paymentAllocations = allocationsByPayment.get(allocation.payment_id) ?? []
+    paymentAllocations.push({ billingNumber, amount: Number(allocation.amount) })
+    allocationsByPayment.set(allocation.payment_id, paymentAllocations)
   }
 
   const collectedByProject = new Map<string, number>()
@@ -283,6 +299,7 @@ export async function loadPortfolio() {
       paymentMode: payment.payment_mode,
       paymentReference: payment.reference ?? '',
       reference: payment.receipt_number ?? payment.reference ?? '',
+      billingAllocations: allocationsByPayment.get(payment.id) ?? [],
     }
   })
 
@@ -406,7 +423,10 @@ export async function loadPortfolio() {
       estimatedCostToComplete: forecast ? Number(forecast.estimated_cost_to_complete) : null,
       changeOrders: allChangeOrdersByProject.get(project.id) ?? [],
       approvedChangeOrders: changeOrdersByProject.get(project.id) ?? [],
-      billed: (billedByProject.get(project.id) ?? 0) + downPaymentBilled,
+      billed: (billedByProject.get(project.id) ?? 0) + downPaymentBilled
+        + (allChangeOrdersByProject.get(project.id) ?? [])
+          .filter((order) => order.status === 'approved' && order.contractId)
+          .reduce((sum, order) => sum + order.amount, 0),
       collected: collectedByProject.get(project.id) ?? 0,
       retentionPaid,
       expenses: expensesByProject.get(project.id) ?? [],
@@ -433,7 +453,7 @@ export async function loadPortfolio() {
   const receivableInputs = projects.flatMap((project) => {
     const downPaymentAmount = Math.round(Math.max(0, project.contract - project.specialDiscount)
       * project.downPaymentPercent / 100)
-    return downPaymentAmount > 0 ? [{
+    const downPayment = downPaymentAmount > 0 ? [{
       id: `down-payment:${project.id}`,
       projectId: project.id,
       projectName: project.name,
@@ -445,12 +465,34 @@ export async function loadPortfolio() {
       dueAt: null,
       kind: 'down-payment' as const,
     }] : []
+    const approvedChangeOrders = project.changeOrders
+      .filter((order) => order.status === 'approved' && order.contractId)
+      .map((order) => ({
+        id: `change-order:${order.id}`,
+        projectId: project.id,
+        contractId: order.contractId,
+        projectName: project.name,
+        clientName: project.client,
+        billingNumber: 0,
+        amount: order.amount,
+        issuedAt: order.decidedAt ?? order.createdAt,
+        createdAt: order.decidedAt ?? order.createdAt,
+        dueAt: null,
+        kind: 'change-order' as const,
+      }))
+    return [...downPayment, ...approvedChangeOrders]
   })
+  const changeOrderContractIds = new Set(
+    projects.flatMap((project) => project.changeOrders
+      .filter((order) => order.status === 'approved' && order.contractId)
+      .map((order) => order.contractId)),
+  )
   const receivables = calculateReceivablesAging(
     [
       ...receivableInputs,
       ...(billingResult.data ?? []).flatMap((billing) => {
       const project = projectsById.get(billing.project_id)
+      if (billing.contract_id && changeOrderContractIds.has(billing.contract_id)) return []
       return project ? [{
         id: billing.id,
         projectId: billing.project_id,
@@ -565,7 +607,7 @@ export async function updateProjectSetup(input: UpdateProjectSetupInput) {
 export type RecordProjectPaymentInput = {
   projectId: string
   contractId?: string | null
-  paymentType: 'down_payment' | 'progress' | 'other'
+  paymentType: Exclude<PaymentType, 'retention_release'>
   amount: number
   receivedDate: string
   paymentMode: 'cash' | 'bank_transfer' | 'check' | 'card' | 'other'
@@ -584,13 +626,37 @@ export async function recordProjectPayment(input: RecordProjectPaymentInput) {
     p_payment_mode: input.paymentMode,
     p_payer_name: input.payerName.trim(),
     p_reference: input.reference?.trim() || null,
-    p_allocations: input.allocations ?? [],
+    p_allocations: (input.allocations ?? []).map((allocation) => ({
+      billing_id: allocation.billingId,
+      amount: allocation.amount,
+    })),
     p_contract_id: input.contractId ?? null,
   }).single()
   throwIfError(error)
   const payment = data as { payment_id: string; receipt_number: string } | null
   if (!payment) throw new Error('Payment was recorded without a receipt number.')
   return { paymentId: payment.payment_id, receiptNumber: payment.receipt_number }
+}
+
+export async function updateProjectPayment(input: {
+  paymentId: string
+  paymentType: PaymentType
+  amount: number
+  receivedDate: string
+  paymentMode: PortfolioPayment['paymentMode']
+  payerName: string
+  reference?: string
+}) {
+  const { error } = await requireSupabase().rpc('update_project_payment', {
+    p_payment_id: input.paymentId,
+    p_payment_type: input.paymentType,
+    p_amount: input.amount,
+    p_received_date: input.receivedDate,
+    p_payment_mode: input.paymentMode,
+    p_payer_name: input.payerName.trim(),
+    p_reference: input.reference?.trim() || null,
+  })
+  throwIfError(error)
 }
 
 export async function recordProjectExpense(input: RecordProjectExpenseInput) {

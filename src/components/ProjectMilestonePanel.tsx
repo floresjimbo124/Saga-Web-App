@@ -76,7 +76,10 @@ function ProjectMilestoneRow({ projectId, milestone, onChanged }: {
     try {
       const storagePath = await uploadProjectMilestonePhoto(projectId, milestone.id, file, milestone.photoStoragePath)
       setPhotoUrl(await createProjectMilestonePhotoUrl(storagePath))
-      showToast('Milestone photo attached.')
+      showToast(
+        milestone.photoStoragePath ? 'Milestone photo updated.' : 'Milestone photo attached.',
+        milestone.photoStoragePath ? 'update' : 'create',
+      )
       onChanged()
     } catch (uploadError) {
       setPhotoError(uploadError instanceof Error ? uploadError.message : 'Could not upload this milestone photo.')
@@ -138,7 +141,7 @@ function ProjectMilestoneRow({ projectId, milestone, onChanged }: {
     <label className="form-field">Milestone name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required /></label>
     <label className="form-field">Start date<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
     <label className="form-field">End date / target<input type="date" value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} /></label>
-    <label className="form-field">Completion %<input type="number" min="0" max="100" step="1" value={completionPercent} onChange={(event) => setCompletionPercent(event.target.value)} required /></label>
+    <label className="form-field">Completion %<input type="number" min="0" max="100" step="0.01" value={completionPercent} onChange={(event) => setCompletionPercent(event.target.value)} required /></label>
     <label className="form-field">Status<select value={status} onChange={(event) => {
       const nextStatus = event.target.value as ProjectMilestoneStatus
       setStatus(nextStatus)
@@ -229,7 +232,7 @@ export function ProjectMilestonePanel({ projectId, milestones, onChanged }: {
       <label className="form-field">Milestone name<input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Foundation complete" maxLength={120} required /></label>
       <label className="form-field">Start date<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
       <label className="form-field">End date / target<input type="date" value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} /></label>
-      <label className="form-field">Completion %<input type="number" min="0" max="100" step="1" value={completionPercent} onChange={(event) => setCompletionPercent(event.target.value)} required /></label>
+      <label className="form-field">Completion %<input type="number" min="0" max="100" step="0.01" value={completionPercent} onChange={(event) => setCompletionPercent(event.target.value)} required /></label>
       <label className="milestone-client-visible"><input type="checkbox" checked={clientVisible} onChange={(event) => setClientVisible(event.target.checked)} /><span><Eye size={14} />Show in client portal</span></label>
       {error && <p className="form-error milestone-manage-error" role="alert">{error}</p>}
       <button className="button button-primary" type="submit" disabled={isSaving}><Plus size={14} />{isSaving ? 'Adding…' : 'Add milestone'}</button>

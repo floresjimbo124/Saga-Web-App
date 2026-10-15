@@ -58,10 +58,12 @@ function isOverdue(task: ProjectTask, today: string) {
   return task.status !== 'done' && task.dueDate < today
 }
 
-export function TaskManagementPanel({ isOwner, currentUserId, projects = [] }: {
+export function TaskManagementPanel({ isOwner, currentUserId, projects = [], notificationTaskId, onNotificationTaskClosed }: {
   isOwner: boolean
   currentUserId: string
   projects?: ProjectOption[]
+  notificationTaskId?: string
+  onNotificationTaskClosed?: () => void
 }) {
   const { showToast } = useToast()
   const [tasks, setTasks] = useState<ProjectTask[]>([])
@@ -160,6 +162,10 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [] }: {
   }, [currentUserId])
 
   const activeStaff = staff
+  const notificationTask = notificationTaskId
+    ? tasks.find((task) => task.id === notificationTaskId) ?? null
+    : null
+  const taskDetailsTask = notificationTask ?? selectedTask
   const staffById = useMemo(() => new Map(activeStaff.map((member) => [member.userId, member])), [activeStaff])
   const staffNames = useMemo(() => new Map(activeStaff.map((member) => [member.userId, member.name])), [activeStaff])
   const availableProjects = useMemo(() => {
@@ -200,7 +206,7 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [] }: {
 
   const saveTask = async (input: TaskInput, taskId?: string) => {
     await saveProjectTask(input, taskId)
-    showToast(taskId ? 'Task updated.' : 'Task created.')
+    showToast(taskId ? 'Task updated.' : 'Task created.', taskId ? 'update' : 'create')
     setShowTaskForm(false)
     setEditingTask(null)
     refresh()
@@ -212,7 +218,7 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [] }: {
     try {
       await updateProjectTaskStatus(task.id, status)
       setTasks((current) => current.map((item) => item.id === task.id ? { ...item, status } : item))
-      showToast('Task status updated.')
+      showToast('Task status updated.', 'update')
       return null
     } catch (statusError) {
       const message = statusError instanceof Error ? statusError.message : 'Could not update task status.'
@@ -292,14 +298,17 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [] }: {
       onClose={() => { setShowTaskForm(false); setEditingTask(null) }}
       onSave={saveTask}
     />}
-    {selectedTask && <TaskDetailsDialog
-      task={tasks.find((task) => task.id === selectedTask.id) ?? selectedTask}
+    {taskDetailsTask && <TaskDetailsDialog
+      task={tasks.find((task) => task.id === taskDetailsTask.id) ?? taskDetailsTask}
       today={today}
       currentUserId={currentUserId}
       staffNames={staffNames}
-      isUpdatingStatus={workingTaskId === selectedTask.id}
-      onStatusChange={(status) => changeStatus(selectedTask, status)}
-      onClose={() => setSelectedTask(null)}
+      isUpdatingStatus={workingTaskId === taskDetailsTask.id}
+      onStatusChange={(status) => changeStatus(taskDetailsTask, status)}
+      onClose={() => {
+        setSelectedTask(null)
+        onNotificationTaskClosed?.()
+      }}
     />}
     {showTeamDialog && <TeamDialog
       staff={staff}
@@ -374,7 +383,7 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [] }: {
         }}
       >{overdueOnly ? 'Show all tasks' : 'View overdue tasks'}</button>
     </section>}
-    {isOwner && (!projects.length || !activeStaff.length) && <section className="task-setup-notice">
+    {!isLoading && !error && isOwner && (!projects.length || !activeStaff.length) && <section className="task-setup-notice">
       <Users size={18} />
       <div><strong>{!activeStaff.length ? 'Invite your team to get started' : 'Add a project before creating tasks'}</strong>
         <p>{!activeStaff.length ? 'Invite the liaison officer, engineer, and architect. You can assign tasks once their accounts are set up.' : 'Tasks need to be linked to a project.'}</p>

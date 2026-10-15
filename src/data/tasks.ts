@@ -40,11 +40,22 @@ export type ProjectTaskActivity = {
   id: string
   taskId: string
   authorId: string | null
+  authorName: string
   activityType: ProjectTaskActivityType
   body: string
   oldStatus: TaskStatus | null
   newStatus: TaskStatus | null
   createdAt: string
+}
+
+export type TaskCommentNotification = {
+  id: string
+  taskId: string
+  taskTitle: string
+  authorName: string
+  projectName: string
+  createdAt: string
+  readAt: string | null
 }
 
 export type StaffTaskWeekSummary = {
@@ -76,11 +87,22 @@ type ProjectTaskActivityRow = {
   id: string
   task_id: string
   author_id: string | null
+  author_name: string
   activity_type: ProjectTaskActivityType
   body: string | null
   old_status: TaskStatus | null
   new_status: TaskStatus | null
   created_at: string
+}
+
+type TaskCommentNotificationRow = {
+  notification_id: string
+  task_id: string
+  task_title: string
+  author_name: string
+  project_name: string
+  created_at: string
+  read_at: string | null
 }
 
 function requireSupabase() {
@@ -193,16 +215,15 @@ export async function deleteProjectTask(taskId: string) {
 }
 
 export async function loadProjectTaskActivity(taskId: string) {
-  const { data, error } = await requireSupabase()
-    .from('project_task_activity')
-    .select('id, task_id, author_id, activity_type, body, old_status, new_status, created_at')
-    .eq('task_id', taskId)
-    .order('created_at', { ascending: true })
+  const { data, error } = await requireSupabase().rpc('get_project_task_activity', {
+    p_task_id: taskId,
+  })
   throwIfError(error)
   return ((data ?? []) as ProjectTaskActivityRow[]).map((activity) => ({
     id: activity.id,
     taskId: activity.task_id,
     authorId: activity.author_id,
+    authorName: activity.author_name,
     activityType: activity.activity_type,
     body: activity.body ?? '',
     oldStatus: activity.old_status,
@@ -219,6 +240,27 @@ export async function addProjectTaskComment(taskId: string, body: string) {
   const { error } = await requireSupabase().rpc('add_project_task_comment', {
     p_task_id: taskId,
     p_body: normalizedBody,
+  })
+  throwIfError(error)
+}
+
+export async function loadTaskCommentNotifications() {
+  const { data, error } = await requireSupabase().rpc('get_project_task_comment_notifications')
+  throwIfError(error)
+  return ((data ?? []) as TaskCommentNotificationRow[]).map((notification) => ({
+    id: notification.notification_id,
+    taskId: notification.task_id,
+    taskTitle: notification.task_title,
+    authorName: notification.author_name,
+    projectName: notification.project_name,
+    createdAt: notification.created_at,
+    readAt: notification.read_at,
+  } satisfies TaskCommentNotification))
+}
+
+export async function markTaskCommentNotificationsRead(notificationId?: string) {
+  const { error } = await requireSupabase().rpc('mark_project_task_comment_notifications_read', {
+    p_notification_id: notificationId ?? null,
   })
   throwIfError(error)
 }

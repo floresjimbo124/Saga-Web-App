@@ -9,6 +9,7 @@ const project = {
   downPaymentAmount: 100_000,
   billings: [],
   payments: [],
+  changeOrders: [],
   allocations: [],
 }
 
@@ -61,6 +62,77 @@ describe('client project receivables', () => {
       id: 'down-payment:project-1',
       amount: 100_000,
       outstandingAmount: 60_000,
+    }])
+  })
+
+  it('keeps payments from the original contract from reducing a change-order billing', () => {
+    expect(calculateClientProjectReceivables([{
+      ...project,
+      downPaymentAmount: 0,
+      billings: [{
+        id: 'change-order-billing',
+        contractId: 'contract-1',
+        number: 1,
+        amount: 50_000,
+        issuedAt: '2026-10-02T00:00:00Z',
+        createdAt: '2026-10-02T00:00:00Z',
+        dueAt: '2026-10-15',
+      }],
+      changeOrders: [{
+        id: 'change-order-1',
+        contractId: 'contract-1',
+        amount: 50_000,
+        status: 'approved',
+        approvedAt: '2026-10-02T00:00:00Z',
+      }],
+      payments: [{
+        id: 'original-contract-payment',
+        contractId: null,
+        amount: 40_000,
+        recordedAt: '2026-10-03T00:00:00Z',
+        paymentType: 'progress',
+      }],
+    }], '2026-10-03')).toMatchObject([{
+      id: 'change-order:change-order-1',
+      contractId: 'contract-1',
+      amount: 50_000,
+      outstandingAmount: 50_000,
+    }])
+  })
+
+  it('includes unpaid approved change orders in the client due balance and subtracts their contract payments', () => {
+    const receivables = calculateClientProjectReceivables([{
+      ...project,
+      downPaymentAmount: 0,
+      changeOrders: [{
+        id: 'change-order-1',
+        contractId: 'contract-1',
+        amount: 426_331,
+        status: 'approved',
+        approvedAt: '2026-10-12T00:00:00Z',
+      }],
+      billings: [{
+        id: 'change-order-billing',
+        contractId: 'contract-1',
+        number: 1,
+        amount: 100_000,
+        issuedAt: '2026-10-12T00:00:00Z',
+        createdAt: '2026-10-12T00:00:00Z',
+        dueAt: null,
+      }],
+      payments: [{
+        id: 'payment-1',
+        contractId: 'contract-1',
+        amount: 100_000,
+        recordedAt: '2026-10-13T00:00:00Z',
+        paymentType: 'progress',
+      }],
+    }], '2026-10-13')
+
+    expect(receivables).toMatchObject([{
+      id: 'change-order:change-order-1',
+      amount: 426_331,
+      outstandingAmount: 326_331,
     }])
   })
 })

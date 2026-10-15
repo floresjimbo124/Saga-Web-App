@@ -346,7 +346,7 @@ export function PayrollPanel({ projects, onChanged }: {
     setIsFinalizingWeek(true)
     try {
       await finalizePayrollWeek(weekStart)
-      showToast('Payroll finalized and assigned project costs updated.')
+      showToast('Payroll finalized and assigned project costs updated.', 'update')
       setPendingDraftSaves(new Set())
       refresh()
       onChanged()

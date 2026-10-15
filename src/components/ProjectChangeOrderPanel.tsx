@@ -1,11 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Eye, Pencil, Plus, Send, Trash2, X } from 'lucide-react'
-import type { PortfolioExpense, PortfolioPayment, ProjectChangeOrder, ProjectChangeOrderItem } from '../data/portfolio'
+import type { ProjectChangeOrder, ProjectChangeOrderItem } from '../data/portfolio'
 import { createProjectChangeOrder, submitProjectChangeOrder, updateProjectChangeOrderDraft } from '../data/change-orders'
 import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
-import { ProjectContractFinance } from './ProjectContractFinance'
 import { formatChangeOrderNumber } from '../lib/change-order-number'
 import { useToast } from './toast-context'
 
@@ -42,7 +41,7 @@ function formatTimeAdjustment(days: number) {
   return `${Math.abs(days)} calendar day${Math.abs(days) === 1 ? '' : 's'} ${days > 0 ? 'added' : 'deducted'}`
 }
 
-export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName, clientName, location, contractAmount, specialDiscount, retentionRatePercent, changeOrders, payments, expenses, onChanged }: {
+export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName, clientName, location, contractAmount, specialDiscount, changeOrders, onChanged }: {
   projectId: string
   projectPrefix: string
   projectName: string
@@ -50,10 +49,7 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
   location: string
   contractAmount: number
   specialDiscount: number
-  retentionRatePercent: number
   changeOrders: ProjectChangeOrder[]
-  payments: PortfolioPayment[]
-  expenses: PortfolioExpense[]
   onChanged: () => void
 }) {
   const { showToast } = useToast()
@@ -235,7 +231,6 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
 
   return <section className="surface-card tab-content project-change-order-panel">
     <div className="card-heading-row"><h2>Change orders</h2><span className="project-milestone-count">{changeOrders.length} order{changeOrders.length === 1 ? '' : 's'}</span></div>
-    <p className="project-milestone-help">Each client-approved change order becomes its own contract within this project, with separate progress, billing, payment, and expense records. Approved values also count toward the overall project total.</p>
     <div className="change-order-totals">
       <div><span>Original contract</span><strong>{money.format(contractAmount)}</strong></div>
       <div><span>Special discount</span><strong>− {money.format(specialDiscount)}</strong></div>
@@ -270,16 +265,6 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
             <button type="button" className="button button-secondary" onClick={() => { void submitForApproval(order) }} disabled={isSaving}><Send size={14} />{isSaving ? 'Submitting…' : 'Submit to client'}</button>
           </div>}
         </article>
-        {order.status === 'approved' && order.contractId && <ProjectContractFinance
-          order={order}
-          projectName={projectName}
-          clientName={clientName}
-          location={location}
-          payments={payments}
-          expenses={expenses}
-          retentionRatePercent={retentionRatePercent}
-          onChanged={onChanged}
-        />}
       </div>
     ))}</div> : <p className="client-empty-note">No change orders yet.</p>}
     {isCreateOpen && createPortal(<div className="modal-backdrop change-order-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeCreateDialog() }}>

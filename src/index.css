@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300..700;1,400&display=swap');
 
 :root {
   --forest: #203f33;
@@ -10,8 +10,9 @@
   --line: #e5e2d8;
   --ink: #304638;
   --muted: #7d867d;
-  --heading: 'DM Sans', 'Segoe UI', sans-serif;
-  --mono: 'DM Mono', Consolas, monospace;
+  --heading: 'Roboto', 'Segoe UI', sans-serif;
+  --mono: 'Roboto', 'Segoe UI', sans-serif;
+  --display: 'Roboto', 'Segoe UI', sans-serif;
   font-family: var(--heading);
   color: var(--ink);
   background: var(--paper);
@@ -41,6 +42,7 @@ body {
 
 button,
 input,
+textarea,
 select {
   font-family: var(--heading);
 }

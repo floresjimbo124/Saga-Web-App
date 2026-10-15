@@ -10,7 +10,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: { from: mocks.from, rpc: mocks.rpc },
 }))
 
-import { createProject, loadPortfolio, recordProjectExpense, recordProjectExpenses, recordProjectPayment, updateProjectCostForecast, updateProjectExpense, updateProjectSetup, updateProjectState } from './portfolio'
+import { createProject, loadPortfolio, recordProjectExpense, recordProjectExpenses, recordProjectPayment, updateProjectCostForecast, updateProjectExpense, updateProjectPayment, updateProjectSetup, updateProjectState } from './portfolio'
 
 type QueryResult = { data: unknown; error: { message: string } | null }
 
@@ -64,6 +64,7 @@ const portfolioRows: Record<string, unknown[]> = {
       reference: null, receipt_number: 'SAL-0001',
     },
   ],
+  payment_allocations: [],
   project_expenses: [
     {
       id: 'expense-salo', project_id: 'project-salo', expense_date: '2026-10-01', category: 'materials',
@@ -128,7 +129,7 @@ describe('portfolio data access', () => {
       downPaymentPercent: 40,
       retentionRate: 5,
       retentionMethod: 'final-schedule',
-      billed: 120_000,
+      billed: 140_000,
       collected: 50_000,
       outflow: 12_500.5,
       expenses: [{
@@ -174,14 +175,28 @@ describe('portfolio data access', () => {
       paymentReference: '',
       reference: 'SAL-0001',
       contractId: null,
+      billingAllocations: [],
     }])
     expect(mocks.from).toHaveBeenCalledWith('projects')
-    expect(portfolio.receivables).toMatchObject([{
+    expect(portfolio.receivables).toEqual(expect.arrayContaining([expect.objectContaining({
       id: 'billing-salo-1',
       projectName: 'Salo Spot',
       clientName: 'Salo Hospitality',
       outstandingAmount: 70_000,
-    }])
+    })]))
+  })
+
+  it('maps payment allocations to billing numbers for payment history', async () => {
+    mocks.from.mockImplementation((table: string) => queryFor(
+      table === 'payment_allocations'
+        ? [{ payment_id: 'payment-salo', billing_id: 'billing-salo-1', amount: '35000.00' }]
+        : portfolioRows[table] ?? [],
+    ))
+
+    const portfolio = await loadPortfolio()
+
+    expect(portfolio.payments.find((payment) => payment.id === 'payment-salo')?.billingAllocations)
+      .toEqual([{ billingNumber: 1, amount: 35_000 }])
   })
 
   it('counts the contracted down payment alongside issued progress billings', async () => {
@@ -195,11 +210,50 @@ describe('portfolio data access', () => {
     const portfolio = await loadPortfolio()
     const salo = portfolio.projects.find((project) => project.id === 'project-salo')
 
-    expect(salo?.billed).toBe(520_000)
+    expect(salo?.billed).toBe(540_000)
     expect(portfolio.receivables).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'down-payment:project-salo', outstandingAmount: 350_000, kind: 'down-payment' }),
       expect.objectContaining({ id: 'billing-salo-1', outstandingAmount: 120_000 }),
     ]))
+  })
+
+  it('keeps approved change-order receivables separate and nets their scoped payments once', async () => {
+    mocks.from.mockImplementation((table: string) => queryFor(
+      table === 'progress_billings'
+        ? [
+          ...portfolioRows.progress_billings,
+          {
+            id: 'billing-change-order', project_id: 'project-salo', contract_id: 'contract-approved',
+            billing_number: 1, amount_for_billing: '5000.00', issued_at: '2026-10-03T09:00:00Z',
+            due_at: '2026-10-10', created_at: '2026-10-03T09:00:00Z',
+          },
+        ]
+        : table === 'payments'
+          ? [
+            ...portfolioRows.payments,
+            {
+              id: 'payment-change-order', project_id: 'project-salo', contract_id: 'contract-approved',
+              payer_name: 'Salo Hospitality', received_at: '2026-10-04T10:00:00Z',
+              created_at: '2026-10-04T10:00:00Z', amount: '7000.00', payment_type: 'change_order',
+              payment_mode: 'bank_transfer', reference: null, receipt_number: 'SAL-0002',
+            },
+          ]
+          : portfolioRows[table] ?? [],
+    ))
+
+    const portfolio = await loadPortfolio()
+
+    expect(portfolio.receivables).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'change-order:change-order-approved',
+        contractId: 'contract-approved',
+        amount: 20_000,
+        outstandingAmount: 13_000,
+        kind: 'change-order',
+      }),
+      expect.objectContaining({ id: 'billing-salo-1', outstandingAmount: 70_000 }),
+    ]))
+    expect(portfolio.receivables).not.toContainEqual(expect.objectContaining({ id: 'billing-change-order' }))
   })
 
   it('includes project-assigned weekly payroll as a project expense', async () => {
@@ -412,7 +466,7 @@ describe('portfolio data access', () => {
 
   it('records payments with explicit billing allocations atomically', async () => {
     mocks.rpc.mockReturnValue({
-      single: () => Promise.resolve({ data: { payment_id: 'payment-1', receipt_number: 'SAL-0002' }, error: null }),
+      single: () => Promise.resolve({ data: { payment_id: 'payment-1', receipt_number: 'SAL-AR-0002' }, error: null }),
     })
 
     await expect(recordProjectPayment({
@@ -423,20 +477,20 @@ describe('portfolio data access', () => {
       paymentMode: 'bank_transfer',
       payerName: 'Salo Hospitality',
       allocations: [{ billingId: 'billing-salo-1', amount: 125_000 }],
-    })).resolves.toEqual({ paymentId: 'payment-1', receiptNumber: 'SAL-0002' })
+    })).resolves.toEqual({ paymentId: 'payment-1', receiptNumber: 'SAL-AR-0002' })
 
     expect(mocks.rpc).toHaveBeenCalledWith('record_project_payment_with_allocations', expect.objectContaining({
       p_project_id: 'project-salo',
       p_amount: 125_000,
       p_received_date: '2026-10-03',
-      p_allocations: [{ billingId: 'billing-salo-1', amount: 125_000 }],
+      p_allocations: [{ billing_id: 'billing-salo-1', amount: 125_000 }],
       p_contract_id: null,
     }))
   })
 
   it('assigns a logged payment to the selected change-order contract', async () => {
     mocks.rpc.mockReturnValue({
-      single: () => Promise.resolve({ data: { payment_id: 'payment-contract-1', receipt_number: 'SAL-0003' }, error: null }),
+      single: () => Promise.resolve({ data: { payment_id: 'payment-contract-1', receipt_number: 'SAL-AR-0003' }, error: null }),
     })
 
     await recordProjectPayment({
@@ -454,6 +508,30 @@ describe('portfolio data access', () => {
       p_contract_id: 'contract-approved',
       p_allocations: [],
     }))
+  })
+
+  it('updates editable payment receipt details through the project payment RPC', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: null })
+
+    await updateProjectPayment({
+      paymentId: 'payment-salo',
+      paymentType: 'progress',
+      amount: 62_500,
+      receivedDate: '2026-10-04',
+      paymentMode: 'cash',
+      payerName: 'Salo Hospitality',
+      reference: 'CASH-104',
+    })
+
+    expect(mocks.rpc).toHaveBeenCalledWith('update_project_payment', {
+      p_payment_id: 'payment-salo',
+      p_payment_type: 'progress',
+      p_amount: 62_500,
+      p_received_date: '2026-10-04',
+      p_payment_mode: 'cash',
+      p_payer_name: 'Salo Hospitality',
+      p_reference: 'CASH-104',
+    })
   })
 
   it('saves project cost forecasts through the owner RPC', async () => {

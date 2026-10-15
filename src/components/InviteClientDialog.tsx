@@ -57,7 +57,10 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
           : response.emailError
             ? `Access granted to ${email.trim()} for ${projectName}, but the sign-in email could not be sent: ${response.emailError}`
             : `Access granted to ${email.trim()} for ${projectName}. They can sign in with their existing account.`)
-      showToast(response.emailError ? 'Client access granted, but the email could not be sent.' : 'Client invitation/access updated.')
+      showToast(
+        response.emailError ? 'Client access granted, but the email could not be sent.' : 'Client invitation/access updated.',
+        response.invited ? 'create' : 'update',
+      )
       await refreshAccounts()
     } catch (inviteError) {
       setError(inviteError instanceof Error ? inviteError.message : 'Could not invite this client.')

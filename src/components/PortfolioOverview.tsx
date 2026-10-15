@@ -97,6 +97,7 @@ function MobileProjectCover({ storagePath, projectName }: { storagePath: string 
 }
 
 type PortfolioOverviewProps = {
+  ownerName?: string
   projects: PortfolioProject[]
   payments: PortfolioPayment[]
   receivables: ReceivableAgingItem[]
@@ -150,7 +151,6 @@ export function PortfolioOverview({
   profitRiskFilter,
   dateFilter,
   monthCashIn,
-  cashBars,
   isLoading,
   setSearch,
   setStatusFilter,
@@ -164,9 +164,44 @@ export function PortfolioOverview({
   isProjectsPage,
   refreshWorkspace,
   openProject,
+  ownerName = '',
 }: PortfolioOverviewProps) {
   const greetingHour = currentDate.getHours()
   const greetingText = greetingHour < 12 ? 'Good morning' : greetingHour < 18 ? 'Good afternoon' : 'Good evening'
+  const isSameMonth = (date: string, offset: number) => {
+    const value = new Date(date.length === 10 ? `${date}T12:00:00` : date)
+    const target = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1)
+    return value.getFullYear() === target.getFullYear() && value.getMonth() === target.getMonth()
+  }
+  const sixMonths = Array.from({ length: 6 }, (_, index) => {
+    const offset = index - 5
+    const monthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1)
+    return {
+      key: `${monthDate.getFullYear()}-${monthDate.getMonth()}`,
+      label: new Intl.DateTimeFormat('en-PH', { month: 'short' }).format(monthDate),
+      cashIn: payments.filter((payment) => isSameMonth(payment.date, offset)).reduce((sum, payment) => sum + payment.amount, 0),
+      expenses: projects.flatMap((project) => project.expenses).filter((expense) => isSameMonth(expense.date, offset)).reduce((sum, expense) => sum + expense.amount, 0),
+      isCurrent: offset === 0,
+    }
+  })
+  const sixMonthMax = Math.max(...sixMonths.map((month) => Math.max(month.cashIn, month.expenses)), 0)
+  const sixMonthCashIn = sixMonths.reduce((sum, month) => sum + month.cashIn, 0)
+  const sixMonthExpenses = sixMonths.reduce((sum, month) => sum + month.expenses, 0)
+  const monthReceiptCount = payments.filter((payment) => isSameMonth(payment.date, 0)).length
+  const overdueItems = receivables.filter((item) => item.daysOverdue > 0)
+  const unpaidChangeOrders = receivables.filter((item) => item.kind === 'change-order')
+  const pendingApprovals = projects.flatMap((project) => project.changeOrders.filter((order) => order.status === 'pending_approval'))
+  const deadlineAlerts = projects.filter((project) => {
+    const level = getProjectDeadlineStatus(project.deadline, project.status).level
+    return level === 'overdue' || level === 'due-soon'
+  })
+  const shortDeadline = (date: string | null) => date ? new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(date.length === 10 ? `${date}T12:00:00` : date)) : ''
+  const actionItems = [
+    overdueItems.length > 0 && { key: 'overdue', tone: 'danger', label: `${overdueItems.length} overdue billing${overdueItems.length === 1 ? '' : 's'}`, detail: `${money.format(overdueItems.reduce((sum, item) => sum + item.outstandingAmount, 0))} past due`, onClick: () => document.getElementById('receivables-aging')?.scrollIntoView({ behavior: 'smooth' }) },
+    unpaidChangeOrders.length > 0 && { key: 'co', tone: 'warning', label: `${unpaidChangeOrders.length} unpaid change order${unpaidChangeOrders.length === 1 ? '' : 's'}`, detail: `${money.format(unpaidChangeOrders.reduce((sum, item) => sum + item.outstandingAmount, 0))} to collect`, onClick: () => openProject(unpaidChangeOrders[0].projectId) },
+    pendingApprovals.length > 0 && { key: 'approval', tone: 'warning', label: `${pendingApprovals.length} change order${pendingApprovals.length === 1 ? '' : 's'} awaiting client`, detail: 'Waiting for client approval', onClick: () => openProject(projects.find((project) => project.changeOrders.some((order) => order.status === 'pending_approval'))?.id ?? '') },
+    deadlineAlerts.length > 0 && { key: 'deadline', tone: 'info', label: `${deadlineAlerts.length} deadline${deadlineAlerts.length === 1 ? '' : 's'} coming up`, detail: deadlineAlerts.slice(0, 2).map((project) => `${project.name} · ${shortDeadline(project.deadline)}`).join(', '), onClick: () => openProject(deadlineAlerts[0].id) },
+  ].filter(Boolean) as { key: string; tone: string; label: string; detail: string; onClick: () => void }[]
   const activeCount = projects.filter((project) => project.status === 'active').length
   const completedCount = projects.filter((project) => project.status === 'completed' || project.status === 'closed').length
   const delayedCount = projects.filter((project) => getProjectDeadlineStatus(project.deadline, project.status).level === 'overdue').length
@@ -299,8 +334,8 @@ export function PortfolioOverview({
 
   return <>
     <section className="page-heading portfolio-page-heading">
-      <div className="portfolio-welcome"><h1>{greetingText}</h1><p>Here’s what’s happening with your projects today.</p></div>
-      <div className="heading-actions"><button className="button button-primary button-danger" onClick={() => setShowDashboardExpense(true)} disabled={!projects.length || isLoading}><Plus size={17} />Add new expense</button><button className="button button-primary" onClick={() => setShowModal(true)}><Plus size={17} />New project</button></div>
+      <div className="portfolio-welcome"><h1>{greetingText}{ownerName ? `, ${ownerName}` : ''}</h1><p>{activeCount} active project{activeCount === 1 ? '' : 's'} · {money.format(receivable)} to collect{pendingApprovals.length ? ` · ${pendingApprovals.length} change order${pendingApprovals.length === 1 ? '' : 's'} awaiting approval` : ''}</p></div>
+      <div className="heading-actions"><button className="button button-secondary dashboard-expense-button" onClick={() => setShowDashboardExpense(true)} disabled={!projects.length || isLoading}><Plus size={17} />Add new expense</button><button className="button button-primary" onClick={() => setShowModal(true)}><Plus size={17} />New project</button></div>
     </section>
     <section className="mobile-dashboard-stats" aria-label="Project summary">
       <div><span className="mobile-dashboard-stat-icon"><FolderKanban size={15} /></span><strong>{projects.length}</strong><small>Total projects</small></div>
@@ -361,11 +396,18 @@ export function PortfolioOverview({
       })}</div> : <p className="mobile-recent-activity-empty">No recent activity yet.</p>}
     </section>
     {loadError && <div className="sample-banner" role="alert"><CircleAlert size={15} /><span><strong>Could not load SAGACT data.</strong> {loadError}</span><button className="text-button" onClick={refreshWorkspace}>Retry</button></div>}
+    {actionItems.length > 0 && <section className="dashboard-action-strip" aria-label="Needs your attention">
+      {actionItems.map((item) => <button type="button" key={item.key} className={`dashboard-action is-${item.tone}`} onClick={item.onClick}>
+        <span className="dashboard-action-icon"><CircleAlert size={15} /></span>
+        <span><strong>{item.label}</strong><small>{item.detail}</small></span>
+        <ArrowRight size={14} />
+      </button>)}
+    </section>}
     <section className="metric-grid desktop-portfolio-metrics" aria-label="Portfolio totals">
-      <Metric icon={<FileText size={16} />} label="Total billed" value={money.format(billed)} foot="Across all projects" tone="green" />
+      <Metric icon={<FileText size={16} />} label="Total billed" value={money.format(billed)} foot="Incl. approved change orders" tone="green" />
       <Metric icon={<ArrowDownLeft size={16} />} label="Collected" value={money.format(collected)} foot={`${billed ? Math.round(collected / billed * 100) : 0}% of billed`} tone="blue" />
       <Metric icon={<ArrowUpRight size={16} />} label="Total expenses" value={money.format(totalExpenses)} foot="Across all projects" tone="red" />
-      <Metric icon={<Clock3 size={16} />} label="Receivables due" value={money.format(receivable)} foot="Retention excluded" tone="gold" />
+      <Metric icon={<Clock3 size={16} />} label="Receivables due" value={money.format(receivable)} foot={`${receivables.length} open item${receivables.length === 1 ? '' : 's'}${overdueItems.length ? ` · ${overdueItems.length} overdue` : ''}`} tone="gold" />
       <Metric icon={<WalletCards size={16} />} label="Retention held" value={money.format(retention)} foot="Not yet due for release" tone="neutral" />
     </section>
     <section className="portfolio-section" id="portfolio-projects"><div className="section-heading"><h2>Projects <span className="count-pill">{projects.length}</span></h2></div>
@@ -396,12 +438,29 @@ export function PortfolioOverview({
             estimatedCostToComplete: project.estimatedCostToComplete,
           })
           const deadlineStatus = getProjectDeadlineStatus(project.deadline, project.status)
-          return <button className="project-row" key={project.id} onClick={() => openProject(project.id)}><span className="project-name-cell"><span className={`project-avatar avatar-${project.prefix.toLowerCase()}`}>{project.name.slice(0, 1)}</span><span className="project-title-stack"><strong>{project.name}</strong><small>{project.client}</small></span></span><span className="money-cell project-contract">{money.format(project.contract)}</span><span className="progress-cell project-progress"><span className="progress-value">{project.progress}%</span><span className="progress-track"><span style={{ width: `${project.progress}%` }} /></span></span><span className="money-cell project-billed">{money.format(project.billed)}</span><span className="money-cell project-collected">{money.format(project.collected)}</span><span className={`money-cell net-cash-cell ${netCash < 0 ? 'net-cash-negative' : 'net-cash-positive'} project-net-cash`}>{money.format(netCash)}</span><span className="project-status"><StatusBadge status={project.status} /></span><span className="project-health"><HealthBadge status={project.healthStatus} /></span><span className="project-risk"><ProfitRiskBadge risk={profitRisk} /></span><span className="project-deadline"><ProjectDeadlineBadge deadline={deadlineStatus} /></span><span className="row-arrow"><ChevronRight size={16} /></span></button>
+          return <button className="project-row" key={project.id} onClick={() => openProject(project.id)}><span className="project-name-cell"><span className={`project-avatar avatar-${project.prefix.toLowerCase()}`}>{project.name.slice(0, 1)}</span><span className="project-title-stack"><strong>{project.name}</strong><small>{project.client}</small></span></span><span className="money-cell project-contract">{money.format(project.contract)}</span><span className="progress-cell project-progress"><span className="progress-value">{project.progress}%</span><span className="progress-track"><span style={{ width: `${project.progress}%` }} /></span></span><span className="money-cell project-billed">{money.format(project.billed)}</span><span className="money-cell project-collected">{money.format(project.collected)}</span><span className={`money-cell net-cash-cell ${netCash < 0 ? 'net-cash-negative' : 'net-cash-positive'} project-net-cash`}>{money.format(netCash)}</span><span className="project-status"><StatusBadge status={project.status} /></span><span className="project-health"><HealthBadge status={project.healthStatus} /></span><span className="project-risk"><ProfitRiskBadge risk={profitRisk} /></span><span className="project-deadline"><ProjectDeadlineBadge deadline={deadlineStatus} />{project.deadline && deadlineStatus.level !== 'completed' && <small className="project-deadline-date">{shortDeadline(project.deadline)}</small>}</span><span className="row-arrow"><ChevronRight size={16} /></span></button>
         }) : <div className="empty-state">{projects.length ? 'No projects match those filters.' : 'No projects in this workspace yet. Create one to get started.'}</div>}
         <div className="table-footer"><span>Showing {filtered.length} of {projects.length} projects</span></div></div>
     </section>
-    <section className="lower-grid"><div className="surface-card cashflow-card"><div className="card-heading-row"><div><div className="section-kicker">{new Intl.DateTimeFormat('en-PH', { month: 'long', year: 'numeric' }).format(currentDate)}</div><h2>Cash in, month to date</h2></div><button className="icon-button small-icon-button" aria-label="Open cash flow details" title="Open cash flow details"><ArrowUpRight size={16} /></button></div><div className="cashflow-total"><strong>{money.format(monthCashIn)}</strong><span className="positive-chip">{payments.length} receipt{payments.length === 1 ? '' : 's'}</span></div>{monthCashIn ? <><div className="bar-chart" aria-label="Monthly cash received from recorded payments">{cashBars.map((height, index) => <span className={index === 11 ? 'bar current-bar' : 'bar'} key={index} style={{ height: `${height}%` }} />)}</div><div className="chart-axis"><span>Start</span><span>Mid-month</span><span>Today</span></div></> : <div className="chart-empty">No payments recorded this month.</div>}</div>
+    <section className="lower-grid"><div className="surface-card cashflow-card">
+        <div className="card-heading-row"><div><div className="section-kicker">Last 6 months</div><h2>Cash in vs expenses</h2></div></div>
+        <div className="cashflow-summary">
+          <span><small>This month</small><strong>{money.format(monthCashIn)}</strong><em>{monthReceiptCount} receipt{monthReceiptCount === 1 ? '' : 's'}</em></span>
+          <span><small>6-month cash in</small><strong>{money.format(sixMonthCashIn)}</strong></span>
+          <span><small>6-month expenses</small><strong className="is-expense">{money.format(sixMonthExpenses)}</strong></span>
+        </div>
+        {sixMonthMax > 0 ? <div className="six-month-chart" role="img" aria-label="Cash in and expenses for the last six months">
+          {sixMonths.map((month) => <div className={`six-month-col${month.isCurrent ? ' is-current' : ''}`} key={month.key} title={`${month.label}: ${money.format(month.cashIn)} in · ${money.format(month.expenses)} expenses`}>
+            <div className="six-month-bars">
+              <span className="bar-in" style={{ height: `${month.cashIn ? Math.max(3, month.cashIn / sixMonthMax * 100) : 0}%` }} />
+              <span className="bar-out" style={{ height: `${month.expenses ? Math.max(3, month.expenses / sixMonthMax * 100) : 0}%` }} />
+            </div>
+            <small>{month.label}</small>
+          </div>)}
+        </div> : <div className="chart-empty">No payments or expenses in the last 6 months.</div>}
+        <div className="six-month-legend"><span><i className="bar-in" />Cash in</span><span><i className="bar-out" />Expenses</span></div>
+      </div>
       <div className="surface-card activity-card"><div className="card-heading-row"><div><h2>Recent payments</h2></div><button className="text-button compact-button" onClick={() => payments[0] && openProject(payments[0].projectId)} disabled={!payments.length}>View all <ArrowRight size={13} /></button></div><div className="activity-list">{payments.length ? payments.slice(0, 3).map((payment) => <button className="activity-row" key={payment.id} onClick={() => openProject(payment.projectId)}><span className="activity-icon"><ArrowDownLeft size={15} /></span><span className="activity-copy"><strong>{payment.payer}</strong><small>{projects.find((item) => item.id === payment.projectId)?.name} · {shortDate(payment.date)} · {payment.reference}</small></span><span className="activity-amount">+{money.format(payment.amount)}</span></button>) : <div className="empty-state">No payments recorded yet.</div>}</div></div></section>
-    <ReceivablesAgingPanel items={receivables} onOpenProject={openProject} />
+    <div id="receivables-aging"><ReceivablesAgingPanel items={receivables} onOpenProject={openProject} /></div>
   </>
 }

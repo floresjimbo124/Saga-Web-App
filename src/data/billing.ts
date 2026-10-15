@@ -14,6 +14,7 @@ export type ProjectBilling = {
 
 export type OpenProjectBilling = {
   id: string
+  contractId: string | null
   billingNumber: number
   outstandingAmount: number
   dueAt: string | null
@@ -44,7 +45,7 @@ export async function loadProjectBillings(projectId: string, contractId?: string
   }))
 }
 
-export async function loadOpenProjectBillings(projectId: string, contractId?: string): Promise<OpenProjectBilling[]> {
+export async function loadOpenProjectBillings(projectId: string, contractId?: string | null): Promise<OpenProjectBilling[]> {
   const client = requireSupabase()
   let billings = client.from('progress_billings')
     .select('id, project_id, contract_id, billing_number, amount_for_billing, issued_at, created_at, due_at')
@@ -54,8 +55,10 @@ export async function loadOpenProjectBillings(projectId: string, contractId?: st
     .select('id, project_id, contract_id, amount, created_at, payment_type')
     .eq('project_id', projectId)
     .is('voided_at', null)
-  billings = contractId ? billings.eq('contract_id', contractId) : billings.is('contract_id', null)
-  payments = contractId ? payments.eq('contract_id', contractId) : payments.is('contract_id', null)
+  if (contractId !== undefined) {
+    billings = contractId ? billings.eq('contract_id', contractId) : billings.is('contract_id', null)
+    payments = contractId ? payments.eq('contract_id', contractId) : payments.is('contract_id', null)
+  }
   const [billingResult, paymentResult, allocationResult] = await Promise.all([
     billings,
     payments,
@@ -96,6 +99,7 @@ export async function loadOpenProjectBillings(projectId: string, contractId?: st
   )
   return outstanding.map((billing) => ({
     id: billing.id,
+    contractId: billing.contractId ?? null,
     billingNumber: billing.billingNumber,
     outstandingAmount: billing.outstandingAmount,
     dueAt: billing.dueAt,

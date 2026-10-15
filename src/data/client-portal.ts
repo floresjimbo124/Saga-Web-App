@@ -1,10 +1,12 @@
 import { SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
+import type { PaymentType } from '../lib/payment-type'
 import type { ProjectChangeOrderStatus } from './portfolio'
 
 export type ClientPortalProject = {
   id: string
   name: string
   prefix: string
+  coverPhotoStoragePath: string | null
   clientName: string
   location: string
   progress: number
@@ -17,12 +19,14 @@ export type ClientPortalProject = {
   retentionAmount: number
   changeOrders: {
     id: string
+    contractId: string | null
     orderNumber: number
     title: string
     description: string
     amount: number
     status: Extract<ProjectChangeOrderStatus, 'pending_approval' | 'approved'>
     createdAt: string
+    approvedAt: string
     pdfStoragePath: string | null
   }[]
   milestones: {
@@ -36,6 +40,7 @@ export type ClientPortalProject = {
   }[]
   billings: {
     id: string
+    contractId: string | null
     number: number
     amount: number
     progress: number
@@ -45,12 +50,13 @@ export type ClientPortalProject = {
   }[]
   payments: {
     id: string
+    contractId: string | null
     receiptNumber: string
     amount: number
     receivedAt: string
     recordedAt: string
     payerName: string
-    paymentType: 'down_payment' | 'progress' | 'retention_release' | 'other'
+    paymentType: PaymentType
     paymentMode: 'cash' | 'bank_transfer' | 'check' | 'card' | 'other'
     reference: string
   }[]
@@ -93,7 +99,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
   const client = requireSupabase()
   const { data: projectRows, error: projectError } = await client
     .from('projects')
-    .select('id, client_id, name, prefix, location, progress_percent, status, created_at, updated_at')
+    .select('id, client_id, name, prefix, location, cover_photo_storage_path, progress_percent, status, created_at, updated_at')
     .eq('organization_id', SAGACT_ORGANIZATION_ID)
     .order('updated_at', { ascending: false })
   throwIfError(projectError)
@@ -102,17 +108,17 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
   const projectIds = projects.map((project) => project.id)
   if (!projectIds.length) return []
 
-  const [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult, changeOrderResult] = await Promise.all([
+  const [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult, changeOrderResult, changeOrderContractsResult] = await Promise.all([
     client.from('clients')
       .select('id, name')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
     client.from('progress_billings')
-      .select('id, project_id, billing_number, amount_for_billing, progress_percent, issued_at, created_at, due_at')
+      .select('id, project_id, contract_id, billing_number, amount_for_billing, progress_percent, issued_at, created_at, due_at')
       .in('project_id', projectIds)
       .eq('status', 'issued')
       .order('billing_number', { ascending: false }),
     client.from('payments')
-      .select('id, project_id, receipt_number, amount, received_at, created_at, payer_name, payment_type, payment_mode, reference')
+      .select('id, project_id, contract_id, receipt_number, amount, received_at, created_at, payer_name, payment_type, payment_mode, reference')
       .in('project_id', projectIds)
       .is('voided_at', null)
       .order('received_at', { ascending: false }),
@@ -132,13 +138,14 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
       .or('client_visible.eq.true,and(status.eq.complete,photo_storage_path.not.is.null)')
       .order('planned_date', { ascending: true, nullsFirst: false }),
     client.from('project_change_orders')
-      .select('id, project_id, order_number, title, description, amount, status, created_at, pdf_storage_path')
+      .select('id, project_id, order_number, title, description, amount, status, created_at, decided_at, pdf_storage_path')
       .in('project_id', projectIds)
       .in('status', ['pending_approval', 'approved'])
       .order('created_at', { ascending: false }),
+    client.rpc('get_client_project_change_order_contracts'),
   ])
 
-  for (const result of [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult, changeOrderResult]) {
+  for (const result of [clientResult, billingResult, paymentResult, allocationResult, documentResult, retentionResult, downPaymentResult, milestoneResult, changeOrderResult, changeOrderContractsResult]) {
     throwIfError(result.error)
   }
 
@@ -157,17 +164,22 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
     })
     milestonesByProject.set(item.project_id, milestones)
   }
+  const changeOrderContractsById = new Map<string, string>(
+    (changeOrderContractsResult.data ?? []).map((contract: { change_order_id: string; contract_id: string }) => [contract.change_order_id, contract.contract_id] as const),
+  )
   const changeOrdersByProject = new Map<string, ClientPortalProject['changeOrders']>()
   for (const item of changeOrderResult.data ?? []) {
     const changeOrders = changeOrdersByProject.get(item.project_id) ?? []
     changeOrders.push({
       id: item.id,
+      contractId: changeOrderContractsById.get(item.id) ?? null,
       orderNumber: item.order_number,
       title: item.title,
       description: item.description ?? '',
       amount: Number(item.amount),
       status: item.status,
       createdAt: item.created_at,
+      approvedAt: item.decided_at ?? item.created_at,
       pdfStoragePath: item.pdf_storage_path,
     })
     changeOrdersByProject.set(item.project_id, changeOrders)
@@ -177,6 +189,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
     const rows = billingsByProject.get(item.project_id) ?? []
     rows.push({
       id: item.id,
+      contractId: item.contract_id ?? null,
       number: item.billing_number,
       amount: Number(item.amount_for_billing),
       progress: Number(item.progress_percent),
@@ -192,6 +205,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
     const rows = paymentsByProject.get(item.project_id) ?? []
     rows.push({
       id: item.id,
+      contractId: item.contract_id ?? null,
       receiptNumber: item.receipt_number,
       amount: Number(item.amount),
       receivedAt: item.received_at,
@@ -241,6 +255,7 @@ export async function loadClientPortalProjects(): Promise<ClientPortalProject[]>
     id: project.id,
     name: project.name,
     prefix: project.prefix,
+    coverPhotoStoragePath: project.cover_photo_storage_path ?? null,
     clientName: clientsById.get(project.client_id) ?? 'Client',
     location: project.location ?? 'Location not provided',
     progress: Number(project.progress_percent),

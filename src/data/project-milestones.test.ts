@@ -83,6 +83,15 @@ describe('project milestone data access', () => {
     })
   })
 
+  it('accepts and saves fractional completion percentages', async () => {
+    await createProjectMilestone({ ...input, completionPercent: 42.75 })
+
+    expect(calls).toContainEqual({
+      method: 'insert',
+      args: [expect.objectContaining({ completion_percent: 42.75 })],
+    })
+  })
+
   it('updates and deletes only the selected project milestone', async () => {
     await updateProjectMilestone('milestone-1', { ...input, status: 'complete', actualDate: '2026-10-13' })
     await deleteProjectMilestone('project-1', 'milestone-1')
@@ -96,8 +105,8 @@ describe('project milestone data access', () => {
     await expect(createProjectMilestone({ ...input, name: '  ' })).rejects.toThrow('Enter a milestone name.')
     await expect(createProjectMilestone({ ...input, plannedDate: '10/12/2026' })).rejects.toThrow('End date must be a valid date.')
     await expect(createProjectMilestone({ ...input, startDate: '2026-10-13' })).rejects.toThrow('End date cannot be before the start date.')
-    await expect(createProjectMilestone({ ...input, completionPercent: 101 })).rejects.toThrow('Milestone completion must be a whole number from 0 to 100.')
-    await expect(createProjectMilestone({ ...input, completionPercent: 35.5 })).rejects.toThrow('Milestone completion must be a whole number from 0 to 100.')
+    await expect(createProjectMilestone({ ...input, completionPercent: 101 })).rejects.toThrow('Milestone completion must be from 0 to 100 with up to two decimal places.')
+    await expect(createProjectMilestone({ ...input, completionPercent: 35.555 })).rejects.toThrow('Milestone completion must be from 0 to 100 with up to two decimal places.')
     expect(calls).toHaveLength(0)
   })
 

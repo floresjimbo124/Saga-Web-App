@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { ClipboardList, LogOut, WalletCards } from 'lucide-react'
 import { TaskManagementPanel } from './TaskManagementPanel'
+import { TaskCommentNotificationBell } from './TaskCommentNotificationBell'
 import { supabase } from '../lib/supabase'
 import { loadPayrollProjectOptions, type PayrollProjectOption } from '../data/payroll'
 import { PayrollPanel } from './PayrollPanel'
+import { readStaffNavigation, saveStaffNavigation } from '../auth/staff-navigation'
 
 const roleLabels: Record<string, string> = {
   liaison_officer: 'Liaison officer',
@@ -19,11 +21,14 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
   const name = displayName.trim() || 'Team member'
   const firstName = name.split(/\s+/)[0]
   const canManagePayroll = staffTitle === 'liaison_officer'
-  const [view, setView] = useState<'tasks' | 'payroll'>('tasks')
+  const [view, setView] = useState<'tasks' | 'payroll'>(() =>
+    readStaffNavigation(window.sessionStorage, userId, canManagePayroll),
+  )
   const [payrollProjects, setPayrollProjects] = useState<PayrollProjectOption[]>([])
   const [payrollProjectsError, setPayrollProjectsError] = useState('')
   const [isLoadingPayrollAccess, setIsLoadingPayrollAccess] = useState(canManagePayroll)
   const [payrollAccessReloadKey, setPayrollAccessReloadKey] = useState(0)
+  const [pendingTaskNotificationId, setPendingTaskNotificationId] = useState('')
 
   useEffect(() => {
     if (!canManagePayroll) return
@@ -55,6 +60,15 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
     setPayrollAccessReloadKey((key) => key + 1)
   }
 
+  const openTaskCommentNotification = (taskId: string) => {
+    setPendingTaskNotificationId(taskId)
+    setView('tasks')
+  }
+
+  useEffect(() => {
+    saveStaffNavigation(window.sessionStorage, userId, view)
+  }, [userId, view])
+
   return <div className="app-shell staff-app-shell">
     <aside className="sidebar">
       <div className="brand-lockup"><span className="brand-mark"><img src="/sagact-mark.svg" alt="" /></span><span>SAGACT<span className="brand-period">.</span></span></div>
@@ -73,9 +87,12 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
     <div className="app-main">
       <header className="topbar">
         <div className="breadcrumbs"><span>SAGACT</span><span className="staff-breadcrumb-separator">›</span><strong>{view === 'payroll' ? 'Payroll' : 'My tasks'}</strong></div>
-        <button className="button button-secondary staff-mobile-sign-out" type="button" onClick={() => { void supabase?.auth.signOut() }}>
-          <LogOut size={15} />Sign out
-        </button>
+        <div className="staff-app-header-actions">
+          <TaskCommentNotificationBell onOpenTask={openTaskCommentNotification} />
+          <button className="button button-secondary staff-mobile-sign-out" type="button" onClick={() => { void supabase?.auth.signOut() }}>
+            <LogOut size={15} />Sign out
+          </button>
+        </div>
       </header>
       <main className="page-content">
         {view === 'payroll' && canManagePayroll
@@ -86,7 +103,12 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
                 ? <p className="payroll-empty" role="status">Checking payroll access…</p>
                 : <PayrollPanel projects={payrollProjects} onChanged={() => undefined} />}
           </div>
-          : <TaskManagementPanel isOwner={false} currentUserId={userId} />}
+          : <TaskManagementPanel
+            isOwner={false}
+            currentUserId={userId}
+            notificationTaskId={pendingTaskNotificationId}
+            onNotificationTaskClosed={() => setPendingTaskNotificationId('')}
+          />}
       </main>
       <footer className="page-footer" aria-hidden="true" />
     </div>

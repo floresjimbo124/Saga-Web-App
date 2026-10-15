@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" fill="none" stroke="#f3e7c8" stroke-linecap="square" font-family="Roboto, Arial, sans-serif">
+  <!-- sheet border -->
+  <rect x="18" y="18" width="564" height="864" stroke-width="1.4" />
+  <rect x="26" y="26" width="548" height="848" stroke-width="0.6" />
+
+  <!-- structural grid axes -->
+  <g stroke-width="0.6" stroke-dasharray="10 4 2 4" opacity="0.8">
+    <path d="M140 92 V560" />
+    <path d="M300 92 V560" />
+    <path d="M460 92 V560" />
+    <path d="M70 180 H530" />
+    <path d="M70 340 H530" />
+    <path d="M70 500 H530" />
+  </g>
+  <g stroke-width="0.9">
+    <circle cx="140" cy="76" r="13" />
+    <circle cx="300" cy="76" r="13" />
+    <circle cx="460" cy="76" r="13" />
+    <circle cx="54" cy="180" r="13" />
+    <circle cx="54" cy="340" r="13" />
+    <circle cx="54" cy="500" r="13" />
+  </g>
+  <g fill="#f3e7c8" stroke="none" font-size="12" font-weight="500" text-anchor="middle">
+    <text x="140" y="80">A</text>
+    <text x="300" y="80">B</text>
+    <text x="460" y="80">C</text>
+    <text x="54" y="184">1</text>
+    <text x="54" y="344">2</text>
+    <text x="54" y="504">3</text>
+  </g>
+
+  <!-- walls -->
+  <g stroke-width="2.4">
+    <path d="M140 180 H460 V500 H140 Z" />
+  </g>
+  <g stroke-width="1.2">
+    <path d="M148 188 H452 V492 H148 Z" />
+    <path d="M300 188 V300 M306 188 V300" />
+    <path d="M148 340 H220 M148 346 H220" />
+    <path d="M262 340 H452 M262 346 H452" />
+    <path d="M380 346 V492 M386 346 V492" />
+  </g>
+  <!-- openings / doors -->
+  <g stroke-width="0.9">
+    <path d="M220 346 V388" />
+    <path d="M220 388 A42 42 0 0 0 262 346" stroke-dasharray="3 3" />
+    <path d="M300 300 H342" />
+    <path d="M342 300 A42 42 0 0 0 300 258" stroke-dasharray="3 3" />
+    <path d="M260 492 H300 M260 500 H300" stroke-width="2.6" stroke="#203f33" />
+    <path d="M260 500 V540" />
+    <path d="M260 540 A40 40 0 0 0 300 500" stroke-dasharray="3 3" />
+  </g>
+  <!-- windows -->
+  <g stroke-width="0.8">
+    <path d="M190 180 H260 M190 184 H260 M190 188 H260" />
+    <path d="M350 180 H420 M350 184 H420 M350 188 H420" />
+    <path d="M460 380 V460 M456 380 V460 M452 380 V460" />
+    <path d="M140 400 V460 M144 400 V460 M148 400 V460" />
+  </g>
+  <!-- stair -->
+  <g stroke-width="0.7">
+    <path d="M396 360 H446 V484 H396 Z" />
+    <path d="M396 376 H446 M396 392 H446 M396 408 H446 M396 424 H446 M396 440 H446 M396 456 H446 M396 472 H446" />
+    <path d="M421 478 V366 M415 374 L421 364 L427 374" />
+  </g>
+  <!-- fixtures -->
+  <g stroke-width="0.6" opacity="0.85">
+    <rect x="170" y="220" width="96" height="74" />
+    <path d="M170 236 H266" />
+    <rect x="330" y="214" width="104" height="22" />
+    <rect x="356" y="262" width="60" height="40" />
+    <rect x="176" y="400" width="130" height="50" />
+  </g>
+
+  <!-- dimension strings -->
+  <g stroke-width="0.6">
+    <path d="M140 132 H460" />
+    <path d="M134 138 L146 126 M294 138 L306 126 M454 138 L466 126" />
+    <path d="M100 180 V500" />
+    <path d="M94 186 L106 174 M94 346 L106 334 M94 506 L106 494" />
+  </g>
+  <g fill="#f3e7c8" stroke="none" font-size="10" letter-spacing="1" text-anchor="middle">
+    <text x="220" y="126">4.00</text>
+    <text x="380" y="126">4.00</text>
+    <text x="90" y="264" transform="rotate(-90 90 264)">4.00</text>
+    <text x="90" y="424" transform="rotate(-90 90 424)">4.00</text>
+  </g>
+  <g fill="#f3e7c8" stroke="none" font-size="9" letter-spacing="1.6" text-anchor="middle" opacity="0.9">
+    <text x="224" y="320">BEDROOM</text>
+    <text x="380" y="252">KITCHEN</text>
+    <text x="262" y="474">LIVING / DINING</text>
+    <text x="421" y="352">UP</text>
+  </g>
+
+  <!-- section marker -->
+  <g stroke-width="0.9">
+    <path d="M110 560 H170" stroke-dasharray="8 4" />
+    <circle cx="96" cy="560" r="11" />
+    <path d="M85 560 H107" />
+  </g>
+  <g fill="#f3e7c8" stroke="none" font-size="8" text-anchor="middle">
+    <text x="96" y="557">A</text>
+    <text x="96" y="568">A-301</text>
+  </g>
+
+  <!-- north arrow -->
+  <g stroke-width="0.9" transform="translate(510 620)">
+    <circle r="22" />
+    <path d="M0 -20 L8 14 L0 7 L-8 14 Z" fill="#f3e7c8" fill-opacity="0.6" />
+  </g>
+  <text x="510" y="586" fill="#f3e7c8" stroke="none" font-size="11" font-weight="500" text-anchor="middle">N</text>
+
+  <!-- title block -->
+  <g stroke-width="0.8">
+    <rect x="380" y="730" width="194" height="144" />
+    <path d="M380 770 H574 M380 806 H574 M380 840 H574 M478 806 V874" />
+  </g>
+  <g fill="#f3e7c8" stroke="none">
+    <text x="392" y="756" font-size="15" font-weight="700" letter-spacing="2">SAGACT.</text>
+    <text x="392" y="784" font-size="7" letter-spacing="1.4" opacity="0.7">PROJECT</text>
+    <text x="392" y="798" font-size="10" letter-spacing="1">RESIDENTIAL · FLOOR PLAN</text>
+    <text x="392" y="820" font-size="7" letter-spacing="1.4" opacity="0.7">SHEET NO.</text>
+    <text x="392" y="834" font-size="11" letter-spacing="1">A-101</text>
+    <text x="490" y="820" font-size="7" letter-spacing="1.4" opacity="0.7">SCALE</text>
+    <text x="490" y="834" font-size="11" letter-spacing="1">1 : 100</text>
+    <text x="392" y="856" font-size="7" letter-spacing="1.4" opacity="0.7">DRAWN</text>
+    <text x="392" y="868" font-size="9" letter-spacing="1">SAGACT STUDIO</text>
+    <text x="490" y="856" font-size="7" letter-spacing="1.4" opacity="0.7">DATE</text>
+    <text x="490" y="868" font-size="9" letter-spacing="1">2026</text>
+  </g>
+</svg>

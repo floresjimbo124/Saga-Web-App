@@ -27,6 +27,58 @@ afterEach(() => {
 })
 
 describe('createPaymentReceiptPdf', () => {
+  it('labels change-order receipts as change-order payments', async () => {
+    await createPaymentReceiptPdf({
+      projectName: 'Harbor Office',
+      payerName: 'Northwind Builders',
+      receiptNumber: 'SAL-0003',
+      amount: 426331,
+      receivedDate: '2026-10-13',
+      paymentType: 'change_order',
+      changeOrderLabel: 'SAL-CO-001 · Additional work',
+      paymentMode: 'bank_transfer',
+      reference: '',
+    })
+
+    expect(mocks.textCalls.some(([label, x, y]) => String(label).includes('SAL-CO-001 · Additional work') && x === 65 && y === 192)).toBe(true)
+    expect(mocks.textCalls.some(([label, x, y]) => String(label).includes('Change order payment') && x === 65 && y === 204)).toBe(true)
+  })
+
+  it('uses the allocated billing as the payment type without a separate allocation line', async () => {
+    await createPaymentReceiptPdf({
+      projectName: 'Project Test',
+      payerName: 'Erika Test',
+      receiptNumber: 'PRO-0002',
+      amount: 35_000,
+      receivedDate: '2026-10-14',
+      paymentType: 'progress',
+      billingAllocations: [{
+        billingNumber: '001',
+      }],
+      paymentMode: 'bank_transfer',
+      reference: '',
+    })
+
+    expect(mocks.textCalls.some(([label, x, y]) => label === 'Billing #001' && x === 65 && y === 204)).toBe(true)
+    expect(mocks.textCalls.some(([label]) => String(label).includes('Applied PHP'))).toBe(false)
+  })
+
+  it('lists all allocated billings in the payment type when a payment covers multiple bills', async () => {
+    await createPaymentReceiptPdf({
+      projectName: 'Project Test',
+      payerName: 'Erika Test',
+      receiptNumber: 'PRO-AR-0003',
+      amount: 50_000,
+      receivedDate: '2026-10-14',
+      paymentType: 'progress',
+      billingAllocations: [{ billingNumber: '001' }, { billingNumber: '002' }],
+      paymentMode: 'bank_transfer',
+      reference: '',
+    })
+
+    expect(mocks.textCalls.some(([label, x, y]) => label === 'Billing #001, Billing #002' && x === 65 && y === 204)).toBe(true)
+  })
+
   it('uses the current local date on the acknowledgement receipt', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-10-03T08:00:00'))
