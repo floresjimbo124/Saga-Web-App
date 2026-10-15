@@ -648,6 +648,7 @@ export async function updateProjectPayment(input: {
   paymentMode: PortfolioPayment['paymentMode']
   payerName: string
   reference?: string
+  contractId?: string | null
 }) {
   const { error } = await requireSupabase().rpc('update_project_payment', {
     p_payment_id: input.paymentId,
@@ -657,6 +658,7 @@ export async function updateProjectPayment(input: {
     p_payment_mode: input.paymentMode,
     p_payer_name: input.payerName.trim(),
     p_reference: input.reference?.trim() || null,
+    p_contract_id: input.paymentType === 'change_order' ? input.contractId ?? null : null,
   })
   throwIfError(error)
 }

@@ -16414,3 +16414,14 @@ button.task-calendar-item:focus-visible {
   height: 6px;
   border-radius: 50%;
 }
+
+.payment-move-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #ead9b8;
+  border-radius: 10px;
+  color: #6e5228;
+  background: #fdf8ee;
+  font-size: 12px;
+  line-height: 1.5;
+}

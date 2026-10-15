@@ -32,6 +32,9 @@ export function PaymentEntryDialog({ project, contractId, changeOrderLabel, chan
   const { showToast } = useToast()
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>(contractId ? `change_order:${contractId}` : 'progress')
   const [editedPaymentType, setEditedPaymentType] = useState<PaymentType>(payment?.paymentType ?? 'progress')
+  const [editedContractId, setEditedContractId] = useState<string>(payment?.paymentType === 'change_order' ? payment.contractId ?? '' : '')
+  const editedChoice = editedPaymentType === 'change_order' ? `change_order:${editedContractId}` : editedPaymentType
+  const movesContract = Boolean(payment) && (payment?.contractId ?? '') !== (editedPaymentType === 'change_order' ? editedContractId : '')
   const [amount, setAmount] = useState(payment?.amount.toFixed(2) ?? '')
   const [receivedDate, setReceivedDate] = useState(payment?.date.slice(0, 10) ?? localToday)
   const [paymentMode, setPaymentMode] = useState<PaymentMode>(payment?.paymentMode ?? 'bank_transfer')
@@ -140,7 +143,11 @@ export function PaymentEntryDialog({ project, contractId, changeOrderLabel, chan
       return
     }
     if (payment) {
-      const allocatedAmount = payment.billingAllocations.reduce((total, allocation) => total + allocation.amount, 0)
+      if (editedPaymentType === 'change_order' && !editedContractId) {
+        setError('Choose which approved change order this payment is for.')
+        return
+      }
+      const allocatedAmount = movesContract ? 0 : payment.billingAllocations.reduce((total, allocation) => total + allocation.amount, 0)
       if (amountValue < allocatedAmount) {
         setError(`Amount received cannot be less than the ${money.format(allocatedAmount)} already allocated to billings.`)
         return
@@ -156,6 +163,7 @@ export function PaymentEntryDialog({ project, contractId, changeOrderLabel, chan
           paymentMode,
           payerName,
           reference,
+          contractId: editedPaymentType === 'change_order' ? editedContractId : null,
         })
         showToast('Payment updated.', 'update')
         onSaved()
@@ -254,8 +262,17 @@ export function PaymentEntryDialog({ project, contractId, changeOrderLabel, chan
           </>}
         <label className="form-field">Amount received<MoneyInput id="payment-amount-received" min="0.01" step="0.01" value={amount} onChange={setAmount} placeholder="0.00" required /></label>
         {payment && <label className="form-field">Payment type<select
-          value={editedPaymentType}
-          onChange={(event) => setEditedPaymentType(event.target.value as PaymentType)}
+          value={editedChoice}
+          onChange={(event) => {
+            const value = event.target.value
+            if (value.startsWith('change_order:')) {
+              setEditedPaymentType('change_order')
+              setEditedContractId(value.slice('change_order:'.length))
+            } else {
+              setEditedPaymentType(value as PaymentType)
+              setEditedContractId('')
+            }
+          }}
           disabled={payment.paymentType === 'retention_release'}
         >
           {payment.paymentType === 'retention_release'
@@ -264,9 +281,13 @@ export function PaymentEntryDialog({ project, contractId, changeOrderLabel, chan
               <option value="down_payment">Down payment</option>
               <option value="progress">Progress payment</option>
               <option value="other">Other payment</option>
-              {payment.contractId && <option value="change_order">Change order payment</option>}
+              {(changeOrderContracts.length > 0 || (payment.paymentType === 'change_order' && payment.contractId)) && <optgroup label="Approved change orders">
+                {changeOrderContracts.map((contract) => <option key={contract.id} value={`change_order:${contract.id}`}>Change order · {contract.label}</option>)}
+                {payment.paymentType === 'change_order' && payment.contractId && !changeOrderContracts.some((contract) => contract.id === payment.contractId) && <option value={`change_order:${payment.contractId}`}>Change order payment</option>}
+              </optgroup>}
             </>}
         </select></label>}
+        {payment && movesContract && payment.billingAllocations.length > 0 && <p className="payment-move-note" role="note">This payment is currently applied to {payment.billingAllocations.length === 1 ? 'a billing' : `${payment.billingAllocations.length} billings`} under its old type. Saving will remove {payment.billingAllocations.length === 1 ? 'that allocation' : 'those allocations'} so the payment counts toward the new type instead.</p>}
         {!payment && selectedBilling && <fieldset className="payment-single-billing">
           <legend>Payment for</legend>
           <div className="payment-single-billing-summary">

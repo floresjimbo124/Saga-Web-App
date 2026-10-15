@@ -531,6 +531,7 @@ describe('portfolio data access', () => {
       p_payment_mode: 'cash',
       p_payer_name: 'Salo Hospitality',
       p_reference: 'CASH-104',
+      p_contract_id: null,
     })
   })
 
