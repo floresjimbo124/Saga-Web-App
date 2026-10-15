@@ -16,7 +16,6 @@
 .pr-stats strong { color: #1f3a2c; font-size: 18px; font-variant-numeric: tabular-nums; }
 .pr-stats .is-net { border-color: #c9d8c7; background: #f1f6ef; }
 .pr-empty { display: grid; justify-items: center; gap: 6px; padding: 28px 16px; border: 1px dashed #d5dcd2; border-radius: 8px; text-align: center; }
-.pr-empty-icon { display: inline-grid; place-items: center; width: 44px; height: 44px; margin-bottom: 4px; border-radius: 50%; background: #eef3ec; color: #2c5a41; }
 .pr-empty strong { color: #1f3a2c; font-size: 14px; }
 .pr-empty p { margin: 0 0 8px; color: #768578; font-size: 13px; }
 .pr-finalize { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 14px; border-top: 1px solid #e2e5df; }

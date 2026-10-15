@@ -1,8 +1,4 @@
 /* Project detail summary (matches home card) */
-.client-progress-band.client-detail-summary {
-  display: grid;
-  gap: 14px;
-}
 
 /* Change order approval card */
 .client-approval-card {
@@ -103,21 +99,6 @@
   gap: 14px;
 }
 
-.client-journey-marker {
-  position: relative;
-  z-index: 1;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: 3px solid var(--surface);
-  border-radius: 50%;
-  color: #fff;
-  background: #648467;
-  font-size: 11px;
-  font-weight: 600;
-}
-
 .client-journey-body {
   display: grid;
   gap: 4px;
@@ -210,10 +191,6 @@
     display: none;
   }
 
-  .client-detail-summary .client-project-home-stats > span:first-child strong {
-    font-size: 15px;
-  }
-
   .client-journey-body {
     padding: 10px;
   }
@@ -257,14 +234,6 @@
   margin-top: 4px;
   color: rgba(255, 255, 255, 0.88);
   font-size: 13px;
-}
-
-.client-project-detail-overlay > .client-project-status {
-  flex: 0 0 auto;
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #fff;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(6px);
 }
 
 /* Sticky tabs with badges */
@@ -708,12 +677,6 @@
   background: linear-gradient(180deg, #648467 0%, #dfe6dc 100%);
 }
 
-.client-journey-marker {
-  border-width: 4px;
-  border-color: var(--paper);
-  box-shadow: 0 0 0 1px #d5ddd2;
-}
-
 .client-journey-body {
   overflow: hidden;
   padding: 0;
@@ -963,43 +926,6 @@
 }
 
 /* ===== Client tabs redesign ===== */
-.client-tab-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.client-tab-summary > span {
-  display: grid;
-  gap: 4px;
-  padding: 16px 18px;
-  border: 1px solid #e9e7dd;
-  border-radius: 14px;
-  background: #fffefa;
-  box-shadow: 0 1px 2px rgba(28, 56, 46, 0.04), 0 6px 18px rgba(28, 56, 46, 0.05);
-}
-
-.client-tab-summary small {
-  color: #858e84;
-  font-size: 11px;
-}
-
-.client-tab-summary strong {
-  color: var(--forest-deep);
-  font-family: var(--display);
-  font-size: 22px;
-  font-weight: 500;
-}
-
-.client-tab-summary > span.is-due {
-  border-color: #ead9b8;
-  background: #fbf5e8;
-}
-
-.client-tab-summary > span.is-due strong {
-  color: #6e5228;
-}
 
 .client-portal-section {
   border-color: #e9e7dd;
@@ -1165,23 +1091,6 @@
 }
 
 @media (max-width: 680px) {
-  .client-tab-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin: 0 15px 14px;
-  }
-
-  .client-tab-summary > span:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .client-tab-summary > span {
-    padding: 12px 14px;
-  }
-
-  .client-tab-summary strong {
-    font-size: 18px;
-  }
 
   .client-change-order-cards .client-change-order-row {
     grid-template-columns: minmax(0, 1fr) auto;

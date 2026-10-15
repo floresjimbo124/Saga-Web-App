@@ -6,9 +6,7 @@
 .section-kicker { font-size: 11px; }
 .eyebrow,
 .detail-eyebrow { font-size: 11px; }
-.eyebrow-date { font-size: 11px; }
 .nav-item { font-size: 14px; }
-.workspace-state { font-size: 12px; }
 .owner-profile strong { font-size: 12px; }
 .owner-profile span { font-size: 11px; }
 .breadcrumbs { font-size: 12px; }
@@ -39,41 +37,18 @@
 .progress-value { font-size: 11px; }
 .status-badge { font-size: 11px; }
 .table-footer { font-size: 11px; }
-.cashflow-total > strong { font-size: 21px; }
-.cashflow-total > small { font-size: 11px; }
 .positive-chip,
 .activity-amount { font-size: 11px; }
-.chart-axis { font-size: 10px; }
-.activity-foot { font-size: 11px; }
 .page-footer { font-size: 11px; }
-.back-link { font-size: 12px; }
 .tab { font-size: 12px; }
 .progress-caption { font-size: 11px; }
 .milestone-callout small { font-size: 11px; }
 .milestone-callout strong { font-size: 12px; }
-.receivable-card h2 { font-size: 16px; }
-.receivable-line { font-size: 11px; }
-.retention-explainer { font-size: 11px; }
-.demo-tag { font-size: 10px; }
-.simple-table-head { font-size: 11px; }
-.simple-table-row,
-.simple-table-row strong { font-size: 11px; }
 .calculation-note { font-size: 11px; }
-.document-placeholder strong { font-size: 11px; }
-.document-placeholder small { font-size: 11px; }
-.portal-preview-pill { font-size: 11px; }
-.portal-project h2 { font-size: 19px; }
-.portal-progress-label,
-.portal-milestone { font-size: 11px; }
-.portal-statement-lines > div { font-size: 11px; }
-.portal-statement-lines strong { font-size: 11px; }
 .modal-intro { font-size: 12px; }
 .form-field { font-size: 11px; }
 .form-field input,
 .form-field select { font-size: 12px; }
-.prefix-preview > span { font-size: 11px; }
-.prefix-preview strong { font-size: 12px; }
-.prefix-preview small { font-size: 11px; }
 .empty-state { font-size: 12px; }
 
 @media (max-width: 640px) {
@@ -83,16 +58,12 @@
   .metric-top { font-size: 11px; }
   .metric-value { font-size: 18px; }
   .page-footer { font-size: 11px; }
-  .portal-statement-lines > div { font-size: 11px; }
 }
 
 .metric-value { font-size: 24px; }
 .money-cell,
 .progress-value,
 .activity-amount { font-size: 12px; }
-.cashflow-total > strong { font-size: 25px; }
-.receivable-total { font-size: 30px; }
-.large-progress { font-size: 32px; }
 .progress-caption strong,
 .portal-progress-label strong,
 .portal-statement-lines strong,
@@ -117,9 +88,7 @@ body { font-size: 16px; }
 .section-kicker,
 .eyebrow,
 .detail-eyebrow { font-size: 12px; }
-.eyebrow-date { font-size: 11px; }
 .nav-item { font-size: 15px; }
-.workspace-state { font-size: 13px; }
 .owner-profile strong,
 .breadcrumbs { font-size: 13px; }
 .owner-profile span { font-size: 12px; }
@@ -153,11 +122,6 @@ body { font-size: 16px; }
 .activity-amount { font-size: 14px; }
 .status-badge { font-size: 12px; }
 .table-footer { font-size: 12px; }
-.cashflow-total > strong { font-size: 27px; }
-.cashflow-total > small,
-.positive-chip { font-size: 12px; }
-.chart-axis,
-.activity-foot { font-size: 11px; }
 .page-footer { font-size: 11px; }
 .back-link,
 .tab { font-size: 13px; }
@@ -168,49 +132,17 @@ body { font-size: 16px; }
 .simple-table-row strong { font-size: 14px; }
 .milestone-callout small { font-size: 11px; }
 .milestone-callout strong { font-size: 13px; }
-.receivable-card h2 { font-size: 18px; }
-.receivable-line { font-size: 13px; }
 .retention-explainer,
 .calculation-note { font-size: 12px; }
-.demo-tag,
-.simple-table-row { font-size: 12px; }
-.simple-table-head { font-size: 11px; }
-.document-placeholder strong { font-size: 13px; }
-.document-placeholder small { font-size: 12px; }
-.portal-preview-pill,
-.portal-progress-label,
-.portal-milestone { font-size: 12px; }
-.portal-project h2 { font-size: 21px; }
-.portal-statement-lines > div { font-size: 13px; }
 .modal-intro { font-size: 13px; }
 .form-field { font-size: 12px; }
 .form-field input,
 .form-field select { font-size: 14px; }
-.prefix-preview > span { font-size: 11px; }
-.prefix-preview strong { font-size: 13px; }
-.prefix-preview small { font-size: 11px; }
 .empty-state { font-size: 13px; }
-.billing-calculation > div { font-size: 14px; }
-.billing-calculation strong { font-size: 15px; }
-.billing-calculation-total strong { font-size: 19px; }
 
 .detail-metrics {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
-}
-
-.detail-financial-metrics {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.detail-financial-content {
-  display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(150px, 1fr);
-  gap: 14px;
-}
-
-.detail-financial-risk {
-  min-width: 0;
 }
 
 .detail-metrics .metric-card {
@@ -239,11 +171,6 @@ body { font-size: 16px; }
 
 .detail-metrics .metric-card > small {
   font-size: 11px;
-}
-
-.detail-financial-metrics .metric-card > small {
-  white-space: normal;
-  line-height: 1.4;
 }
 
 .risk-text-red { color: #a34242 !important; }
@@ -291,17 +218,6 @@ body { font-size: 16px; }
   margin-bottom: 21px;
 }
 
-.detail-heading-main {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 22px;
-}
-
-.detail-heading-copy {
-  min-width: 0;
-}
-
 .detail-breadcrumb {
   display: inline-flex;
   align-items: center;
@@ -339,10 +255,6 @@ body { font-size: 16px; }
   outline-offset: 2px;
 }
 
-.detail-title-row {
-  align-items: flex-start;
-}
-
 .detail-heading h1 {
   margin: 5px 0 3px;
   font-size: clamp(29px, 3vw, 38px);
@@ -351,129 +263,6 @@ body { font-size: 16px; }
 
 .detail-heading p {
   margin: 0;
-}
-
-.detail-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.detail-eyebrow .eyebrow-date {
-  overflow: hidden;
-  max-width: min(45vw, 420px);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.detail-status-row {
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 10px;
-}
-
-.project-state-pill {
-  position: relative;
-  box-sizing: border-box;
-  flex: 0 0 auto;
-  min-height: 32px;
-  min-width: 0;
-  width: max-content;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  padding: 0 12px 0 10px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font-size: 13px;
-}
-
-.project-state-pill::after {
-  width: 0;
-  height: 0;
-  margin-left: 1px;
-  border-top: 4px solid currentColor;
-  border-right: 3px solid transparent;
-  border-left: 3px solid transparent;
-  content: '';
-  pointer-events: none;
-}
-
-.project-state-pill select {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  appearance: none;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.project-state-pill select:disabled {
-  cursor: progress;
-}
-
-.project-state-dot {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 8px;
-  border-radius: 50%;
-  background: currentColor;
-  pointer-events: none;
-}
-
-.project-state-value {
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.project-state-pill select {
-  min-width: 0;
-}
-
-.state-planning { border-color: #dce3e1; color: #677a78; background: #fffdf8; }
-.state-active,
-.state-completed { border-color: #d8e7d8; color: #547955; background: #f0f6ee; }
-.state-on-hold { border-color: #ecdcbc; color: #99783d; background: #faf4e7; }
-.state-closed { border-color: #e1e3df; color: #777e77; background: #f3f3ef; }
-
-.detail-status-row > .status-badge {
-  min-height: 32px;
-  gap: 7px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.detail-status-row > .status-badge.deadline-due-soon {
-  border-color: #d9aa5b;
-  color: #76551c;
-  background: #fff2d6;
-}
-
-.detail-status-row > .status-badge.deadline-overdue {
-  border-color: #d78780;
-  color: #8e302c;
-  background: #ffebe8;
-}
-
-.detail-status-row > .status-badge.deadline-on-track {
-  border-color: #9eb99e;
-  color: #3e6945;
-  background: #edf5e9;
-}
-
-.detail-status-row > .status-badge.deadline-none,
-.detail-status-row > .status-badge.deadline-completed {
-  border-color: #c9cec5;
-  color: #586459;
-  background: #f3f4ef;
 }
 
 .detail-actions {
@@ -497,11 +286,6 @@ body { font-size: 16px; }
   box-shadow: 0 2px 8px rgba(32, 53, 39, 0.025);
 }
 
-.detail-content-grid {
-  gap: 14px;
-  margin-top: 16px;
-}
-
 .detail-activity-card .payment-detail-row {
   border-bottom-color: #efeee7;
 }
@@ -511,18 +295,6 @@ body { font-size: 16px; }
 }
 
 @media (max-width: 900px) {
-  .detail-financial-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .detail-financial-content {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .detail-heading-main {
-    flex-direction: column;
-    gap: 13px;
-  }
 
   .detail-actions {
     padding-top: 0;
@@ -552,30 +324,12 @@ body { font-size: 16px; }
   .payroll-page {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  .payroll-finalize-action {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .payroll-finalize-buttons {
-    width: 100%;
-  }
-
-  .payroll-finalize-buttons > .button {
-    flex: 1;
-    justify-content: center;
-  }
 }
 
 @media (max-width: 640px) {
   .detail-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 9px;
-  }
-
-  .detail-financial-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .detail-metrics .metric-card {
@@ -597,32 +351,6 @@ body { font-size: 16px; }
 
   .project-risk-callout button {
     margin-left: 27px;
-  }
-
-  .detail-eyebrow .eyebrow-date {
-    max-width: 55vw;
-  }
-
-  .detail-heading-main {
-    width: 100%;
-  }
-
-  .detail-status-row {
-    display: grid;
-    grid-template-columns: max-content max-content;
-    align-items: center;
-    justify-content: start;
-    width: fit-content;
-    gap: 7px;
-  }
-
-  .detail-status-row > .status-badge {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
-
-  .project-state-pill {
-    flex: 0 0 auto;
   }
 
   .detail-actions {
@@ -656,7 +384,6 @@ body { font-size: 16px; }
   .progress-value,
   .activity-amount { font-size: 13px; }
   .page-footer { font-size: 11px; }
-  .portal-statement-lines > div { font-size: 12px; }
 }
 
 @media (max-width: 360px) {

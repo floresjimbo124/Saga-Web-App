@@ -105,82 +105,13 @@
     line-height: 1.35;
   }
 
-  .detail-financial-section .detail-financial-risk .metric-card {
-    min-height: 0;
-    min-width: 0;
-    display: grid;
-    grid-template-areas:
-      "icon label value"
-      "icon foot foot";
-    grid-template-columns: 48px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 5px 10px;
-    padding: 10px 12px;
-  }
-
-  .detail-financial-section .detail-financial-risk .metric-top {
-    display: contents;
-  }
-
-  .detail-financial-section .detail-financial-risk .metric-icon {
-    grid-area: icon;
-    width: 44px;
-    height: 52px;
-    align-self: stretch;
-    justify-self: start;
-    flex: 0 0 44px;
-  }
-
-  .detail-financial-section .detail-financial-risk .metric-icon svg {
-    width: 27px;
-    height: 27px;
-  }
-
-  .detail-financial-section .detail-financial-risk .metric-top > span:last-child {
-    grid-area: label;
-    min-width: 0;
-    font-size: 11px;
-  }
-
-  .detail-financial-section .detail-financial-risk .metric-value {
-    grid-area: value;
-    align-self: center;
-    justify-self: end;
-    margin: 0;
-    padding: 0;
-    font-size: 16px;
-    line-height: 1.2;
-  }
-
-  .detail-financial-section .detail-financial-risk .metric-card > small {
-    grid-area: foot;
-    min-width: 0;
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-size: 11px;
-    line-height: 1.4;
-  }
-
   .detail-financial-section {
     display: flex;
     flex-direction: column;
   }
 
-  .detail-financial-content {
-    display: contents;
-  }
-
-  .detail-financial-risk {
-    order: -1;
-    margin-bottom: 9px;
-  }
-
   .detail-financial-heading {
     order: 0;
-  }
-
-  .detail-financial-metrics {
-    order: 1;
   }
 
   .detail-supporting-grid {
@@ -443,10 +374,6 @@
   font-size: 13px;
 }
 
-.project-detail-title-row .project-state-pill {
-  margin-top: 2px;
-}
-
 .project-detail-summary-row {
   display: flex;
   align-items: center;
@@ -548,30 +475,6 @@
 }
 
 @media (max-width: 640px) {
-  .project-detail-title-row .project-state-pill select,
-  .project-detail-summary-row .project-state-pill select {
-    z-index: 2;
-    width: 100%;
-    min-height: inherit;
-    border: 0;
-    border-radius: inherit;
-    appearance: none;
-    opacity: 0;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .project-detail-title-row .project-state-pill select option,
-  .project-detail-summary-row .project-state-pill select option {
-    color: #405345;
-    background: #fffefa;
-  }
-
-  .project-detail-title-row .project-state-pill select:focus-visible,
-  .project-detail-summary-row .project-state-pill select:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
-  }
 
   .detail-heading {
     gap: 0;
@@ -672,27 +575,8 @@
     font-size: 11px;
   }
 
-  .project-detail-title-row .project-state-pill {
-    min-height: 30px;
-    gap: 5px;
-    padding-right: 8px;
-    padding-left: 8px;
-    font-size: 11px;
-  }
-
-  .project-detail-title-row .project-state-dot {
-    width: 6px;
-    height: 6px;
-    flex-basis: 6px;
-  }
-
   .project-detail-summary-row {
     gap: 6px;
-  }
-
-  .project-detail-summary-row .project-state-pill {
-    min-height: 28px;
-    font-size: 11px;
   }
 
   .project-deadline-status {

@@ -19,28 +19,6 @@
   font-size: 11px;
 }
 
-.client-portal-client-name {
-  font-family: var(--heading);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.client-sign-out {
-  gap: 7px;
-  padding: 7px 9px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  color: #536458;
-  background: transparent;
-  font-family: var(--heading);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.client-sign-out:hover {
-  background: #f4f2eb;
-}
-
 .client-portal-content {
   width: min(100%, 1160px);
   margin: 0 auto;
@@ -88,12 +66,6 @@
     display: none;
   }
 
-  .client-portal-topbar .client-portal-client-name,
-  .client-portal-topbar.has-project .client-portal-client-name {
-    display: block;
-    color: #536458;
-  }
-
   .client-portal-topbar .client-portal-topbar-right,
   .client-portal-topbar.has-project .client-portal-topbar-right {
     color: #748176;
@@ -107,17 +79,6 @@
   .client-portal-topbar .notification-button > svg,
   .client-portal-topbar.has-project .notification-button > svg {
     color: inherit;
-  }
-
-  .client-portal-topbar .client-sign-out,
-  .client-portal-topbar.has-project .client-sign-out {
-    border-color: var(--line);
-    color: #536458;
-  }
-
-  .client-portal-topbar .client-sign-out:hover,
-  .client-portal-topbar.has-project .client-sign-out:hover {
-    background: #f4f2eb;
   }
 
   .client-portal-content {
@@ -234,17 +195,6 @@
   min-width: 0;
 }
 
-.client-project-home-icon {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  flex: 0 0 38px;
-  place-items: center;
-  border-radius: 7px;
-  color: #52745a;
-  background: #edf2ea;
-}
-
 .client-project-home-copy {
   display: grid;
   flex: 1;
@@ -327,13 +277,6 @@
   position: relative;
   display: grid;
   min-width: 0;
-}
-
-.client-project-home-media > .client-project-status {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  box-shadow: 0 2px 8px rgba(27, 57, 44, 0.12);
 }
 
 .client-project-home-body {
@@ -547,33 +490,6 @@
   }
 }
 
-.client-project-home-footer {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 10px;
-  align-items: center;
-  padding-top: 10px;
-  border-top: 1px solid #efeee7;
-}
-
-.client-project-home-footer > small {
-  color: #858e84;
-  font-size: 11px;
-}
-
-.client-project-home-footer > strong {
-  color: #425b48;
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 600;
-  text-align: right;
-}
-
-.client-project-home-footer > small:last-child {
-  grid-column: 1 / -1;
-  margin-top: 2px;
-}
-
 .client-projects-back {
   display: inline-flex;
   align-items: center;
@@ -601,11 +517,6 @@
   font-size: 11px;
 }
 
-.client-portal-eyebrow > span:last-child {
-  margin-left: 5px;
-  color: #92998f;
-}
-
 .client-project-switcher {
   display: flex;
   gap: 5px;
@@ -631,14 +542,6 @@
   border-bottom-color: var(--gold);
   color: var(--forest);
   font-weight: 600;
-}
-
-.client-project-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  margin-top: 0;
 }
 
 .client-project-detail-hero {
@@ -674,119 +577,9 @@
   font-weight: 600;
 }
 
-.client-project-detail-body {
-  display: grid;
-  gap: 14px;
-  padding: 18px 20px 20px;
-}
-
-.client-project-heading h1 {
-  margin: 6px 0 0;
-  color: var(--forest-deep);
-  font-size: 32px;
-  font-weight: 600;
-}
-
 .client-project-location {
   font-family: var(--heading);
   font-size: 12px;
-}
-
-.client-project-status {
-  padding: 5px 8px;
-  border: 1px solid #dfe6db;
-  border-radius: 4px;
-  color: #557459;
-  background: #f1f5ee;
-  font-size: 11px;
-  text-transform: capitalize;
-}
-
-.client-progress-band {
-  margin-top: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.client-progress-heading,
-.client-progress-summary {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 15px;
-}
-
-.client-progress-heading > div {
-  display: grid;
-  gap: 5px;
-}
-
-.client-progress-heading strong {
-  color: var(--forest);
-  font-size: 26px;
-  font-weight: 600;
-}
-
-.client-progress-heading > span {
-  color: #8a9289;
-  font-size: 11px;
-}
-
-.client-progress-track {
-  height: 7px;
-  overflow: hidden;
-  margin-top: 14px;
-  border-radius: 5px;
-  background: #e9e9df;
-}
-
-.client-progress-track span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: #648467;
-}
-
-.client-progress-summary {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: start;
-  margin-top: 15px;
-  color: #7b867d;
-  font-size: 13px;
-}
-
-.client-progress-summary > span {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.client-progress-summary strong {
-  color: #425b48;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.client-progress-summary > span > small {
-  color: #858e84;
-  font-size: 11px;
-}
-
-.client-progress-summary .client-progress-balance {
-  align-items: flex-end;
-  color: var(--forest-deep);
-  font-weight: 600;
-  text-align: right;
-}
-
-.client-progress-summary .client-progress-balance strong {
-  color: var(--forest-deep);
-  font-size: 18px;
-  font-weight: 700;
-  overflow-wrap: anywhere;
 }
 
 .task-card h3.is-complete {

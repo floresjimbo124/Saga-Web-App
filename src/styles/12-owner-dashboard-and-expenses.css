@@ -26,70 +26,6 @@
 }
 
 /* Action strip */
-.dashboard-action-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.dashboard-action {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid #e9e7dd;
-  border-radius: 12px;
-  color: var(--forest-deep);
-  background: #fffefa;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 140ms ease, box-shadow 140ms ease;
-}
-
-.dashboard-action:hover {
-  box-shadow: 0 6px 18px rgba(28, 56, 46, 0.08);
-}
-
-.dashboard-action > span:nth-child(2) {
-  display: grid;
-  flex: 1;
-  gap: 2px;
-  min-width: 0;
-}
-
-.dashboard-action strong {
-  font-size: 13px;
-}
-
-.dashboard-action small {
-  overflow: hidden;
-  color: #7b867d;
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dashboard-action > svg {
-  flex: 0 0 auto;
-  color: #9aa39a;
-}
-
-.dashboard-action-icon {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  flex: 0 0 32px;
-  place-items: center;
-  border-radius: 9px;
-}
-
-.dashboard-action.is-danger { border-color: #efc4bc; background: #fdf3f1; }
-.dashboard-action.is-danger .dashboard-action-icon { color: #a3412f; background: #fbe1db; }
-.dashboard-action.is-warning { border-color: #ead9b8; background: #fdf8ee; }
-.dashboard-action.is-warning .dashboard-action-icon { color: #8a6430; background: #f6ebd3; }
-.dashboard-action.is-info .dashboard-action-icon { color: #315f83; background: #e6f0f8; }
 
 /* KPI cards: softer, receivables emphasised */
 .desktop-portfolio-metrics .metric-card {
@@ -131,16 +67,6 @@
 }
 
 /* Cash-in empty state comparison */
-.chart-empty-compare {
-  display: block;
-  margin-top: 6px;
-  color: #7b867d;
-  font-size: 12px;
-}
-
-.chart-empty-compare strong {
-  color: var(--forest-deep);
-}
 
 /* Deadline cell: badge + date on one line */
 .project-deadline {
@@ -480,13 +406,6 @@
   gap: 6px;
 }
 
-.expense-register-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
 .expense-missing-filter {
   padding: 4px 10px;
   border: 1px solid #ead9b8;
@@ -580,15 +499,6 @@
 .project-table-head > span:first-child,
 .project-row > .project-name-cell {
   box-shadow: none;
-}
-
-.net-cash-empty {
-  color: #a0a79e;
-  font-weight: 400;
-}
-
-.net-cash-empty small {
-  font-size: 11px;
 }
 
 /* Cash card: align the three amounts on one baseline */
@@ -818,26 +728,6 @@
   font-size: 11px;
 }
 
-.project-profit-setup {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.project-profit-setup button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border: 1px dashed #d8c08f;
-  border-radius: 10px;
-  color: #8a6430;
-  background: #fdf8ee;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .project-risk {
   display: flex;
   flex-wrap: wrap;
@@ -877,11 +767,6 @@
 .project-profit-lines > div.is-total {
   margin-top: 4px;
   padding-top: 14px;
-}
-
-.project-profit-setup {
-  padding-top: 14px;
-  border-top: 1px solid #efeee7;
 }
 
 @media (max-width: 680px) {
