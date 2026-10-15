@@ -15986,3 +15986,431 @@ button.task-calendar-item:focus-visible {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Profit card: proper card frame + spacing */
+.surface-card.project-profit-card {
+  margin-top: 16px;
+  padding: 22px 24px;
+  border: 1px solid #e9e7dd;
+  border-radius: 14px;
+  background: #fffefa;
+  box-shadow: 0 1px 2px rgba(28, 56, 46, 0.04), 0 6px 18px rgba(28, 56, 46, 0.04);
+}
+
+.project-profit-card .card-heading-row {
+  align-items: flex-start;
+}
+
+.project-profit-card .section-kicker {
+  margin-bottom: 4px;
+}
+
+.project-profit-lines > div.is-total {
+  margin-top: 4px;
+  padding-top: 14px;
+}
+
+.project-profit-setup {
+  padding-top: 14px;
+  border-top: 1px solid #efeee7;
+}
+
+@media (max-width: 680px) {
+  .surface-card.project-profit-card {
+    padding: 18px 16px;
+  }
+}
+
+/* ===== Calmer owner dashboard ===== */
+/* 1. Four quieter KPI cards, receivables emphasised */
+.desktop-portfolio-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.desktop-portfolio-metrics .metric-value {
+  font-size: 22px;
+}
+
+.desktop-portfolio-metrics .metric-card.metric-gold .metric-value {
+  font-size: 28px;
+}
+
+.desktop-portfolio-metrics .metric-top {
+  font-size: 12px;
+}
+
+/* 2. Alert pills under the greeting */
+.dashboard-action-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -6px 0 18px;
+}
+
+.dashboard-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border: 1px solid #e6e4d9;
+  border-radius: 999px;
+  color: var(--forest-deep);
+  background: #fffefa;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.dashboard-action-pill:hover {
+  border-color: #c9d3c6;
+  background: #f4f6ef;
+}
+
+.dashboard-action-pill > i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #6f8fa8;
+}
+
+.dashboard-action-pill.is-danger > i { background: #c0533f; }
+.dashboard-action-pill.is-warning > i { background: #c98a2e; }
+
+.dashboard-action-pill > strong {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dashboard-action-pill > span {
+  overflow: hidden;
+  color: #7b867d;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-action-pill > svg {
+  flex: 0 0 auto;
+  color: #9aa39a;
+}
+
+/* 3. Slim projects table: 7 columns */
+@media (min-width: 681px) {
+  .project-table-head,
+  .project-row {
+    min-width: 860px;
+    grid-template-columns: minmax(220px, 2fr) minmax(130px, 1.1fr) minmax(170px, 1.3fr) minmax(130px, 1fr) minmax(110px, 0.9fr) minmax(130px, 1fr) 24px;
+    column-gap: 16px;
+    padding: 0 18px;
+  }
+
+  .project-row {
+    min-height: 70px;
+  }
+
+  .project-table-head {
+    height: 40px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+
+  .project-row > .project-contract {
+    display: none;
+  }
+}
+
+.project-billing-cell {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.project-billing-cell > span:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.project-billing-cell strong {
+  color: #344b3b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.project-billing-cell small {
+  color: #8a948b;
+  font-size: 11px;
+}
+
+.project-billing-track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #e9e9df;
+}
+
+.project-billing-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #b8925a;
+}
+
+.project-status {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+}
+
+.project-attention {
+  color: #a3412f;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ===== Owner sidebar: aligned brand, grouped nav, counts ===== */
+@media (min-width: 681px) {
+  .sidebar {
+    padding-top: 0;
+  }
+
+  .sidebar > .brand-lockup {
+    min-height: 64px;
+    margin: 0 -16px;
+    padding: 0 19px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .topbar {
+    min-height: 64px;
+  }
+}
+
+.sidebar > .primary-nav.grouped-nav {
+  gap: 3px;
+  margin-top: 14px;
+}
+
+.nav-group-label {
+  margin: 14px 0 6px;
+  padding: 0 11px;
+  color: rgba(232, 201, 138, 0.85);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.nav-group-label:first-child {
+  margin-top: 4px;
+}
+
+.nav-item > span {
+  flex: 1;
+  text-align: left;
+}
+
+.nav-count {
+  min-width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: var(--forest-deep);
+  background: #e8c98a;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.nav-count.is-warning {
+  color: #fff;
+  background: #b5442f;
+}
+
+/* ===== All expenses page ===== */
+.all-expenses-heading {
+  margin-bottom: 18px;
+}
+
+.all-expenses-heading .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.all-expenses-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.all-expenses-summary > span,
+.all-expenses-missing {
+  display: grid;
+  gap: 3px;
+  padding: 16px 18px;
+  border: 1px solid #e9e7dd;
+  border-radius: 14px;
+  color: inherit;
+  background: #fffefa;
+  text-align: left;
+}
+
+.all-expenses-summary small {
+  color: #858e84;
+  font-size: 11px;
+}
+
+.all-expenses-summary strong {
+  color: var(--forest-deep);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.all-expenses-summary em {
+  color: #7b867d;
+  font-size: 11px;
+  font-style: normal;
+}
+
+.all-expenses-missing {
+  border-color: #ead9b8;
+  background: #fdf8ee;
+  cursor: pointer;
+}
+
+.all-expenses-missing strong {
+  color: #8a6430;
+}
+
+.all-expenses-missing.is-active {
+  border-color: #8a6430;
+  box-shadow: 0 0 0 1px #8a6430;
+}
+
+.all-expenses-missing.is-clear {
+  border-color: #e9e7dd;
+  background: #fffefa;
+  cursor: default;
+}
+
+.all-expenses-missing.is-clear strong {
+  color: #3f6948;
+}
+
+.all-expenses-filters {
+  margin-bottom: 12px;
+}
+
+.all-expenses-list {
+  padding: 8px 18px;
+  border-radius: 14px;
+}
+
+.all-expenses-row {
+  display: grid;
+  gap: 2px;
+  padding-top: 10px;
+}
+
+.all-expenses-row + .all-expenses-row {
+  border-top: 1px solid #efeee7;
+}
+
+.all-expenses-project {
+  color: #a6803f;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.all-expenses-row .expense-row {
+  border-bottom: 0;
+}
+
+@media (max-width: 680px) {
+  .all-expenses-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .all-expenses-missing {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ===== Dashboard design pass 2 ===== */
+/* 1. Smaller greeting so the numbers lead */
+.portfolio-welcome h1 {
+  font-size: 30px;
+}
+
+.portfolio-welcome p {
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+/* 2. Projected-profit prompt card */
+.metric-card.metric-prompt {
+  border-style: dashed;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.metric-card.metric-prompt:hover {
+  border-color: #b9c9bb;
+  box-shadow: 0 6px 18px rgba(28, 56, 46, 0.08);
+}
+
+.metric-card.metric-prompt .metric-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #3f6948;
+  font-size: 18px;
+}
+
+/* 4. Over-collected billing */
+.project-billing-cell.is-over .project-billing-track > span {
+  background: #4f8a5b;
+}
+
+.project-billing-advance {
+  color: #3f6948;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* 6. Shorter cash chart */
+.six-month-chart {
+  height: 120px;
+}
+
+/* 7. Muted empty expenses */
+.cashflow-summary strong.is-muted {
+  color: #a0a79e;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* 9. Softer borderless status pills */
+.status-badge {
+  min-height: 22px;
+  padding: 0 9px;
+  border-color: transparent !important;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.status-badge > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}

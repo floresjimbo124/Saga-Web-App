@@ -16,7 +16,6 @@ import {
   Search,
   TrendingUp,
   X,
-  WalletCards,
 } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
@@ -27,7 +26,7 @@ import { calculateProjectFinance } from '../finance/project-finance'
 import { calculateProfitRisk } from '../finance/profit-risk'
 import { calculateCostPace } from '../finance/cost-pace'
 import { getProjectDeadlineStatus } from '../finance/project-deadline'
-import { HealthBadge, Metric, ProjectDeadlineBadge, ProfitRiskBadge, StatusBadge } from './ProjectStatusBadges'
+import { Metric, ProjectDeadlineBadge, ProfitRiskBadge, StatusBadge } from './ProjectStatusBadges'
 import { ReceivablesAgingPanel } from './ReceivablesAgingPanel'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
@@ -418,30 +417,28 @@ export function PortfolioOverview({
       })}</div> : <p className="mobile-recent-activity-empty">No recent activity yet.</p>}
     </section>
     {loadError && <div className="sample-banner" role="alert"><CircleAlert size={15} /><span><strong>Could not load SAGACT data.</strong> {loadError}</span><button className="text-button" onClick={refreshWorkspace}>Retry</button></div>}
-    {actionItems.length > 0 && <section className="dashboard-action-strip" aria-label="Needs your attention">
-      {actionItems.map((item) => <button type="button" key={item.key} className={`dashboard-action is-${item.tone}`} onClick={item.onClick}>
-        <span className="dashboard-action-icon"><CircleAlert size={15} /></span>
-        <span><strong>{item.label}</strong><small>{item.detail}</small></span>
-        <ArrowRight size={14} />
+    {actionItems.length > 0 && <section className="dashboard-action-pills" aria-label="Needs your attention">
+      {actionItems.map((item) => <button type="button" key={item.key} className={`dashboard-action-pill is-${item.tone}`} onClick={item.onClick} title={item.detail}>
+        <i aria-hidden="true" /><strong>{item.label}</strong><span>{item.detail}</span><ArrowRight size={12} />
       </button>)}
     </section>}
     <section className="metric-grid desktop-portfolio-metrics" aria-label="Portfolio totals">
       <Metric icon={<FileText size={16} />} label="Total billed" value={money.format(billed)} foot="Incl. approved change orders" tone="green" />
       <Metric icon={<ArrowDownLeft size={16} />} label="Collected" value={money.format(collected)} foot={`${billed ? Math.round(collected / billed * 100) : 0}% of billed`} tone="blue" />
-      <Metric icon={<TrendingUp size={16} />} label="Projected profit" value={ratedForecasts.length ? money.format(projectedProfitTotal) : 'Not rated'} foot={ratedForecasts.length ? `${ratedForecasts.length} of ${projects.length} project${projects.length === 1 ? '' : 's'} rated · ${money.format(totalExpenses)} spent` : `Set budgets to rate · ${money.format(totalExpenses)} spent`} tone={ratedForecasts.length && projectedProfitTotal < 0 ? 'red' : 'green'} />
-      <Metric icon={<Clock3 size={16} />} label="Receivables due" value={money.format(receivable)} foot={`${receivables.length} open item${receivables.length === 1 ? '' : 's'}${overdueItems.length ? ` · ${overdueItems.length} overdue` : ''}`} tone="gold" />
-      <Metric icon={<WalletCards size={16} />} label="Retention held" value={money.format(retention)} foot="Not yet due for release" tone="neutral" />
+      {ratedForecasts.length || !projects.length
+        ? <Metric icon={<TrendingUp size={16} />} label="Projected profit" value={ratedForecasts.length ? money.format(projectedProfitTotal) : '—'} foot={ratedForecasts.length ? `${ratedForecasts.length} of ${projects.length} project${projects.length === 1 ? '' : 's'} rated · ${money.format(totalExpenses)} spent` : `Set budgets to rate · ${money.format(totalExpenses)} spent`} tone={ratedForecasts.length && projectedProfitTotal < 0 ? 'red' : 'green'} />
+        : <button type="button" className="metric-card metric-green metric-prompt" onClick={() => openProject(projects[0].id)}><div className="metric-top"><span className="metric-icon"><TrendingUp size={16} /></span><span>Projected profit</span></div><strong className="metric-value">Set a budget <ArrowRight size={16} /></strong><small>To see profit and margin · {money.format(totalExpenses)} spent</small></button>}
+      <Metric icon={<Clock3 size={16} />} label="Receivables due" value={money.format(receivable)} foot={`${receivables.length} open item${receivables.length === 1 ? '' : 's'}${overdueItems.length ? ` · ${overdueItems.length} overdue` : ''}${retention > 0 ? ` · ${money.format(retention)} retention held` : ''}`} tone="gold" />
     </section>
     <section className="portfolio-section" id="portfolio-projects"><div className="section-heading"><h2>Projects <span className="count-pill">{projects.length}</span></h2></div>
       {attentionCount > 0 && <div className="attention-summary" role="status"><div><CircleAlert size={16} /><strong>{attentionCount} project{attentionCount === 1 ? '' : 's'} need{attentionCount === 1 ? 's' : ''} attention</strong></div><button type="button" className="text-button compact-button" onClick={() => setHealthFilter('needs_attention')}>View projects <ArrowRight size={13} /></button></div>}
-      <div className="filter-bar"><label className="search-field"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search projects or clients" aria-label="Search projects or clients" /></label>
+      {projects.length >= 5 && <div className="filter-bar"><label className="search-field"><Search size={15} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search projects or clients" aria-label="Search projects or clients" /></label>
         <label className="select-wrap"><span className="sr-only">Filter by status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option>All statuses</option>{projectStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown size={13} /></label>
-        <label className="select-wrap"><span className="sr-only">Filter by health</span><select value={healthFilter} onChange={(event) => setHealthFilter(event.target.value)}><option>All health</option>{projectHealthOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown size={13} /></label>
+
         <label className="select-wrap"><span className="sr-only">Filter by profit risk</span><select value={profitRiskFilter} onChange={(event) => setProfitRiskFilter(event.target.value)}><option>All profit risks</option><option>High</option><option>Medium</option><option>Low</option><option>Not rated</option></select><ChevronDown size={13} /></label>
-        <label className="select-wrap date-filter"><span className="sr-only">Filter by date range</span><select value={dateFilter} onChange={(event) => setDateFilter(event.target.value)}><option>Any time</option><option>Last 30 days</option><option>This quarter</option></select><ChevronDown size={13} /></label></div>
-      <div className="project-table"><div className="project-table-head"><span>Project / client</span><span>Contract</span><span>Progress</span><span>Billed</span><span>Collected</span><span>Net cash</span><span>Status</span><span>Health</span><span>Profit risk</span><span>Deadline</span><span /></div>
+        <label className="select-wrap date-filter"><span className="sr-only">Filter by date range</span><select value={dateFilter} onChange={(event) => setDateFilter(event.target.value)}><option>Any time</option><option>Last 30 days</option><option>This quarter</option></select><ChevronDown size={13} /></label></div>}
+      <div className="project-table"><div className="project-table-head"><span>Project</span><span>Progress</span><span>Collected / billed</span><span>Profit</span><span>Status</span><span>Deadline</span><span /></div>
         {filtered.length ? filtered.map((project) => {
-          const netCash = project.collected - project.outflow
           const finance = calculateProjectFinance({
             contractAmount: project.contract,
             specialDiscount: project.specialDiscount,
@@ -460,7 +457,17 @@ export function PortfolioOverview({
             estimatedCostToComplete: project.estimatedCostToComplete,
           })
           const deadlineStatus = getProjectDeadlineStatus(project.deadline, project.status)
-          return <button className="project-row" key={project.id} onClick={() => openProject(project.id)}><span className="project-name-cell"><span className={`project-avatar avatar-${project.prefix.toLowerCase()}`}>{project.name.slice(0, 1)}</span><span className="project-title-stack"><strong>{project.name}</strong><small>{project.client}</small></span></span><span className="money-cell project-contract">{money.format(project.contract)}</span><span className="progress-cell project-progress"><span className="progress-value">{project.progress}%</span><span className="progress-track"><span style={{ width: `${project.progress}%` }} /></span></span><span className="money-cell project-billed">{money.format(project.billed)}</span><span className="money-cell project-collected">{money.format(project.collected)}</span><span className={`money-cell net-cash-cell ${netCash < 0 ? 'net-cash-negative' : 'net-cash-positive'} project-net-cash`}>{project.outflow > 0 ? money.format(netCash) : <span className="net-cash-empty" title="No expenses recorded yet, so net cash equals collected.">— <small>no expenses</small></span>}</span><span className="project-status"><StatusBadge status={project.status} /></span><span className="project-health"><HealthBadge status={project.healthStatus} /></span><span className="project-risk"><ProfitRiskBadge risk={profitRisk} />{profitRisk.projectedMarginPercent !== null && <small className="project-risk-margin">{Math.round(profitRisk.projectedMarginPercent)}% margin</small>}</span><span className="project-deadline"><ProjectDeadlineBadge deadline={deadlineStatus} />{project.deadline && deadlineStatus.level !== 'completed' && <small className="project-deadline-date">{shortDeadline(project.deadline)}</small>}</span><span className="row-arrow"><ChevronRight size={16} /></span></button>
+          const collectedPercent = project.billed > 0 ? Math.min(100, Math.round(project.collected / project.billed * 100)) : 0
+          return <button className="project-row" key={project.id} onClick={() => openProject(project.id)}>
+            <span className="project-name-cell"><span className={`project-avatar avatar-${project.prefix.toLowerCase()}`}>{project.name.slice(0, 1)}</span><span className="project-title-stack"><strong>{project.name}</strong><small>{project.client} · {money.format(project.contract)}</small></span></span>
+            <span className="money-cell project-contract">{money.format(project.contract)}</span>
+            <span className="progress-cell project-progress"><span className="progress-value">{project.progress}%</span><span className="progress-track"><span style={{ width: `${project.progress}%` }} /></span></span>
+            <span className={`project-billed project-billing-cell${project.collected > project.billed ? ' is-over' : ''}`}><span><strong>{money.format(project.collected)}</strong><small>of {money.format(project.billed)}</small></span>{project.collected > project.billed && <small className="project-billing-advance">+{money.format(project.collected - project.billed)} advance</small>}<span className="project-billing-track"><span style={{ width: `${collectedPercent}%` }} /></span></span>
+            <span className="project-risk"><ProfitRiskBadge risk={profitRisk} />{profitRisk.projectedMarginPercent !== null && <small className="project-risk-margin">{Math.round(profitRisk.projectedMarginPercent)}%</small>}</span>
+            <span className="project-status"><StatusBadge status={project.status} />{project.healthStatus === 'needs_attention' && <small className="project-attention">Needs attention</small>}</span>
+            <span className="project-deadline"><ProjectDeadlineBadge deadline={deadlineStatus} />{project.deadline && deadlineStatus.level !== 'completed' && <small className="project-deadline-date">{shortDeadline(project.deadline)}</small>}</span>
+            <span className="row-arrow"><ChevronRight size={16} /></span>
+          </button>
         }) : <div className="empty-state">{projects.length ? 'No projects match those filters.' : 'No projects in this workspace yet. Create one to get started.'}</div>}
         <div className="table-footer"><span>Showing {filtered.length} of {projects.length} projects</span></div></div>
     </section>
@@ -469,7 +476,7 @@ export function PortfolioOverview({
         <div className="cashflow-summary">
           <span><small>This month</small><strong>{money.format(monthCashIn)}</strong><em>{monthReceiptCount} receipt{monthReceiptCount === 1 ? '' : 's'}</em></span>
           <span><small>6-month cash in</small><strong>{money.format(sixMonthCashIn)}</strong></span>
-          <span><small>6-month expenses</small><strong className="is-expense">{money.format(sixMonthExpenses)}</strong></span>
+          <span><small>6-month expenses</small>{sixMonthExpenses > 0 ? <strong className="is-expense">{money.format(sixMonthExpenses)}</strong> : <strong className="is-muted">None logged</strong>}</span>
         </div>
         {sixMonthMax > 0 ? <div className="six-month-chart" role="img" aria-label="Cash in and expenses for the last six months">
           {sixMonths.map((month) => <div className={`six-month-col${month.isCurrent ? ' is-current' : ''}`} key={month.key} title={`${month.label}: ${money.format(month.cashIn)} in · ${money.format(month.expenses)} expenses`}>
@@ -480,7 +487,7 @@ export function PortfolioOverview({
             <small>{month.label}</small>
           </div>)}
         </div> : <div className="chart-empty">No payments or expenses in the last 6 months.</div>}
-        <div className="six-month-legend"><span><i className="bar-in" />Cash in</span><span><i className="bar-out" />Expenses</span></div>
+        {sixMonthExpenses > 0 && <div className="six-month-legend"><span><i className="bar-in" />Cash in</span><span><i className="bar-out" />Expenses</span></div>}
       </div>
       <div className="surface-card activity-card"><div className="card-heading-row"><div><h2>Recent payments</h2></div><button className="text-button compact-button" onClick={() => payments[0] && openProject(payments[0].projectId)} disabled={!payments.length}>View all <ArrowRight size={13} /></button></div><div className="activity-list">{payments.length ? payments.slice(0, 3).map((payment) => <button className="activity-row" key={payment.id} onClick={() => openProject(payment.projectId)}><span className="activity-icon"><ArrowDownLeft size={15} /></span><span className="activity-copy"><strong>{payment.payer}</strong><small>{projects.find((item) => item.id === payment.projectId)?.name} · {shortDate(payment.date)} · {payment.reference}</small></span><span className="activity-amount">+{money.format(payment.amount)}</span></button>) : <div className="empty-state">No payments recorded yet.</div>}</div></div></section>
     <div id="receivables-aging"><ReceivablesAgingPanel items={receivables} onOpenProject={openProject} /></div>

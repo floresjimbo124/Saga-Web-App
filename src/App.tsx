@@ -4,7 +4,7 @@ import {
   ArrowDownLeft, ArrowLeft, ArrowRight, BriefcaseBusiness, Camera, Crop, Download, Eye,
   CalendarDays, Check, ChevronRight, CircleAlert, CircleDollarSign, ClipboardList, Pencil,
   FileText, House, LayoutDashboard, LogOut, Plus, RefreshCw, Settings2, Trash2, UserPlus, Users, WalletCards, X,
-  UserRound,
+  Receipt, UserRound,
 } from 'lucide-react'
 import { calculateProjectFinance } from './finance/project-finance'
 import { calculateProfitRisk } from './finance/profit-risk'
@@ -19,6 +19,8 @@ import { ExpensePanel } from './components/ExpensePanel'
 import { QuickExpenseSheet } from './components/QuickExpenseSheet'
 import { AccountMenu } from './components/AccountMenu'
 import { ProjectProfitCard } from './components/ProjectProfitCard'
+import { AllExpensesPanel } from './components/AllExpensesPanel'
+import { loadProjectTasks } from './data/tasks'
 import { ProjectDocumentPanel } from './components/ProjectDocumentPanel'
 import { InviteClientDialog } from './components/InviteClientDialog'
 import { ProjectForecastPanel } from './components/ProjectForecastPanel'
@@ -43,7 +45,7 @@ import './App.css'
 
 type Project = PortfolioProject
 type Payment = PortfolioPayment
-type WorkspaceView = 'portfolio' | 'portal' | 'payroll' | 'tasks'
+type WorkspaceView = 'portfolio' | 'portal' | 'payroll' | 'tasks' | 'expenses'
 type MobileNavigationPage = 'home' | 'projects' | 'updates' | 'profile'
 type ProjectDetailTab = 'Overview' | 'Milestones' | 'Change orders' | 'Billings' | 'Payments' | 'Expenses' | 'Forecast' | 'Documents'
 const projectDetailTabs: ProjectDetailTab[] = ['Overview', 'Milestones', 'Change orders', 'Billings', 'Payments', 'Expenses', 'Forecast', 'Documents']
@@ -53,7 +55,7 @@ function readWorkspaceNavigation(): { view: WorkspaceView; selectedId: string | 
     if (!stored) return { view: 'portfolio', selectedId: null, projectTab: 'Overview' }
     const state = JSON.parse(stored) as { view?: unknown; selectedId?: unknown; projectTab?: unknown }
     return {
-      view: state.view === 'portal' ? 'portal' : state.view === 'payroll' ? 'payroll' : state.view === 'tasks' ? 'tasks' : 'portfolio',
+      view: state.view === 'portal' ? 'portal' : state.view === 'payroll' ? 'payroll' : state.view === 'tasks' ? 'tasks' : state.view === 'expenses' ? 'expenses' : 'portfolio',
       selectedId: typeof state.selectedId === 'string' ? state.selectedId : null,
       projectTab: projectDetailTabs.find((tab) => tab === state.projectTab) ?? 'Overview',
     }
@@ -141,7 +143,17 @@ function App() {
   const [isCreatingProject, setIsCreatingProject] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const [taskAttentionCount, setTaskAttentionCount] = useState(0)
   useEffect(() => { if (!isLoading) setHasLoadedOnce(true) }, [isLoading])
+  useEffect(() => {
+    if (isLoading) return
+    let active = true
+    const weekAhead = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10)
+    void loadProjectTasks()
+      .then((tasks) => { if (active) setTaskAttentionCount(tasks.filter((task) => task.status !== 'done' && (task.status === 'blocked' || (task.dueDate && task.dueDate <= weekAhead))).length) })
+      .catch(() => { if (active) setTaskAttentionCount(0) })
+    return () => { active = false }
+  }, [isLoading, view])
   const [profileName, setProfileName] = useState('Project Manager')
   const [profileTitle, setProfileTitle] = useState('Project Manager')
   const [profileEmail, setProfileEmail] = useState('')
@@ -149,6 +161,7 @@ function App() {
   const [reloadKey, setReloadKey] = useState(0)
   const selected = projects.find((project) => project.id === selectedId)
   const clients = [...new Set(projects.map((project) => project.client))]
+  const missingReceiptCount = projects.flatMap((project) => project.expenses).filter((expense) => !expense.receiptStoragePath && expense.category !== 'payroll' && !expense.id.startsWith('payroll')).length
   const billed = projects.reduce((sum, project) => sum + project.billed, 0)
   const collected = projects.reduce((sum, project) => sum + project.collected, 0)
   const totalExpenses = projects.reduce((sum, project) => sum + project.outflow, 0)
@@ -392,11 +405,14 @@ function App() {
       <div className="mobile-owner-header-actions">
         <NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} onOpenTask={openTaskCommentNotification} />
       </div>
-      <nav className="primary-nav" aria-label="Main navigation">
+      <nav className="primary-nav grouped-nav" aria-label="Main navigation">
+        <span className="nav-group-label">Workspace</span>
         <button className={`nav-item ${view === 'portfolio' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('portfolio'); setSelectedId(null); setProjectTab('Overview') }}><LayoutDashboard size={17} /><span>Portfolio</span></button>
-        <button className={`nav-item ${view === 'tasks' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }}><ClipboardList size={17} /><span>Tasks</span></button>
-        <button className={`nav-item ${view === 'payroll' ? 'is-active' : ''}`} onClick={() => { setView('payroll'); setSelectedId(null); setProjectTab('Overview') }}><WalletCards size={17} /><span>Payroll</span></button>
+        <button className={`nav-item ${view === 'tasks' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }}><ClipboardList size={17} /><span>Tasks</span>{taskAttentionCount > 0 && <em className="nav-count" title="Blocked or due within 7 days">{taskAttentionCount}</em>}</button>
         <button className={`nav-item ${view === 'portal' ? 'is-active' : ''}`} onClick={() => { setView('portal'); setSelectedId(null); setProjectTab('Overview') }}><Users size={17} /><span>Client portal</span></button>
+        <span className="nav-group-label">Finance</span>
+        <button className={`nav-item ${view === 'expenses' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('expenses'); setSelectedId(null); setProjectTab('Overview') }}><Receipt size={17} /><span>Expenses</span>{missingReceiptCount > 0 && <em className="nav-count is-warning" title="Expenses without a receipt">{missingReceiptCount}</em>}</button>
+        <button className={`nav-item ${view === 'payroll' ? 'is-active' : ''}`} onClick={() => { setView('payroll'); setSelectedId(null); setProjectTab('Overview') }}><WalletCards size={17} /><span>Payroll</span></button>
       </nav>
       <div className="owner-sidebar-footer">
         <button type="button" className="client-sidebar-account" onClick={() => { setMobileNavigationPage('profile'); setSelectedId(null) }}>
@@ -446,7 +462,7 @@ function App() {
 
     <div className="app-main">
       <header className="topbar">
-        <div className="breadcrumbs"><span>SAGACT</span><ChevronRight size={13} /><strong>{view === 'portal' ? 'Client portal' : view === 'payroll' ? 'Payroll' : view === 'tasks' ? 'Tasks' : selected?.name ?? 'Portfolio'}</strong></div>
+        <div className="breadcrumbs"><span>SAGACT</span><ChevronRight size={13} /><strong>{view === 'portal' ? 'Client portal' : view === 'payroll' ? 'Payroll' : view === 'tasks' ? 'Tasks' : view === 'expenses' ? 'Expenses' : selected?.name ?? 'Portfolio'}</strong></div>
         <div className="topbar-right">
           <span className="topbar-date"><CalendarDays size={14} />{new Intl.DateTimeFormat('en-PH', { weekday: 'short', month: 'short', day: 'numeric' }).format(currentDate)}</span>
           <button className={`icon-button refresh-button ${isLoading ? 'is-loading' : ''}`} aria-label={isLoading ? 'Refreshing workspace' : 'Refresh workspace'} title={isLoading ? 'Refreshing workspace' : 'Workspace ready'} onClick={() => refreshWorkspace()} disabled={isLoading}>
@@ -460,7 +476,7 @@ function App() {
 
       <main className="page-content">
         <div key={`${view}:${selectedId ?? 'portfolio'}`} className="view-transition">
-        {mobileNavigationPage === 'profile' ? <MobileOwnerProfile name={profileName} title={profileTitle} email={profileEmail} onSignOut={() => { void supabase?.auth.signOut() }} /> : view === 'portal' ? <ClientPortal projects={projects} onOpenProject={openProject} /> : view === 'payroll' ? <PayrollPanel projects={projects} onChanged={() => refreshWorkspace(false)} /> : view === 'tasks' ? <TaskManagementPanel isOwner currentUserId="" projects={projects.map((project) => ({ id: project.id, name: project.name }))} notificationTaskId={pendingTaskNotificationId} onNotificationTaskClosed={() => setPendingTaskNotificationId('')} /> : selected ? <ProjectDetail project={selected} tab={projectTab} setTab={setProjectTab} payments={payments.filter((payment) => payment.projectId === selected.id)} receivables={receivables.filter((item) => item.projectId === selected.id)} onBack={() => { setSelectedId(null); setProjectTab('Overview') }} onSetup={() => openProjectSetup(selected)} onChanged={() => refreshWorkspace(false)} onProjectStateChange={saveProjectStateOptimistically} /> : <PortfolioOverview ownerName={profileName === 'Project Manager' ? '' : profileName.split(' ')[0]} projects={projects} payments={payments} receivables={receivables} filtered={filtered} currentDate={currentDate} loadError={loadError} attentionCount={attentionCount} billed={billed} collected={collected} totalExpenses={totalExpenses} receivable={receivable} retention={retention} search={search} statusFilter={statusFilter} healthFilter={healthFilter} profitRiskFilter={profitRiskFilter} dateFilter={dateFilter} monthCashIn={monthCashIn} cashBars={cashBars} isLoading={isLoading} setSearch={setSearch} setStatusFilter={setStatusFilter} setHealthFilter={setHealthFilter} setProfitRiskFilter={setProfitRiskFilter} setDateFilter={setDateFilter} setShowDashboardExpense={setShowDashboardExpense} setShowModal={setShowModal} onViewTasks={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }} onUploadUpdate={(projectId) => { setMobileNavigationPage('projects'); setSelectedId(projectId); setView('portfolio'); setProjectTab('Milestones') }} isProjectsPage={mobileNavigationPage === 'projects'} refreshWorkspace={refreshWorkspace} openProject={openProject} />}
+        {mobileNavigationPage === 'profile' ? <MobileOwnerProfile name={profileName} title={profileTitle} email={profileEmail} onSignOut={() => { void supabase?.auth.signOut() }} /> : view === 'portal' ? <ClientPortal projects={projects} onOpenProject={openProject} /> : view === 'expenses' ? <AllExpensesPanel projects={projects.map((project) => ({ id: project.id, name: project.name, expenses: project.expenses }))} onChanged={() => refreshWorkspace(false)} /> : view === 'payroll' ? <PayrollPanel projects={projects} onChanged={() => refreshWorkspace(false)} /> : view === 'tasks' ? <TaskManagementPanel isOwner currentUserId="" projects={projects.map((project) => ({ id: project.id, name: project.name }))} notificationTaskId={pendingTaskNotificationId} onNotificationTaskClosed={() => setPendingTaskNotificationId('')} /> : selected ? <ProjectDetail project={selected} tab={projectTab} setTab={setProjectTab} payments={payments.filter((payment) => payment.projectId === selected.id)} receivables={receivables.filter((item) => item.projectId === selected.id)} onBack={() => { setSelectedId(null); setProjectTab('Overview') }} onSetup={() => openProjectSetup(selected)} onChanged={() => refreshWorkspace(false)} onProjectStateChange={saveProjectStateOptimistically} /> : <PortfolioOverview ownerName={profileName === 'Project Manager' ? '' : profileName.split(' ')[0]} projects={projects} payments={payments} receivables={receivables} filtered={filtered} currentDate={currentDate} loadError={loadError} attentionCount={attentionCount} billed={billed} collected={collected} totalExpenses={totalExpenses} receivable={receivable} retention={retention} search={search} statusFilter={statusFilter} healthFilter={healthFilter} profitRiskFilter={profitRiskFilter} dateFilter={dateFilter} monthCashIn={monthCashIn} cashBars={cashBars} isLoading={isLoading} setSearch={setSearch} setStatusFilter={setStatusFilter} setHealthFilter={setHealthFilter} setProfitRiskFilter={setProfitRiskFilter} setDateFilter={setDateFilter} setShowDashboardExpense={setShowDashboardExpense} setShowModal={setShowModal} onViewTasks={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }} onUploadUpdate={(projectId) => { setMobileNavigationPage('projects'); setSelectedId(projectId); setView('portfolio'); setProjectTab('Milestones') }} isProjectsPage={mobileNavigationPage === 'projects'} refreshWorkspace={refreshWorkspace} openProject={openProject} />}
         </div>
       </main>
       <footer className="page-footer" aria-hidden="true" />

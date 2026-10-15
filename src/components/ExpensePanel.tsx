@@ -8,7 +8,7 @@ import { useToast } from './toast-context'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2 })
 const dateFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
-const categories: { value: ProjectExpenseCategory; label: string }[] = [
+export const expenseCategories: { value: ProjectExpenseCategory; label: string }[] = [
   { value: 'materials', label: 'Materials' },
   { value: 'labor', label: 'Labor' },
   { value: 'operational_expenses', label: 'Operational Expenses' },
@@ -41,7 +41,7 @@ function ReceiptThumb({ storagePath, label, onOpen }: { storagePath: string; lab
   </button>
 }
 
-function ExpenseRow({ expense, onEdit, onOpenReceipt, onReceiptChanged }: {
+export function ExpenseRow({ expense, onEdit, onOpenReceipt, onReceiptChanged }: {
   expense: PortfolioExpense
   onEdit: (expense: PortfolioExpense) => void
   onOpenReceipt: (url: string) => void
@@ -51,7 +51,7 @@ function ExpenseRow({ expense, onEdit, onOpenReceipt, onReceiptChanged }: {
   const [isUploading, setIsUploading] = useState(false)
   const [rowError, setRowError] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
-  const category = categories.find((item) => item.value === expense.category)?.label ?? 'Other'
+  const category = expenseCategories.find((item) => item.value === expense.category)?.label ?? 'Other'
   const isPayroll = expense.id.startsWith('payroll') || expense.category === 'payroll'
 
   const attachReceipt = async (file: File | undefined) => {
@@ -101,7 +101,7 @@ export function ExpensePanel({ projectId, contractId, projectName, expenses, inf
   const visibleExpenses = showMissingOnly ? expenses.filter(isMissingReceipt) : expenses
   const totalOutflow = expenses.reduce((total, expense) => total + expense.amount, 0)
   const net = inflow - totalOutflow
-  const categoryTotals = categories.map((category) => ({
+  const categoryTotals = expenseCategories.map((category) => ({
     ...category,
     total: expenses
       .filter((expense) => expense.category === category.value)
