@@ -46,6 +46,7 @@ export type PortfolioExpense = {
   description: string
   vendor: string
   amount: number
+  receiptStoragePath?: string | null
 }
 
 export type PortfolioProject = {
@@ -175,7 +176,7 @@ export async function loadPortfolio() {
       .select('payment_id, billing_id, amount')
       .eq('organization_id', SAGACT_ORGANIZATION_ID),
     client.from('project_expenses')
-      .select('id, project_id, contract_id, expense_date, category, description, vendor, amount')
+      .select('*')
       .eq('organization_id', SAGACT_ORGANIZATION_ID)
       .order('expense_date', { ascending: false })
       .order('created_at', { ascending: false }),
@@ -317,6 +318,7 @@ export async function loadPortfolio() {
       description: expense.description,
       vendor: expense.vendor ?? '',
       amount,
+      receiptStoragePath: expense.receipt_storage_path ?? null,
     })
     expensesByProject.set(expense.project_id, expenses)
     outflowByProject.set(expense.project_id, (outflowByProject.get(expense.project_id) ?? 0) + amount)
@@ -695,6 +697,78 @@ export async function recordProjectExpenses(inputs: RecordProjectExpenseInput[])
   const savedCount = Number(data)
   if (savedCount !== inputs.length) throw new Error('Not all expense rows were recorded.')
   return savedCount
+}
+
+const receiptBucket = 'expense-receipts'
+
+async function compressReceiptImage(file: File): Promise<Blob> {
+  if (!file.type.startsWith('image/')) throw new Error('Receipt must be a photo (JPG, PNG or WebP).')
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.8))
+    if (blob) return blob
+  } catch {
+    // Fall back to the original file when the browser cannot decode it (e.g. HEIC).
+  }
+  if (file.size > 8 * 1024 * 1024) throw new Error('Receipt photo must be smaller than 8 MB.')
+  return file
+}
+
+export async function uploadExpenseReceipt(projectId: string, file: File) {
+  const blob = await compressReceiptImage(file)
+  const contentType = blob.type || file.type || 'image/jpeg'
+  const extension = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg'
+  const storagePath = `${SAGACT_ORGANIZATION_ID}/${projectId}/receipts/${crypto.randomUUID()}.${extension}`
+  const { error } = await requireSupabase().storage.from(receiptBucket).upload(storagePath, blob, {
+    cacheControl: '3600',
+    contentType,
+    upsert: false,
+  })
+  if (error) throw new Error(error.message)
+  return storagePath
+}
+
+export async function createExpenseReceiptUrl(storagePath: string) {
+  const { data, error } = await requireSupabase().storage.from(receiptBucket).createSignedUrl(storagePath, 3600)
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('Could not create a secure receipt link.')
+  return data.signedUrl
+}
+
+export async function setProjectExpenseReceipt(expenseId: string, storagePath: string | null) {
+  const { error } = await requireSupabase().rpc('set_project_expense_receipt', {
+    p_expense_id: expenseId,
+    p_receipt_storage_path: storagePath,
+  })
+  throwIfError(error)
+}
+
+export async function recordQuickProjectExpense(input: {
+  projectId: string
+  date: string
+  category: ProjectExpenseCategory
+  description: string
+  vendor?: string
+  amount: number
+  receiptStoragePath: string | null
+}) {
+  const { data, error } = await requireSupabase().rpc('record_project_expense_quick', {
+    p_project_id: input.projectId,
+    p_expense_date: input.date,
+    p_category: input.category,
+    p_description: input.description.trim(),
+    p_vendor: input.vendor?.trim() || null,
+    p_amount: input.amount,
+    p_receipt_storage_path: input.receiptStoragePath,
+  })
+  throwIfError(error)
+  return data as string
 }
 
 export async function updateProjectExpense(input: UpdateProjectExpenseInput) {

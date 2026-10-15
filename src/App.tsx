@@ -16,7 +16,9 @@ import { supabase } from './lib/supabase'
 import { PaymentEntryDialog } from './components/PaymentEntryDialog'
 import { BillingPanel } from './components/BillingPanel'
 import { ExpensePanel } from './components/ExpensePanel'
-import { ExpenseEntryDialog } from './components/ExpenseEntryDialog'
+import { QuickExpenseSheet } from './components/QuickExpenseSheet'
+import { AccountMenu } from './components/AccountMenu'
+import { ProjectProfitCard } from './components/ProjectProfitCard'
 import { ProjectDocumentPanel } from './components/ProjectDocumentPanel'
 import { InviteClientDialog } from './components/InviteClientDialog'
 import { ProjectForecastPanel } from './components/ProjectForecastPanel'
@@ -374,7 +376,7 @@ function App() {
 
   return <div className={`app-shell${mobileNavigationPage === 'projects' ? ' is-mobile-projects-page' : ''}${mobileNavigationPage === 'profile' ? ' is-mobile-profile-page' : ''}${selected && view === 'portfolio' ? ' is-mobile-project-detail' : ''}`} aria-busy={isLoading}>
     {showSetupModal && setupProject && <ProjectSetupDialog project={setupProject} client={setupClient} setClient={setSetupClient} contract={setupContract} setContract={setSetupContract} discount={setupDiscount} setDiscount={setSetupDiscount} startDate={setupStartDate} setStartDate={setSetupStartDate} deadline={setupDeadline} setDeadline={setSetupDeadline} downPayment={setupDownPayment} setDownPayment={setSetupDownPayment} retentionRate={setupRetentionRate} setRetentionRate={setSetupRetentionRate} retentionMethod={setupRetentionMethod} setRetentionMethod={setSetupRetentionMethod} error={setupError} saving={isSavingSetup} onSubmit={saveProjectSetup} onClose={() => setShowSetupModal(false)} />}
-    {showDashboardExpense && <ExpenseEntryDialog projects={projects.map((project) => ({ id: project.id, name: project.name }))} onClose={() => setShowDashboardExpense(false)} onSaved={() => { setShowDashboardExpense(false); refreshWorkspace(false) }} />}
+    {showDashboardExpense && <QuickExpenseSheet projects={projects.map((project) => ({ id: project.id, name: project.name }))} onClose={() => setShowDashboardExpense(false)} onSaved={() => { setShowDashboardExpense(false); refreshWorkspace(false) }} />}
     {isLoading && (hasLoadedOnce
       ? <div className="workspace-loading" role="status" aria-live="polite" aria-label="Loading SAGACT workspace"><span className="loading-brand">SAGACT<span>.</span></span><span className="loading-spinner"><RefreshCw size={25} /></span><strong>Loading your workspace</strong><span className="loading-caption">Preparing your project overview</span><span className="loading-progress"><span /></span></div>
       : <div className="workspace-loading auth-loading" role="status" aria-live="polite" aria-label="Loading SAGACT workspace"><span className="auth-loading-mark"><img src="/sagact-mark.svg" alt="" /></span><span className="loading-brand">SAGACT<span>.</span></span><strong>Preparing your workspace</strong><span className="loading-progress"><span /></span></div>)}
@@ -396,6 +398,13 @@ function App() {
         <button className={`nav-item ${view === 'payroll' ? 'is-active' : ''}`} onClick={() => { setView('payroll'); setSelectedId(null); setProjectTab('Overview') }}><WalletCards size={17} /><span>Payroll</span></button>
         <button className={`nav-item ${view === 'portal' ? 'is-active' : ''}`} onClick={() => { setView('portal'); setSelectedId(null); setProjectTab('Overview') }}><Users size={17} /><span>Client portal</span></button>
       </nav>
+      <div className="owner-sidebar-footer">
+        <button type="button" className="client-sidebar-account" onClick={() => { setMobileNavigationPage('profile'); setSelectedId(null) }}>
+          <span className="client-account-avatar">{profileName.trim().charAt(0).toUpperCase() || <UserRound size={15} />}</span>
+          <span><strong>{profileName}</strong><small>{profileTitle}</small></span>
+          <ChevronRight size={15} aria-hidden="true" />
+        </button>
+      </div>
     </aside>
     <nav className="mobile-bottom-nav" aria-label="Mobile quick navigation">
       <button type="button" className={mobileNavigationPage === 'home' ? 'is-active' : ''} aria-current={mobileNavigationPage === 'home' ? 'page' : undefined} onClick={() => { setMobileNavigationPage('home'); setView('portfolio'); setSelectedId(null); setProjectTab('Overview'); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
@@ -445,7 +454,7 @@ function App() {
             <span className="sr-only" role="status" aria-live="polite">{isLoading ? 'Refreshing workspace' : 'Workspace ready'}</span>
           </button>
           <NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} onOpenTask={openTaskCommentNotification} />
-          <button className="icon-button topbar-sign-out" type="button" aria-label="Sign out" title="Sign out" onClick={() => { void supabase?.auth.signOut() }}><LogOut size={16} /></button>
+          <AccountMenu name={profileName} caption={profileTitle} onOpenProfile={() => { setMobileNavigationPage('profile'); setSelectedId(null); window.scrollTo({ top: 0 }) }} onSignOut={() => { void supabase?.auth.signOut() }} />
         </div>
       </header>
 
@@ -718,6 +727,7 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
     {(profitRisk.level === 'high' || profitRisk.level === 'critical') && <div className={`project-risk-callout risk-${profitRisk.level}`} role="status"><CircleAlert size={17} /><span><strong>Profit risk: {profitRisk.label}.</strong> {profitRisk.detail}.</span><button type="button" onClick={() => setTab('Forecast')}>Review forecast <ArrowRight size={14} /></button></div>}
     {tab === 'Overview' && <>
       <section className="surface-card detail-progress-card"><div className="card-heading-row"><h2>Project health</h2><span className="large-progress">{project.progress}<small>%</small></span></div><div className="detail-progress-track"><span style={{ width: `${project.progress}%` }} /></div><div className="progress-caption"><span>Work accomplished</span><strong>{money.format(finance.earnedToDate)} earned</strong></div><div className="milestone-callout"><span className="milestone-icon"><CalendarDays size={16} /></span><span><small>Next milestone</small><strong>{project.milestone}</strong></span><ChevronRight size={16} /></div></section>
+      <ProjectProfitCard contractValue={finance.contractValue} recordedCosts={project.outflow} costBudget={project.costBudget} estimatedCostToComplete={project.estimatedCostToComplete} progressPercent={project.progress} onOpenForecast={() => setTab('Forecast')} onOpenExpenses={() => setTab('Expenses')} />
       <section className="detail-financial-section" aria-labelledby="detail-financial-heading">
         <div className="detail-financial-heading"><h2 id="detail-financial-heading">Financial overview</h2></div>
         <div className="detail-financial-content">

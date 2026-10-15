@@ -2,7 +2,6 @@ import {
   Activity,
   ArrowDownLeft,
   ArrowRight,
-  ArrowUpRight,
   CalendarDays,
   Camera,
   ChevronDown,
@@ -26,6 +25,7 @@ import { createProjectMilestonePhotoUrl } from '../data/project-milestones'
 import type { ReceivableAgingItem } from '../finance/receivables-aging'
 import { calculateProjectFinance } from '../finance/project-finance'
 import { calculateProfitRisk } from '../finance/profit-risk'
+import { calculateCostPace } from '../finance/cost-pace'
 import { getProjectDeadlineStatus } from '../finance/project-deadline'
 import { HealthBadge, Metric, ProjectDeadlineBadge, ProfitRiskBadge, StatusBadge } from './ProjectStatusBadges'
 import { ReceivablesAgingPanel } from './ReceivablesAgingPanel'
@@ -195,11 +195,33 @@ export function PortfolioOverview({
     const level = getProjectDeadlineStatus(project.deadline, project.status).level
     return level === 'overdue' || level === 'due-soon'
   })
+  const projectForecasts = projects.map((project) => {
+    const contractValue = calculateProjectFinance({
+      contractAmount: project.contract,
+      specialDiscount: project.specialDiscount,
+      approvedChangeOrders: project.approvedChangeOrders,
+      progressPercent: project.progress,
+      retentionRatePercent: project.retentionRate,
+      retentionMethod: project.retentionMethod,
+      billedToDate: project.billed,
+      paymentsReceived: project.collected,
+      retentionHeld: project.retention,
+    }).contractValue
+    return {
+      project,
+      risk: calculateProfitRisk({ contractValue, recordedCosts: project.outflow, costBudget: project.costBudget, estimatedCostToComplete: project.estimatedCostToComplete }),
+      pace: calculateCostPace({ costBudget: project.costBudget, recordedCosts: project.outflow, progressPercent: project.progress }),
+    }
+  })
+  const ratedForecasts = projectForecasts.filter((item) => item.risk.projectedProfit !== null)
+  const projectedProfitTotal = ratedForecasts.reduce((sum, item) => sum + (item.risk.projectedProfit ?? 0), 0)
+  const overspending = projectForecasts.filter((item) => item.pace.level === 'overspending' || item.pace.level === 'watch')
   const shortDeadline = (date: string | null) => date ? new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(date.length === 10 ? `${date}T12:00:00` : date)) : ''
   const actionItems = [
     overdueItems.length > 0 && { key: 'overdue', tone: 'danger', label: `${overdueItems.length} overdue billing${overdueItems.length === 1 ? '' : 's'}`, detail: `${money.format(overdueItems.reduce((sum, item) => sum + item.outstandingAmount, 0))} past due`, onClick: () => document.getElementById('receivables-aging')?.scrollIntoView({ behavior: 'smooth' }) },
     unpaidChangeOrders.length > 0 && { key: 'co', tone: 'warning', label: `${unpaidChangeOrders.length} unpaid change order${unpaidChangeOrders.length === 1 ? '' : 's'}`, detail: `${money.format(unpaidChangeOrders.reduce((sum, item) => sum + item.outstandingAmount, 0))} to collect`, onClick: () => openProject(unpaidChangeOrders[0].projectId) },
     pendingApprovals.length > 0 && { key: 'approval', tone: 'warning', label: `${pendingApprovals.length} change order${pendingApprovals.length === 1 ? '' : 's'} awaiting client`, detail: 'Waiting for client approval', onClick: () => openProject(projects.find((project) => project.changeOrders.some((order) => order.status === 'pending_approval'))?.id ?? '') },
+    overspending.length > 0 && { key: 'pace', tone: 'danger', label: `${overspending.length} project${overspending.length === 1 ? '' : 's'} spending ahead of progress`, detail: overspending.slice(0, 2).map((item) => `${item.project.name} · ${item.pace.detail}`).join(', '), onClick: () => openProject(overspending[0].project.id) },
     deadlineAlerts.length > 0 && { key: 'deadline', tone: 'info', label: `${deadlineAlerts.length} deadline${deadlineAlerts.length === 1 ? '' : 's'} coming up`, detail: deadlineAlerts.slice(0, 2).map((project) => `${project.name} · ${shortDeadline(project.deadline)}`).join(', '), onClick: () => openProject(deadlineAlerts[0].id) },
   ].filter(Boolean) as { key: string; tone: string; label: string; detail: string; onClick: () => void }[]
   const activeCount = projects.filter((project) => project.status === 'active').length
@@ -406,7 +428,7 @@ export function PortfolioOverview({
     <section className="metric-grid desktop-portfolio-metrics" aria-label="Portfolio totals">
       <Metric icon={<FileText size={16} />} label="Total billed" value={money.format(billed)} foot="Incl. approved change orders" tone="green" />
       <Metric icon={<ArrowDownLeft size={16} />} label="Collected" value={money.format(collected)} foot={`${billed ? Math.round(collected / billed * 100) : 0}% of billed`} tone="blue" />
-      <Metric icon={<ArrowUpRight size={16} />} label="Total expenses" value={money.format(totalExpenses)} foot="Across all projects" tone="red" />
+      <Metric icon={<TrendingUp size={16} />} label="Projected profit" value={ratedForecasts.length ? money.format(projectedProfitTotal) : 'Not rated'} foot={ratedForecasts.length ? `${ratedForecasts.length} of ${projects.length} project${projects.length === 1 ? '' : 's'} rated · ${money.format(totalExpenses)} spent` : `Set budgets to rate · ${money.format(totalExpenses)} spent`} tone={ratedForecasts.length && projectedProfitTotal < 0 ? 'red' : 'green'} />
       <Metric icon={<Clock3 size={16} />} label="Receivables due" value={money.format(receivable)} foot={`${receivables.length} open item${receivables.length === 1 ? '' : 's'}${overdueItems.length ? ` · ${overdueItems.length} overdue` : ''}`} tone="gold" />
       <Metric icon={<WalletCards size={16} />} label="Retention held" value={money.format(retention)} foot="Not yet due for release" tone="neutral" />
     </section>
@@ -438,7 +460,7 @@ export function PortfolioOverview({
             estimatedCostToComplete: project.estimatedCostToComplete,
           })
           const deadlineStatus = getProjectDeadlineStatus(project.deadline, project.status)
-          return <button className="project-row" key={project.id} onClick={() => openProject(project.id)}><span className="project-name-cell"><span className={`project-avatar avatar-${project.prefix.toLowerCase()}`}>{project.name.slice(0, 1)}</span><span className="project-title-stack"><strong>{project.name}</strong><small>{project.client}</small></span></span><span className="money-cell project-contract">{money.format(project.contract)}</span><span className="progress-cell project-progress"><span className="progress-value">{project.progress}%</span><span className="progress-track"><span style={{ width: `${project.progress}%` }} /></span></span><span className="money-cell project-billed">{money.format(project.billed)}</span><span className="money-cell project-collected">{money.format(project.collected)}</span><span className={`money-cell net-cash-cell ${netCash < 0 ? 'net-cash-negative' : 'net-cash-positive'} project-net-cash`}>{money.format(netCash)}</span><span className="project-status"><StatusBadge status={project.status} /></span><span className="project-health"><HealthBadge status={project.healthStatus} /></span><span className="project-risk"><ProfitRiskBadge risk={profitRisk} /></span><span className="project-deadline"><ProjectDeadlineBadge deadline={deadlineStatus} />{project.deadline && deadlineStatus.level !== 'completed' && <small className="project-deadline-date">{shortDeadline(project.deadline)}</small>}</span><span className="row-arrow"><ChevronRight size={16} /></span></button>
+          return <button className="project-row" key={project.id} onClick={() => openProject(project.id)}><span className="project-name-cell"><span className={`project-avatar avatar-${project.prefix.toLowerCase()}`}>{project.name.slice(0, 1)}</span><span className="project-title-stack"><strong>{project.name}</strong><small>{project.client}</small></span></span><span className="money-cell project-contract">{money.format(project.contract)}</span><span className="progress-cell project-progress"><span className="progress-value">{project.progress}%</span><span className="progress-track"><span style={{ width: `${project.progress}%` }} /></span></span><span className="money-cell project-billed">{money.format(project.billed)}</span><span className="money-cell project-collected">{money.format(project.collected)}</span><span className={`money-cell net-cash-cell ${netCash < 0 ? 'net-cash-negative' : 'net-cash-positive'} project-net-cash`}>{project.outflow > 0 ? money.format(netCash) : <span className="net-cash-empty" title="No expenses recorded yet, so net cash equals collected.">— <small>no expenses</small></span>}</span><span className="project-status"><StatusBadge status={project.status} /></span><span className="project-health"><HealthBadge status={project.healthStatus} /></span><span className="project-risk"><ProfitRiskBadge risk={profitRisk} />{profitRisk.projectedMarginPercent !== null && <small className="project-risk-margin">{Math.round(profitRisk.projectedMarginPercent)}% margin</small>}</span><span className="project-deadline"><ProjectDeadlineBadge deadline={deadlineStatus} />{project.deadline && deadlineStatus.level !== 'completed' && <small className="project-deadline-date">{shortDeadline(project.deadline)}</small>}</span><span className="row-arrow"><ChevronRight size={16} /></span></button>
         }) : <div className="empty-state">{projects.length ? 'No projects match those filters.' : 'No projects in this workspace yet. Create one to get started.'}</div>}
         <div className="table-footer"><span>Showing {filtered.length} of {projects.length} projects</span></div></div>
     </section>
