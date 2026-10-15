@@ -7,6 +7,7 @@ import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
 import { formatChangeOrderNumber } from '../lib/change-order-number'
 import { useToast } from './toast-context'
+import { CountUp, EmptyArt } from './Motion'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 2 })
 const dateFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -63,7 +64,7 @@ export function ContractImpactCard({ contractAmount, specialDiscount, changeOrde
       <div><dt>Original contract</dt><dd>{money.format(contractAmount)}</dd></div>
       <div><dt>Special discount</dt><dd>− {money.format(specialDiscount)}</dd></div>
       <div><dt>Approved changes{approvedCount ? ` (${approvedCount})` : ''}</dt><dd>+ {money.format(approvedTotal)}</dd></div>
-      <div className="is-total"><dt>Revised contract</dt><dd>{money.format(contractAmount - specialDiscount + approvedTotal)}</dd></div>
+      <div className="is-total"><dt>Revised contract</dt><dd><CountUp value={money.format(contractAmount - specialDiscount + approvedTotal)} /></dd></div>
     </dl>
     {changeOrderOutstanding !== undefined && approvedTotal > 0 && <div className="co-impact-status">
       <div className="co-impact-status-head"><span>Change orders total</span><strong>{money.format(approvedTotal)}</strong></div>
@@ -286,6 +287,7 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
           <strong className="co-amount" role="cell">{money.format(order.amount)}</strong>
         </button>)}
       </div> : <div className="pr-empty">
+        <EmptyArt kind="document" />
         <strong>No change orders yet</strong>
         <p>Create one when the client asks for extra work or a scope change.</p>
       </div>}

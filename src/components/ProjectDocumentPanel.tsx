@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { EmptyArt, SkeletonRows } from './Motion'
 import { createPortal } from 'react-dom'
 import { Eye, FileText, RefreshCw, Share2, Trash2, Upload, X } from 'lucide-react'
 import {
@@ -147,7 +148,7 @@ export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
     <p className="document-upload-note">PDF, images, Office files, or CAD drawings · 50 MB max · uploaded files are shared with the client</p>
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="document-success" role="status">{message}</p>}
-    {isLoading ? <div className="empty-state">Loading documents…</div> : documents.length ? <div className="document-list">{documents.map((document) => {
+    {isLoading ? <SkeletonRows rows={3} label="Loading documents" /> : documents.length ? <div className="document-list">{documents.map((document) => {
       const isWorking = workingDocumentId === document.id
       return <article className="document-row" key={document.id}>
         <span className="activity-icon"><FileText size={16} /></span>
@@ -155,7 +156,7 @@ export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
         <label className="document-visibility"><input type="checkbox" checked={document.clientVisible} disabled={isWorking} onChange={() => { void toggleVisibility(document) }} /><Share2 size={14} /><span>{document.clientVisible ? 'Shared' : 'Private'}</span></label>
         <div className="document-actions"><button className="text-button compact-button document-view-button" type="button" aria-label={`View ${document.fileName}`} title="View document" disabled={isWorking} onClick={() => { void openDocument(document) }}>{isWorking ? <RefreshCw size={15} /> : <Eye size={15} />}<span>View</span></button><button className="icon-button document-delete-button" type="button" aria-label={`Delete ${document.fileName}`} title="Delete document" disabled={isWorking} onClick={() => { setError(''); setPendingDelete(document) }}><Trash2 size={15} /></button></div>
       </article>
-    })}</div> : <div className="empty-state">No documents uploaded for this project.</div>}
+    })}</div> : <div className="pr-empty"><EmptyArt kind="folder" /><strong>No documents yet</strong><p>Upload plans, permits and contracts to keep them with this project.</p></div>}
     </section>
   </>
 }

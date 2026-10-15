@@ -15,6 +15,7 @@ import { formatChangeOrderNumber } from '../lib/change-order-number'
 import { formatPaymentType } from '../lib/payment-type'
 import { respondToProjectChangeOrder } from '../data/change-orders'
 import { createProjectCoverPhotoUrl } from '../data/project-cover'
+import { CountUp, EmptyArt, ProgressRing } from './Motion'
 import { createProjectMilestonePhotoUrl } from '../data/project-milestones'
 import { useToast } from './toast-context'
 
@@ -95,7 +96,15 @@ function ClientProjectCover({ storagePath, projectName, variant }: { storagePath
   return <div className={className}>
     {photoUrl && failedStoragePath !== storagePath
       ? <img src={photoUrl} alt={`${projectName} project cover`} onError={() => setFailedStoragePath(storagePath)} />
-      : variant === 'thumb' ? <span>{projectName.slice(0, 1)}</span> : <><FolderKanban size={isDetail ? 29 : 18} aria-hidden="true" /><span>{isDetail ? 'Project overview' : projectName.slice(0, 1)}</span></>}
+      : variant === 'thumb' ? <span>{projectName.slice(0, 1)}</span> : <div className="client-cover-blueprint" aria-hidden="true">
+        <svg viewBox="0 0 480 220" preserveAspectRatio="xMidYMax meet">
+          <g fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
+            <path d="M40 200h400M90 200V96l80-50 80 50v104M70 108l100-66 100 66M150 200v-38h40v38M250 200V122h130v78M250 122l20-22h90l20 22" />
+            <rect x="112" y="128" width="34" height="30" /><rect x="194" y="128" width="34" height="30" /><rect x="272" y="140" width="36" height="28" /><rect x="324" y="140" width="36" height="28" />
+          </g>
+        </svg>
+        {isDetail && <span>{projectName}</span>}
+      </div>}
   </div>
 }
 
@@ -278,7 +287,7 @@ function ClientMilestonePhoto({ milestoneName, storagePath }: { milestoneName: s
   }
 
   if (error) return <small className="client-milestone-photo-error" role="alert">{error}</small>
-  if (!photoUrl) return <small className="client-milestone-photo-loading" role="status">Loading milestone photo…</small>
+  if (!photoUrl) return <span className="client-photo-skeleton" role="status" aria-label="Loading milestone photo" />
   return <>
     <button className="client-milestone-photo-button" type="button" aria-label={`View ${milestoneName} photo`} onClick={() => { setZoom(1); setIsPreviewOpen(true) }}>
       <img className="client-milestone-photo" src={photoUrl} alt={`${milestoneName} completion`} loading="lazy" />
@@ -1020,7 +1029,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
                   <ChevronRight className="client-project-home-arrow" size={18} />
                 </span>
                 <span className="client-project-home-progress-block">
-                  <span className="client-project-home-meta"><small>Construction progress</small><strong>{progress}%</strong></span>
+                  <span className="client-project-home-meta"><small>Construction progress</small><strong><CountUp value={`${progress}%`} /></strong></span>
                   <span className="client-project-home-progress"><span style={{ width: `${progress}%` }} /></span>
                   {item.milestones.length > 0 && <small className="client-project-home-milestone">
                     <span>{nextMilestone ? <>Next: <b>{nextMilestone.name}</b>{nextMilestone.plannedDate ? ` · ${formatDate(nextMilestone.plannedDate)}` : ''}</> : 'All milestones complete'}</span>
@@ -1057,8 +1066,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
             <ClientStageStepper status={project.status} />
             <div className="client-detail-summary-progress">
               <small>Construction progress</small>
-              <strong className="client-detail-summary-figure">{projectSummary.progress}%</strong>
-              <span className="client-project-home-progress"><span style={{ width: `${projectSummary.progress}%` }} /></span>
+              <div className="client-progress-ring-row"><ProgressRing value={projectSummary.progress} size={92} stroke={8} /><span>{projectSummary.progress >= 100 ? 'Construction complete' : projectSummary.progress > 0 ? 'Work is under way' : 'Getting started'}</span></div>
               {project.milestones.length > 0 && <p>
                 {projectSummary.nextMilestone ? <>Next: <b>{projectSummary.nextMilestone.name}</b>{projectSummary.nextMilestone.plannedDate ? ` · ${formatDate(projectSummary.nextMilestone.plannedDate)}` : ''}</> : 'All milestones complete'}
                 <span>{projectSummary.completedMilestones} of {project.milestones.length} milestones done</span>
@@ -1066,7 +1074,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
             </div>
             <div className="client-detail-summary-money">
               <small>Payments</small>
-              <strong className="client-detail-summary-figure">{wholePeso(projectSummary.paid)} <span>paid of {wholePeso(projectSummary.totalContract)}</span></strong>
+              <strong className="client-detail-summary-figure"><CountUp value={wholePeso(projectSummary.paid)} /> <span>paid of {wholePeso(projectSummary.totalContract)}</span></strong>
               <span className="client-project-home-progress is-paid"><span style={{ width: `${projectSummary.paidPercent}%` }} /></span>
               <p>
                 <span>{projectSummary.paidPercent}% paid · <b>{wholePeso(Math.max(0, projectSummary.totalContract - projectSummary.paid))}</b> remaining</span>
@@ -1198,7 +1206,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
               return <div className="client-finance-row" key={`change-order:${order.id}`}><span className="client-record-icon"><FileText size={16} /></span><span><strong>Change order · {formatChangeOrderNumber(project.prefix, order.orderNumber)} <ClientPayStatus amount={order.amount} outstanding={receivable?.outstandingAmount ?? 0} daysOverdue={receivable?.daysOverdue ?? 0} /></strong><small>{order.title}{receivable?.outstandingAmount ? ` · ${money.format(receivable.outstandingAmount)} outstanding` : ''}</small></span><strong className="client-record-amount">{money.format(order.amount)}</strong>{changeOrderDocument && <div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`Preview change order ${formatChangeOrderNumber(project.prefix, order.orderNumber)} PDF`} title="Preview change-order PDF" disabled={downloadingDocument === order.id} onClick={() => { void openDocument(changeOrderDocument) }}>{downloadingDocument === order.id ? <RefreshCw size={15} /> : <Eye size={15} />}</button><button type="button" className="client-download-button" aria-label={`Download change order ${formatChangeOrderNumber(project.prefix, order.orderNumber)} PDF`} title="Download change-order PDF" disabled={downloadingDocument === order.id} onClick={() => { void openDocument(changeOrderDocument, true) }}><Download size={15} /></button></div>}</div>
             })}
             {project.billings.map((billing) => { const receivable = projectOutstandingItems.find((item) => item.id === billing.id); return <div className="client-finance-row" key={billing.id}><span className="client-record-icon"><FileText size={16} /></span><span><strong>Billing #{formatBillingNumber(billing.number)} <ClientPayStatus amount={billing.amount} outstanding={receivable?.outstandingAmount ?? 0} daysOverdue={receivable?.daysOverdue ?? 0} /></strong><small>{formatDate(billing.issuedAt)} · {billing.progress}% complete{billing.dueAt ? ` · due ${formatDate(billing.dueAt)}` : ''}</small></span><strong className="client-record-amount">{money.format(billing.amount)}</strong><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`Preview billing ${formatBillingNumber(billing.number)}`} title="Preview billing PDF" onClick={() => { void openBillingPdf({ projectName: project.name, clientName: project.clientName, location: project.location, billingNumber: billing.number, amount: billing.amount, progressPercent: billing.progress, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }) }}><Eye size={15} /></button><button type="button" className="client-download-button" aria-label={`Download billing ${formatBillingNumber(billing.number)}`} title="Download billing PDF" onClick={() => { void downloadBillingPdf({ projectName: project.name, clientName: project.clientName, location: project.location, billingNumber: billing.number, amount: billing.amount, progressPercent: billing.progress, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }) }}><Download size={15} /></button></div></div> })}
-          </div> : <p className="client-empty-note">No billings have been issued yet.</p>}</section>
+          </div> : <div className="client-empty-art"><EmptyArt kind="receipt" /><strong>No billings yet</strong><span>Billings from SAGACT will appear here when issued.</span></div>}</section>
           <section className="client-portal-section"><h2>Payment history</h2>{project.payments.length > 0 && (() => {
             const total = project.payments.reduce((sum, payment) => sum + payment.amount, 0)
             const latest = [...project.payments].sort((x, y) => y.receivedAt.localeCompare(x.receivedAt))[0]
@@ -1240,7 +1248,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
               reference: payment.reference,
             }
             return <div className="client-finance-row" key={payment.id}><span className="client-record-icon"><ArrowDownLeft size={16} /></span><span><strong>{payment.receiptNumber || 'Payment received'}</strong><small>{formatDate(payment.receivedAt)} · {formatPaymentType(payment.paymentType)} · {payment.reference || payment.payerName}</small></span><strong className="client-record-amount">{money.format(payment.amount)}</strong><div className="client-download-actions"><button type="button" className="client-download-button" aria-label={`Preview receipt ${payment.receiptNumber}`} title="Preview payment receipt" onClick={() => { void openPaymentReceiptPdf(receiptDetails) }}><Eye size={15} /></button><button type="button" className="client-download-button" aria-label={`Download receipt ${payment.receiptNumber}`} title="Download payment receipt" onClick={() => { void downloadPaymentReceiptPdf(receiptDetails) }}><Download size={15} /></button></div></div>
-          })}</div> : <p className="client-empty-note">No payments have been recorded yet.</p>}</section>
+          })}</div> : <div className="client-empty-art"><EmptyArt kind="wallet" /><strong>No payments yet</strong><span>Your payments and receipts will be listed here.</span></div>}</section>
         </div>}
         {tab === 'Change orders' && <section className={`client-portal-section client-change-orders-section${project.changeOrders.length ? '' : ' is-empty'}`}>
           <h2>Change orders</h2>
@@ -1283,7 +1291,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
                 </div>}
               </article>
             })}</div>
-            : <div className="client-change-order-empty">No change orders at this time.</div>}
+            : <div className="client-empty-art"><EmptyArt kind="document" /><strong>No change orders</strong><span>Any changes to your project scope will appear here for your approval.</span></div>}
         </section>}
         {tab === 'Documents' && <section className={`client-portal-section client-documents-section${project.documents.length ? '' : ' is-empty'}`}>
           <h2>Documents</h2>
@@ -1306,7 +1314,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
               </div>
             ))}</div>
             </div>)}</div>
-            : <div className="client-change-order-empty">No documents at this time.</div>}
+            : <div className="client-empty-art"><EmptyArt kind="folder" /><strong>No documents yet</strong><span>Plans, permits and contracts shared with you will appear here.</span></div>}
         </section>}
         </div>
       </>}

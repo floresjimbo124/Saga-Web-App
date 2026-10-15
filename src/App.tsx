@@ -28,6 +28,7 @@ import { ProjectMilestonePanel } from './components/ProjectMilestonePanel'
 import { ContractImpactCard, ProjectChangeOrderPanel } from './components/ProjectChangeOrderPanel'
 import { ProjectPulse } from './components/ProjectPulse'
 import { StatusMenu, type StatusMenuOption } from './components/StatusMenu'
+import { CountUp, EmptyArt, ProgressRing } from './components/Motion'
 import { createProjectCoverPhotoUrl, deleteProjectCoverPhoto, uploadProjectCoverPhoto, validateProjectCoverPhoto } from './data/project-cover'
 import { ProjectCoverCropDialog } from './components/ProjectCoverCropDialog'
 import { PayrollPanel } from './components/PayrollPanel'
@@ -414,11 +415,11 @@ function App() {
       <nav className="primary-nav grouped-nav" aria-label="Main navigation">
         <span className="nav-indicator" aria-hidden="true" style={{ '--nav-index': Math.max(0, (['portfolio', 'tasks', 'expenses', 'payroll'] as WorkspaceView[]).indexOf(view)) } as React.CSSProperties} />
         <span className="nav-group-label">Workspace</span>
-        <button className={`nav-item ${view === 'portfolio' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('portfolio'); setSelectedId(null); setProjectTab('Overview') }}><LayoutDashboard size={17} /><span>Portfolio</span></button>
-        <button className={`nav-item ${view === 'tasks' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }}><ClipboardList size={17} /><span>Tasks</span>{taskAttentionCount > 0 && <em className="nav-count" title="Blocked or due within 7 days">{taskAttentionCount}</em>}</button>
+        <button className={`nav-item ${view === 'portfolio' && mobileNavigationPage !== 'profile' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('portfolio'); setSelectedId(null); setProjectTab('Overview') }}><LayoutDashboard size={17} /><span>Portfolio</span></button>
+        <button className={`nav-item ${view === 'tasks' && mobileNavigationPage !== 'profile' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('updates'); setView('tasks'); setSelectedId(null); setProjectTab('Overview') }}><ClipboardList size={17} /><span>Tasks</span>{taskAttentionCount > 0 && <em className="nav-count" title="Blocked or due within 7 days">{taskAttentionCount}</em>}</button>
         <span className="nav-group-label">Finance</span>
-        <button className={`nav-item ${view === 'expenses' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('expenses'); setSelectedId(null); setProjectTab('Overview') }}><Receipt size={17} /><span>Expenses</span>{missingReceiptCount > 0 && <em className="nav-count is-warning" title="Expenses without a receipt">{missingReceiptCount}</em>}</button>
-        <button className={`nav-item ${view === 'payroll' ? 'is-active' : ''}`} onClick={() => { setView('payroll'); setSelectedId(null); setProjectTab('Overview') }}><WalletCards size={17} /><span>Payroll</span></button>
+        <button className={`nav-item ${view === 'expenses' && mobileNavigationPage !== 'profile' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('expenses'); setSelectedId(null); setProjectTab('Overview') }}><Receipt size={17} /><span>Expenses</span>{missingReceiptCount > 0 && <em className="nav-count is-warning" title="Expenses without a receipt">{missingReceiptCount}</em>}</button>
+        <button className={`nav-item ${view === 'payroll' && mobileNavigationPage !== 'profile' ? 'is-active' : ''}`} onClick={() => { setMobileNavigationPage('home'); setView('payroll'); setSelectedId(null); setProjectTab('Overview') }}><WalletCards size={17} /><span>Payroll</span></button>
       </nav>
       <div className="owner-sidebar-footer">
         <button type="button" className="client-sidebar-account" onClick={() => { setMobileNavigationPage('profile'); setSelectedId(null) }}>
@@ -468,7 +469,7 @@ function App() {
 
     <div className="app-main">
       <header className="topbar">
-        <div className="breadcrumbs"><span>SAGACT</span><ChevronRight size={13} /><strong>{view === 'payroll' ? 'Payroll' : view === 'tasks' ? 'Tasks' : view === 'expenses' ? 'Expenses' : selected?.name ?? 'Portfolio'}</strong></div>
+        <div className="breadcrumbs"><span>SAGACT</span><ChevronRight size={13} /><strong>{mobileNavigationPage === 'profile' ? 'Profile' : view === 'payroll' ? 'Payroll' : view === 'tasks' ? 'Tasks' : view === 'expenses' ? 'Expenses' : selected?.name ?? 'Portfolio'}</strong></div>
         <div className="topbar-right">
           <span className="topbar-date"><CalendarDays size={14} />{new Intl.DateTimeFormat('en-PH', { weekday: 'short', month: 'short', day: 'numeric' }).format(currentDate)}</span>
           <NotificationCenter projects={projects} receivables={receivables} onOpenProject={openProject} onOpenTask={openTaskCommentNotification} />
@@ -484,7 +485,34 @@ function App() {
       <footer className="page-footer" aria-hidden="true" />
     </div>
 
-    {showModal && createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowModal(false) }}><section className="project-modal" role="dialog" aria-modal="true" aria-labelledby="new-project-title"><div className="modal-heading"><div><h2 id="new-project-title">Create a project</h2></div><button className="icon-button" onClick={() => setShowModal(false)} aria-label="Close"><X size={18} /></button></div><form onSubmit={createProject}><label className="form-field">Project name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Salo Spot" required /></label><label className="form-field">Client<input list="known-clients" value={client} onChange={(event) => setClient(event.target.value)} placeholder="Choose or add a client" required /><datalist id="known-clients">{clients.map((item) => <option key={item} value={item} />)}</datalist></label><label className="form-field">Project location<input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="City or project address" maxLength={200} minLength={2} required /></label><div className="form-row"><label className="form-field">Contract amount<MoneyInput min="1" step="1" value={contract} onChange={setContract} placeholder="0" required /></label><label className="form-field">Down payment %<input type="number" min="0" max="100" step="0.5" value={downPaymentPercent} onChange={(event) => setDownPaymentPercent(event.target.value)} required /></label></div><div className="form-row"><label className="form-field">Retention rate<select value={retentionRate} onChange={(event) => setRetentionRate(event.target.value as '5' | '10')}><option value="5">5% default</option><option value="10">10% client request</option></select></label><label className="form-field">Retention method<select value={retentionMethod} onChange={(event) => setRetentionMethod(event.target.value as 'final_schedule' | 'per_billing')}><option value="final_schedule">Final payment schedule</option><option value="per_billing">Deduct from each billing</option></select></label></div>{formError && <p className="form-error" role="alert">{formError}</p>}<div className="modal-actions"><button type="button" className="button button-secondary" onClick={() => setShowModal(false)}>Cancel</button><button type="submit" className="button button-primary" disabled={isCreatingProject}><Plus size={15} />{isCreatingProject ? 'Saving…' : 'Create project'}</button></div></form></section></div>, document.body)}
+    {showModal && createPortal(<div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isCreatingProject) setShowModal(false) }}>
+      <section className="project-modal setup-dialog" role="dialog" aria-modal="true" aria-labelledby="new-project-title">
+        <div className="modal-heading"><div><div className="section-kicker">New project</div><h2 id="new-project-title">Create a project</h2></div><button className="icon-button" onClick={() => setShowModal(false)} aria-label="Close" disabled={isCreatingProject}><X size={18} /></button></div>
+        <form onSubmit={createProject} className="setup-form">
+          <fieldset className="setup-group"><legend>Project</legend>
+            <label className="form-field">Project name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Salo Spot" required /></label>
+            <div className="form-row">
+              <label className="form-field">Client<input list="known-clients" value={client} onChange={(event) => setClient(event.target.value)} placeholder="Choose or add a client" required /><datalist id="known-clients">{clients.map((item) => <option key={item} value={item} />)}</datalist></label>
+              <label className="form-field">Location<input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="City or project address" maxLength={200} minLength={2} required /></label>
+            </div>
+          </fieldset>
+          <fieldset className="setup-group"><legend>Contract &amp; payment terms</legend>
+            <div className="form-row">
+              <label className="form-field">Contract amount<MoneyInput min="1" step="1" value={contract} onChange={setContract} placeholder="0" required /></label>
+              <label className="form-field">Down payment<span className="setup-suffix-input"><input type="number" min="0" max="100" step="0.5" value={downPaymentPercent} onChange={(event) => setDownPaymentPercent(event.target.value)} required /><span>%</span></span></label>
+            </div>
+            {(() => { const amount = parseMoneyInput(contract); const percent = Number(downPaymentPercent); return Number.isFinite(amount) && amount > 0 && Number.isFinite(percent) && percent > 0 ? <p className="setup-preview"><span>Down payment amount</span><strong>{setupMoney.format(amount * percent / 100)}</strong></p> : null })()}
+            <div className="form-field"><span>Retention rate</span><div className="setup-segment" role="radiogroup" aria-label="Retention rate">{([{ value: '5', label: '5%', hint: 'Default' }, { value: '10', label: '10%', hint: 'Client request' }] as const).map((option) => <button key={option.value} type="button" role="radio" aria-checked={retentionRate === option.value} className={retentionRate === option.value ? 'is-selected' : ''} onClick={() => setRetentionRate(option.value)}><strong>{option.label}</strong><small>{option.hint}</small></button>)}</div></div>
+            <div className="form-field"><span>Retention method</span><div className="setup-choice" role="radiogroup" aria-label="Retention method">
+              <button type="button" role="radio" aria-checked={retentionMethod === 'final_schedule'} className={retentionMethod === 'final_schedule' ? 'is-selected' : ''} onClick={() => setRetentionMethod('final_schedule')}><strong>Final payment schedule</strong><small>Collected once at the end</small></button>
+              <button type="button" role="radio" aria-checked={retentionMethod === 'per_billing'} className={retentionMethod === 'per_billing' ? 'is-selected' : ''} onClick={() => setRetentionMethod('per_billing')}><strong>Deduct from each billing</strong><small>Held back from every progress billing</small></button>
+            </div></div>
+          </fieldset>
+          {formError && <p className="form-error" role="alert">{formError}</p>}
+          <div className="modal-actions"><button type="button" className="button button-secondary" onClick={() => setShowModal(false)} disabled={isCreatingProject}>Cancel</button><button type="submit" className="button button-primary" disabled={isCreatingProject}><Plus size={15} />{isCreatingProject ? 'Creating…' : 'Create project'}</button></div>
+        </form>
+      </section>
+    </div>, document.body)}
   </div>
 }
 
@@ -618,7 +646,25 @@ function ProjectDetailCover({ projectId, projectName, storagePath, onChanged }: 
   return <div className={`project-detail-cover${photoUrl ? ' has-photo' : ''}`}>
     {photoUrl
       ? <img src={photoUrl} alt={`${projectName} project cover`} />
-      : <div className="project-detail-cover-empty"><Camera size={24} /><strong>Add a project photo</strong><span>JPG, PNG, or WebP · Up to 10 MB</span></div>}
+      : <div className="project-detail-cover-empty is-blueprint">
+        <svg className="cover-blueprint" viewBox="0 0 480 220" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+          <g fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
+            <path d="M40 200h400" />
+            <path d="M90 200V96l80-50 80 50v104" />
+            <path d="M70 108l100-66 100 66" />
+            <rect x="112" y="128" width="34" height="30" /><path d="M129 128v30M112 143h34" />
+            <rect x="194" y="128" width="34" height="30" /><path d="M211 128v30M194 143h34" />
+            <path d="M150 200v-38h40v38" />
+            <path d="M250 200V122h130v78" /><path d="M250 122l20-22h90l20 22" />
+            <rect x="272" y="140" width="36" height="28" /><rect x="324" y="140" width="36" height="28" />
+            <path d="M290 140v28M342 140v28" />
+          </g>
+          <g fill="none" stroke="currentColor" strokeWidth=".8" strokeDasharray="4 4" opacity=".7">
+            <path d="M90 214h160M90 210v8M250 210v8M262 40v150M256 40h12" />
+          </g>
+        </svg>
+        <span className="cover-blueprint-copy"><Camera size={18} /><strong>Add a project photo</strong><span>JPG, PNG, or WebP · Up to 10 MB</span></span>
+      </div>}
     {photoUrl && <button type="button" className="project-detail-cover-adjust" aria-label="Adjust project photo crop" title="Adjust photo crop" disabled={isWorking} onClick={() => { void adjustCover() }}><Crop size={14} />Adjust crop</button>}
     <label className="project-detail-cover-upload">
       <Camera size={14} />{isWorking ? 'Saving…' : storagePath ? 'Change photo' : 'Upload photo'}
@@ -768,7 +814,7 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
     {(profitRisk.level === 'high' || profitRisk.level === 'critical') && <div className={`project-risk-callout risk-${profitRisk.level}`} role="status"><CircleAlert size={17} /><span><strong>Profit risk: {profitRisk.label}.</strong> {profitRisk.detail}.</span><button type="button" onClick={() => setTab('Forecast')}>Review forecast <ArrowRight size={14} /></button></div>}
     {tab === 'Overview' && <>
       <ProjectPulse progress={project.progress} startDate={project.startDate ?? project.createdAt} deadline={project.deadline} isClosed={project.status === 'completed' || project.status === 'closed'} milestones={project.milestones} costBudget={project.costBudget} recordedCosts={project.outflow} outstanding={due} pendingChangeOrders={project.changeOrders.filter((order) => order.status === 'pending_approval').length} onOpenTab={setTab} />
-      <section className="surface-card detail-progress-card"><div className="card-heading-row"><h2>Project health</h2><span className="large-progress">{project.progress}<small>%</small></span></div><div className="detail-progress-track"><span style={{ width: `${project.progress}%` }} /></div><div className="progress-caption"><span>Work accomplished</span><strong>{money.format(finance.earnedToDate)} earned</strong></div><div className="milestone-callout"><span className="milestone-icon"><CalendarDays size={16} /></span><span><small>Next milestone</small><strong>{project.milestone}</strong></span><ChevronRight size={16} /></div></section>
+      <section className="surface-card detail-progress-card"><div className="card-heading-row"><h2>Project health</h2><ProgressRing value={project.progress} /></div><div className="detail-progress-track"><span style={{ width: `${project.progress}%` }} /></div><div className="progress-caption"><span>Work accomplished</span><strong>{money.format(finance.earnedToDate)} earned</strong></div><div className="milestone-callout"><span className="milestone-icon"><CalendarDays size={16} /></span><span><small>Next milestone</small><strong>{project.milestone}</strong></span><ChevronRight size={16} /></div></section>
       <ProjectProfitCard contractValue={finance.contractValue} recordedCosts={project.outflow} costBudget={project.costBudget} estimatedCostToComplete={project.estimatedCostToComplete} progressPercent={project.progress} onOpenForecast={() => setTab('Forecast')} onOpenExpenses={() => setTab('Expenses')} />
       <section className="detail-financial-section fin-section" aria-labelledby="detail-financial-heading">
         <div className="detail-financial-heading"><h2 id="detail-financial-heading">Financial overview</h2></div>
@@ -777,7 +823,7 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
           <div className="detail-metrics fin-metrics">
             <div className="metric-card metric-blue">
               <div className="metric-top"><span className="metric-icon"><FileText size={16} /></span><span>Billed to date</span></div>
-              <strong className="metric-value">{money.format(project.billed)}</strong>
+              <strong className="metric-value"><CountUp value={money.format(project.billed)} /></strong>
               <small>{finance.contractValue ? Math.round(project.billed / finance.contractValue * 100) : 0}% of revised contract</small>
               {approvedChangeOrderTotal > 0 && <ul className="fin-balance-lines">
                 <li><span>Contract</span><span>{money.format(project.billed - approvedChangeOrderTotal)}</span></li>
@@ -786,7 +832,7 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
             </div>
             <div className="metric-card metric-green">
               <div className="metric-top"><span className="metric-icon"><CircleDollarSign size={16} /></span><span>Collected</span></div>
-              <strong className="metric-value">{money.format(project.collected)}</strong>
+              <strong className="metric-value"><CountUp value={money.format(project.collected)} /></strong>
               <small>{finance.contractValue ? Math.round(project.collected / finance.contractValue * 100) : 0}% of revised contract</small>
               {approvedChangeOrderTotal > 0 && <ul className="fin-balance-lines">
                 <li><span>Contract</span><span>{money.format(Math.max(0, project.collected - Math.max(0, approvedChangeOrderTotal - changeOrderReceivable)))}</span></li>
@@ -796,7 +842,7 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
             <Metric icon={<WalletCards size={16} />} label="Retention held" value={money.format(retentionHeld)} foot="Released one month after completion" tone="neutral" />
             <div className={`metric-card fin-balance ${due > 0 ? 'has-balance' : 'is-settled'}`}>
               <div className="metric-top"><span className="metric-icon">{due > 0 ? <CircleAlert size={16} /> : <Check size={16} />}</span><span>Balance outstanding</span></div>
-              <strong className="metric-value">{due > 0 ? money.format(due) : 'Fully settled'}</strong>
+              <strong className="metric-value">{due > 0 ? <CountUp value={money.format(due)} /> : 'Fully settled'}</strong>
               <ul className="fin-balance-lines">
                 <li><span>Billings</span><span>{money.format(billingReceivable)}</span></li>
                 {approvedChangeOrderTotal > 0 && <li><span>Change orders</span><span>{money.format(changeOrderReceivable)}</span></li>}
@@ -841,7 +887,7 @@ function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, on
             {payment.receiptNumber && <button type="button" className="pay-action is-icon" aria-label={`Download acknowledgement receipt ${payment.receiptNumber}`} title="Download receipt PDF" onClick={() => { void downloadAcknowledgementReceipt(payment) }}><Download size={14} /></button>}
           </span>
         </div>
-      })}</div> : <div className="empty-state">No payments recorded for this project.</div>}
+      })}</div> : <div className="pr-empty"><EmptyArt kind="wallet" /><strong>No payments yet</strong><p>Payments you log for this project will appear here with their receipts.</p></div>}
     </section>}
     {tab === 'Expenses' && <ExpensePanel projectId={project.id} projectName={project.name} expenses={projectExpenses} inflow={project.collected} onChanged={onChanged} />}
     {tab === 'Forecast' && <ProjectForecastPanel projectId={project.id} contractValue={finance.contractValue} recordedCosts={project.outflow} costBudget={project.costBudget} estimatedCostToComplete={project.estimatedCostToComplete} onChanged={onChanged} />}
@@ -926,6 +972,7 @@ function MobileOwnerProfile({ name, title, email, onSignOut }: { name: string; t
       <h1 id="mobile-profile-title">Profile</h1>
     </header>
     <section className="mobile-profile-identity surface-card" aria-label="Account identity">
+      <span className="mobile-profile-avatar owner-profile-avatar" aria-hidden="true">{name.trim().charAt(0).toUpperCase() || 'U'}</span>
       <span className="mobile-profile-identity-copy">
         <strong>{name}</strong>
         <span>{title}</span>

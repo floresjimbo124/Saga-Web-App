@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { EmptyArt } from './Motion'
 import { createPortal } from 'react-dom'
 import { Camera, ChevronRight, Eye, EyeOff, Image as ImageIcon, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 import {
@@ -326,6 +327,7 @@ export function ProjectMilestonePanel({ projectId, milestones, onChanged }: {
         <ChevronRight size={16} className="milestone-list-open" aria-hidden="true" />
       </button>
     })}</div> : <div className="pr-empty">
+      <EmptyArt kind="blueprint" />
       <strong>No milestones yet</strong>
       <p>Add the first milestone to start the project timeline.</p>
       <button type="button" className="button button-primary" onClick={() => setEditing('new')}><Plus size={15} />Add milestone</button>

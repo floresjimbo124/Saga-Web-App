@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowDownLeft, ArrowUpRight, Camera, Pencil, Plus, Receipt, RefreshCw, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Camera, Pencil, Plus, RefreshCw, X } from 'lucide-react'
 import { createExpenseReceiptUrl, setProjectExpenseReceipt, uploadExpenseReceipt, type PortfolioExpense, type ProjectExpenseCategory } from '../data/portfolio'
 import { ExpenseEntryDialog } from './ExpenseEntryDialog'
 import { QuickExpenseSheet } from './QuickExpenseSheet'
 import { useToast } from './toast-context'
+import { CountUp, EmptyArt } from './Motion'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2 })
 const dateFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -118,9 +119,9 @@ export function ExpensePanel({ projectId, contractId, projectName, expenses, inf
       </header>
 
       <div className="ex-stats" aria-label="Project cash flow totals">
-        <div><span><ArrowDownLeft size={14} />Inflow</span><strong>{money.format(inflow)}</strong><small>Payments collected</small></div>
-        <div><span><ArrowUpRight size={14} />Outflow</span><strong>{money.format(totalOutflow)}</strong><small>{inflow > 0 ? `${Math.round(totalOutflow / inflow * 100)}% of inflow` : 'Recorded expenses'}</small></div>
-        <div className={net < 0 ? 'is-negative' : 'is-positive'}><span>Net cash</span><strong>{money.format(net)}</strong><small>{net < 0 ? 'Spending exceeds collections' : 'Cash on hand for this project'}</small></div>
+        <div><span><ArrowDownLeft size={14} />Inflow</span><strong><CountUp value={money.format(inflow)} /></strong><small>Payments collected</small></div>
+        <div><span><ArrowUpRight size={14} />Outflow</span><strong><CountUp value={money.format(totalOutflow)} /></strong><small>{inflow > 0 ? `${Math.round(totalOutflow / inflow * 100)}% of inflow` : 'Recorded expenses'}</small></div>
+        <div className={net < 0 ? 'is-negative' : 'is-positive'}><span>Net cash</span><strong><CountUp value={money.format(net)} /></strong><small>{net < 0 ? 'Spending exceeds collections' : 'Cash on hand for this project'}</small></div>
       </div>
 
       {expenses.length ? <>
@@ -142,7 +143,7 @@ export function ExpensePanel({ projectId, contractId, projectName, expenses, inf
           {visibleExpenses.length ? <div className="expense-register-list ex-register">{visibleExpenses.map((expense) => <ExpenseRow key={expense.id} expense={expense} onEdit={(item) => { setEditingExpense(item); setShowForm(true) }} onOpenReceipt={setReceiptUrl} onReceiptChanged={onChanged} />)}</div> : <div className="empty-state">Every expense has a receipt.</div>}
         </div>
       </> : <div className="pr-empty">
-        <span className="pr-empty-icon" aria-hidden="true"><Receipt size={20} /></span>
+        <EmptyArt kind="receipt" />
         <strong>No expenses yet</strong>
         <p>Snap a receipt or enter costs to see spending by category.</p>
         <button type="button" className="button button-primary" onClick={() => contractId ? setShowForm(true) : setShowQuick(true)}><Camera size={15} />Add first expense</button>

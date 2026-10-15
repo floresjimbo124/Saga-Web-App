@@ -17312,3 +17312,141 @@ button.tk-stat > small { color: #4f7a57; font-weight: 600; }
 .auth-password-checks li.is-met { color: #3f6a48; }
 .auth-password-checks li.is-met svg { opacity: 1; }
 @media (max-width: 360px) { .auth-name-row { grid-template-columns: 1fr; } }
+
+/* ===== Motion: bars fill, panels slide, shimmer placeholders ===== */
+@keyframes bar-fill { from { transform: scaleX(0); } }
+.detail-progress-track > span,
+.progress-track > span,
+.project-detail-progress-track > span,
+.mobile-progress-track > span,
+.co-impact-meter > i,
+.project-cost-pace-track > i,
+.milestone-gantt-progress,
+.payroll-progress > span {
+  transform-origin: left center;
+  animation: bar-fill 700ms cubic-bezier(.2, .8, .2, 1) both;
+}
+.milestone-gantt-bar { transform-origin: left center; animation: gantt-bar-in 600ms cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes gantt-bar-in { from { opacity: 0; clip-path: inset(0 100% 0 0 round 999px); } to { opacity: 1; clip-path: inset(0 0 0 0 round 999px); } }
+.ex-category-bar > i { transform-origin: left center; animation: bar-fill 700ms cubic-bezier(.2, .8, .2, 1) both; }
+
+/* Side panels slide in from the right on desktop, up from the bottom on phones */
+@keyframes panel-in-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes panel-in-up { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+.modal-backdrop { animation: backdrop-in 180ms ease-out both; }
+.project-modal { animation: modal-pop 200ms cubic-bezier(.2, .8, .2, 1) both; }
+.project-modal.payroll-worker-drawer { animation: panel-in-right 260ms cubic-bezier(.2, .8, .2, 1) both; }
+@media (max-width: 640px) {
+  .project-modal.payroll-worker-drawer { animation-name: panel-in-up; }
+}
+
+/* Shimmer placeholders */
+@keyframes skeleton-shimmer { to { background-position: -200% 0; } }
+.skeleton-rows { display: grid; gap: 0; overflow: hidden; border: 1px solid #e6e8e1; border-radius: 10px; background: #fff; }
+.skeleton-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 90px; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #f1f2ec; }
+.skeleton-row:last-child { border-bottom: 0; }
+.skeleton-row > span { display: grid; gap: 7px; }
+.skeleton-dot, .skeleton-bar { display: block; background: linear-gradient(90deg, #eef0ea 25%, #f7f8f4 50%, #eef0ea 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.3s linear infinite; }
+.skeleton-dot { width: 34px; height: 34px; border-radius: 50%; }
+.skeleton-bar { height: 10px; border-radius: 999px; }
+.skeleton-bar.is-title { width: 55%; height: 12px; }
+.skeleton-bar.is-sub { width: 35%; }
+.skeleton-bar.is-amount { justify-self: end; width: 80px; height: 12px; }
+.skeleton-row:nth-child(2) .is-title { width: 42%; }
+.skeleton-row:nth-child(3) .is-title { width: 62%; }
+.skeleton-row:nth-child(4) .is-title { width: 48%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-progress-track > span, .progress-track > span, .project-detail-progress-track > span, .mobile-progress-track > span,
+  .co-impact-meter > i, .project-cost-pace-track > i, .milestone-gantt-progress, .milestone-gantt-bar, .ex-category-bar > i,
+  .modal-backdrop, .project-modal, .project-modal.payroll-worker-drawer, .skeleton-dot, .skeleton-bar { animation: none; }
+}
+
+/* ===== Visual graphics ===== */
+/* Progress ring */
+.progress-ring { position: relative; display: inline-grid; place-items: center; flex: 0 0 auto; }
+.progress-ring svg { position: absolute; inset: 0; }
+.progress-ring-track { fill: none; stroke: #e6ebe3; }
+.progress-ring-fill { fill: none; stroke: #2c5a41; stroke-linecap: round; animation: ring-fill 900ms cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes ring-fill { from { stroke-dashoffset: var(--ring-length); } }
+.progress-ring strong { position: relative; display: inline-flex; align-items: baseline; color: #1f3a2c; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.progress-ring strong small { margin-left: 1px; color: #768578; font-size: 11px; font-weight: 600; }
+.detail-progress-card .card-heading-row { align-items: center; }
+
+/* Sparkline */
+.metric-card.has-trend .metric-top { display: flex; align-items: center; }
+.sparkline { margin-left: auto; overflow: visible; }
+.sparkline-line { fill: none; stroke: #4f7a57; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 300; animation: spark-draw 900ms ease-out both; }
+.sparkline-area { fill: rgb(79 122 87 / 12%); stroke: none; }
+.sparkline-dot { fill: #2c5a41; }
+@keyframes spark-draw { from { stroke-dashoffset: 300; } to { stroke-dashoffset: 0; } }
+
+/* Empty-state illustrations */
+.empty-art { color: #8fa58f; margin-bottom: 4px; }
+.pr-empty .empty-art + strong { margin-top: 2px; }
+
+/* Blueprint cover for projects without a photo */
+.project-detail-cover-empty.is-blueprint {
+  position: relative; display: grid; place-items: center; height: 100%; overflow: hidden; color: #4d6e57;
+  background-color: #e9efe6;
+  background-image: linear-gradient(rgb(77 110 87 / 9%) 1px, transparent 1px), linear-gradient(90deg, rgb(77 110 87 / 9%) 1px, transparent 1px), linear-gradient(rgb(77 110 87 / 5%) 1px, transparent 1px), linear-gradient(90deg, rgb(77 110 87 / 5%) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px, 12px 12px, 12px 12px;
+}
+.cover-blueprint { position: absolute; inset: auto 0 0; width: 100%; height: 78%; opacity: .55; }
+.cover-blueprint path, .cover-blueprint rect { stroke-dasharray: 900; animation: blueprint-draw 1.6s ease-out both; }
+@keyframes blueprint-draw { from { stroke-dashoffset: 900; } to { stroke-dashoffset: 0; } }
+.cover-blueprint-copy { position: relative; display: grid; justify-items: center; gap: 4px; padding: 12px 18px; border-radius: 12px; color: #2d4234; background: rgb(255 255 255 / 78%); backdrop-filter: blur(2px); text-align: center; }
+.cover-blueprint-copy strong { font-size: 14px; }
+.cover-blueprint-copy > span { color: #768578; font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-ring-fill, .sparkline-line, .cover-blueprint path, .cover-blueprint rect { animation: none; }
+}
+
+/* ===== Client portal graphics ===== */
+.client-project-home-progress > span,
+.client-milestone-progress-track > span {
+  transform-origin: left center;
+  animation: bar-fill 800ms cubic-bezier(.2, .8, .2, 1) both;
+}
+.client-progress-ring-row { display: flex; align-items: center; gap: 14px; margin: 6px 0 4px; }
+.client-progress-ring-row > span:last-child { color: #5d6b60; font-size: 13px; font-weight: 600; }
+.client-progress-ring-row .progress-ring strong { font-size: 22px; }
+.client-cover-blueprint {
+  position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; color: #4d6e57;
+  background-color: #e9efe6;
+  background-image: linear-gradient(rgb(77 110 87 / 9%) 1px, transparent 1px), linear-gradient(90deg, rgb(77 110 87 / 9%) 1px, transparent 1px), linear-gradient(rgb(77 110 87 / 5%) 1px, transparent 1px), linear-gradient(90deg, rgb(77 110 87 / 5%) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px, 12px 12px, 12px 12px;
+}
+.client-project-home-cover, .client-project-detail-cover { position: relative; }
+.client-cover-blueprint svg { position: absolute; inset: auto 0 0; width: 100%; height: 80%; opacity: .55; }
+.client-cover-blueprint svg path, .client-cover-blueprint svg rect { stroke-dasharray: 900; animation: blueprint-draw 1.6s ease-out both; }
+.client-cover-blueprint > span { position: relative; padding: 8px 16px; border-radius: 10px; color: #1f3a2c; background: rgb(255 255 255 / 80%); font-size: 15px; font-weight: 600; }
+.client-photo-skeleton { display: block; width: 100%; height: 100%; min-height: 140px; border-radius: inherit; background: linear-gradient(90deg, #eef0ea 25%, #f7f8f4 50%, #eef0ea 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.3s linear infinite; }
+.client-empty-art { display: grid; justify-items: center; gap: 6px; padding: 28px 16px; border: 1px dashed #d5dcd2; border-radius: 12px; text-align: center; }
+.client-empty-art strong { color: #1f3a2c; font-size: 14.5px; }
+.client-empty-art > span { max-width: 320px; color: #768578; font-size: 13px; line-height: 1.45; }
+@media (prefers-reduced-motion: reduce) {
+  .client-project-home-progress > span, .client-milestone-progress-track > span, .client-cover-blueprint svg path, .client-cover-blueprint svg rect, .client-photo-skeleton { animation: none; }
+}
+
+/* Owner profile page on tablet/desktop (mobile styles live in the 640px block) */
+@media (min-width: 641px) {
+  .mobile-owner-profile-page { display: grid; gap: 16px; width: min(560px, 100%); margin: 8px auto 40px; }
+  .mobile-profile-heading h1 { margin: 0; color: #1f3a2c; font-size: 30px; letter-spacing: -0.02em; }
+  .mobile-profile-identity { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 14px; }
+  .mobile-profile-avatar.owner-profile-avatar { display: grid; place-items: center; flex: 0 0 56px; width: 56px; height: 56px; border-radius: 50%; color: #1f3a2c; background: #e8c98a; font-size: 22px; font-weight: 700; }
+  .mobile-profile-identity-copy { display: grid; gap: 2px; min-width: 0; }
+  .mobile-profile-identity-copy strong { color: #1f3a2c; font-size: 18px; font-weight: 600; }
+  .mobile-profile-identity-copy > span { color: #5d6b60; font-size: 13.5px; }
+  .mobile-profile-identity-copy small { overflow: hidden; color: #8a958b; font-size: 13px; text-overflow: ellipsis; }
+  .mobile-profile-settings { display: grid; padding: 6px; border-radius: 14px; }
+  .mobile-profile-setting-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 16px; align-items: center; gap: 12px; width: 100%; padding: 12px 10px; border: 0; border-radius: 10px; color: #1f3a2c; background: transparent; font: inherit; font-size: 14px; font-weight: 500; text-align: left; cursor: pointer; }
+  .mobile-profile-setting-row:hover { background: #f3f6f0; }
+  .mobile-profile-setting-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: #2c5a41; background: #eef3ec; }
+  .mobile-profile-setting-chevron { color: #a3ada4; }
+  .mobile-profile-sign-out { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 1px solid #efcdc8; border-radius: 12px; color: #a5463f; background: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .mobile-profile-sign-out:hover { background: #fbeeec; }
+}

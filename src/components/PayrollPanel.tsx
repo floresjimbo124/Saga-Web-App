@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { EmptyArt, SkeletonRows } from './Motion'
 import { ArrowLeft, ArrowRight, BadgeCheck, History, Pencil, Plus, Save, Users, WalletCards, X } from 'lucide-react'
 import {
   createPayrollEmployee,
@@ -482,7 +483,7 @@ export function PayrollPanel({ projects, onChanged }: {
         <div className="is-net"><small>Net pay</small><strong>{money.format(savedGross - savedDeductions)}</strong></div>
       </div>
       {loadError && <p className="form-error" role="alert">{loadError} <button type="button" className="text-button" onClick={() => refresh()}>Retry</button></p>}
-      {isLoading ? <p className="payroll-empty">Loading payroll…</p> : activeEmployees.length ? <div className="payroll-week-list">{activeEmployees.map((employee) => {
+      {isLoading ? <SkeletonRows rows={4} label="Loading payroll" /> : activeEmployees.length ? <div className="payroll-week-list">{activeEmployees.map((employee) => {
         const entry = currentEntries.find((item) => item.employeeId === employee.id)
         const netPay = entry ? entry.grossPay - entry.advanceDeduction : null
         const status = entry ? entry.finalizedAt ? 'Finalized' : 'Draft saved' : 'Not entered'
@@ -500,7 +501,7 @@ export function PayrollPanel({ projects, onChanged }: {
           <span className="payroll-worker-open" aria-hidden="true">›</span>
         </button>
       })}</div> : <div className="pr-empty">
-        <span className="pr-empty-icon" aria-hidden="true"><Users size={20} /></span>
+        <EmptyArt kind="hardhat" />
         <strong>No active employees yet</strong>
         <p>Add your crew to start tracking attendance and weekly pay.</p>
         <button type="button" className="button button-primary" onClick={() => { setIsCreatingEmployee(true); setIsViewEmployeesOpen(true) }}><Plus size={15} />Add employee</button>

@@ -5,6 +5,7 @@ import {
   Plus, RefreshCw, Trash2, UserRoundPlus, Users, X, CheckCircle2, ClipboardCheck, HardHat, Ruler, Send, UserRoundX,
 } from 'lucide-react'
 import { TaskActivityPanel } from './TaskActivityPanel'
+import { EmptyArt, SkeletonRows } from './Motion'
 import {
   deleteProjectTask, loadProjectTasks, saveProjectTask, updateProjectTaskStatus,
   summarizeStaffTasksForWeek,
@@ -465,7 +466,7 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
       </div>
     </section>
 
-    {isLoading ? <div className="task-loading" role="status"><RefreshCw size={16} />Loading tasks…</div>
+    {isLoading ? <SkeletonRows rows={4} label="Loading tasks" />
       : layout === 'kanban' ? <section className="task-kanban-panel" aria-label="Tasks by status">
         <div className="task-list-heading">
           <h2>{isOwner ? 'Project tasks' : 'Assigned to me'}</h2><span>{taskCountText}</span>
@@ -505,7 +506,7 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
           />) : <p className="task-kanban-empty">{overdueOnly ? 'No overdue tasks match these filters.' : tasks.length ? 'No tasks match these filters.' : isOwner ? 'No tasks yet. Add a task and assign it to a team member.' : 'No tasks have been assigned to you yet.'}</p>}
         </section>
         {!tasks.length && !overdueOnly ? <div className="pr-empty tk-empty">
-          <span className="pr-empty-icon" aria-hidden="true"><Columns3 size={20} /></span>
+          <EmptyArt kind="clipboard" />
           <strong>{isOwner ? 'No tasks yet' : 'Nothing assigned to you yet'}</strong>
           <p>{isOwner ? (activeStaff.length ? 'Create a task, link it to a project and assign it to a team member.' : 'Invite your team first, then create and assign tasks.') : 'Tasks your manager assigns to you will appear here.'}</p>
           {isOwner && <button type="button" className="button button-primary" onClick={() => activeStaff.length ? setShowTaskForm(true) : setShowTeamDialog(true)} disabled={activeStaff.length > 0 && !projects.length}>{activeStaff.length ? <><Plus size={15} />Add task</> : <><UserRoundPlus size={15} />Invite staff</>}</button>}
