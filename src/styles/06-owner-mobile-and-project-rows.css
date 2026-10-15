@@ -1,0 +1,705 @@
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+.side-label,
+.section-kicker { font-size: 11px; }
+.eyebrow,
+.detail-eyebrow { font-size: 11px; }
+.eyebrow-date { font-size: 11px; }
+.nav-item { font-size: 14px; }
+.workspace-state { font-size: 12px; }
+.owner-profile strong { font-size: 12px; }
+.owner-profile span { font-size: 11px; }
+.breadcrumbs { font-size: 12px; }
+.topbar-right { font-size: 11px; }
+.topbar-date { font-size: 11px; }
+.page-heading p,
+.portal-header p,
+.detail-heading p { font-size: 14px; }
+.button { font-size: 12px; }
+.sample-banner { font-size: 12px; }
+.metric-top { font-size: 12px; }
+.metric-value { font-size: 21px; }
+.metric-card > small { font-size: 11px; }
+.section-heading h2 { font-size: 19px; }
+.card-heading-row h2,
+.tab-content h2,
+.portal-statement h2 { font-size: 16px; }
+.count-pill { font-size: 10px; }
+.text-button { font-size: 12px; }
+.search-field input,
+.select-wrap select { font-size: 12px; }
+.project-table-head { font-size: 11px; }
+.project-title-stack strong,
+.activity-copy strong { font-size: 13px; }
+.project-title-stack small,
+.activity-copy small { font-size: 11px; }
+.money-cell { font-size: 11px; }
+.progress-value { font-size: 11px; }
+.status-badge { font-size: 11px; }
+.table-footer { font-size: 11px; }
+.cashflow-total > strong { font-size: 21px; }
+.cashflow-total > small { font-size: 11px; }
+.positive-chip,
+.activity-amount { font-size: 11px; }
+.chart-axis { font-size: 10px; }
+.activity-foot { font-size: 11px; }
+.page-footer { font-size: 11px; }
+.back-link { font-size: 12px; }
+.tab { font-size: 12px; }
+.progress-caption { font-size: 11px; }
+.milestone-callout small { font-size: 11px; }
+.milestone-callout strong { font-size: 12px; }
+.receivable-card h2 { font-size: 16px; }
+.receivable-line { font-size: 11px; }
+.retention-explainer { font-size: 11px; }
+.demo-tag { font-size: 10px; }
+.simple-table-head { font-size: 11px; }
+.simple-table-row,
+.simple-table-row strong { font-size: 11px; }
+.calculation-note { font-size: 11px; }
+.document-placeholder strong { font-size: 11px; }
+.document-placeholder small { font-size: 11px; }
+.portal-preview-pill { font-size: 11px; }
+.portal-project h2 { font-size: 19px; }
+.portal-progress-label,
+.portal-milestone { font-size: 11px; }
+.portal-statement-lines > div { font-size: 11px; }
+.portal-statement-lines strong { font-size: 11px; }
+.modal-intro { font-size: 12px; }
+.form-field { font-size: 11px; }
+.form-field input,
+.form-field select { font-size: 12px; }
+.prefix-preview > span { font-size: 11px; }
+.prefix-preview strong { font-size: 12px; }
+.prefix-preview small { font-size: 11px; }
+.empty-state { font-size: 12px; }
+
+@media (max-width: 640px) {
+  .nav-item { font-size: 12px; }
+  .topbar-date { font-size: 11px; }
+  .sample-banner { font-size: 11px; }
+  .metric-top { font-size: 11px; }
+  .metric-value { font-size: 18px; }
+  .page-footer { font-size: 11px; }
+  .portal-statement-lines > div { font-size: 11px; }
+}
+
+.metric-value { font-size: 24px; }
+.money-cell,
+.progress-value,
+.activity-amount { font-size: 12px; }
+.cashflow-total > strong { font-size: 25px; }
+.receivable-total { font-size: 30px; }
+.large-progress { font-size: 32px; }
+.progress-caption strong,
+.portal-progress-label strong,
+.portal-statement-lines strong,
+.simple-table-row strong { font-size: 12px; }
+.count-pill { font-size: 11px; }
+
+@media (max-width: 640px) {
+  .metric-value { font-size: 20px; }
+}
+
+.metric-top { font-size: 14px; }
+.metric-card > small { font-size: 13px; }
+
+@media (max-width: 640px) {
+  .metric-top { font-size: 12px; }
+  .metric-card > small { font-size: 12px; }
+}
+
+body { font-size: 16px; }
+.brand-lockup { font-size: 19px; }
+.side-label,
+.section-kicker,
+.eyebrow,
+.detail-eyebrow { font-size: 12px; }
+.eyebrow-date { font-size: 11px; }
+.nav-item { font-size: 15px; }
+.workspace-state { font-size: 13px; }
+.owner-profile strong,
+.breadcrumbs { font-size: 13px; }
+.owner-profile span { font-size: 12px; }
+.topbar-right,
+.topbar-date { font-size: 12px; }
+.page-heading h1,
+.portal-header h1 { font-size: 40px; }
+.page-heading p,
+.portal-header p,
+.detail-heading p { font-size: 15px; }
+.button { font-size: 13px; }
+.sample-banner { font-size: 13px; }
+.metric-top { font-size: 16px; }
+.metric-value { font-size: 28px; }
+.metric-card > small { font-size: 14px; }
+.section-heading h2 { font-size: 21px; }
+.card-heading-row h2,
+.tab-content h2,
+.portal-statement h2 { font-size: 18px; }
+.text-button { font-size: 13px; }
+.search-field input,
+.select-wrap select { font-size: 13px; }
+.project-table-head { font-size: 11px; }
+.project-row { min-height: 74px; }
+.project-title-stack strong,
+.activity-copy strong { font-size: 15px; }
+.project-title-stack small,
+.activity-copy small { font-size: 12px; }
+.money-cell,
+.progress-value,
+.activity-amount { font-size: 14px; }
+.status-badge { font-size: 12px; }
+.table-footer { font-size: 12px; }
+.cashflow-total > strong { font-size: 27px; }
+.cashflow-total > small,
+.positive-chip { font-size: 12px; }
+.chart-axis,
+.activity-foot { font-size: 11px; }
+.page-footer { font-size: 11px; }
+.back-link,
+.tab { font-size: 13px; }
+.progress-caption { font-size: 12px; }
+.progress-caption strong,
+.portal-progress-label strong,
+.portal-statement-lines strong,
+.simple-table-row strong { font-size: 14px; }
+.milestone-callout small { font-size: 11px; }
+.milestone-callout strong { font-size: 13px; }
+.receivable-card h2 { font-size: 18px; }
+.receivable-line { font-size: 13px; }
+.retention-explainer,
+.calculation-note { font-size: 12px; }
+.demo-tag,
+.simple-table-row { font-size: 12px; }
+.simple-table-head { font-size: 11px; }
+.document-placeholder strong { font-size: 13px; }
+.document-placeholder small { font-size: 12px; }
+.portal-preview-pill,
+.portal-progress-label,
+.portal-milestone { font-size: 12px; }
+.portal-project h2 { font-size: 21px; }
+.portal-statement-lines > div { font-size: 13px; }
+.modal-intro { font-size: 13px; }
+.form-field { font-size: 12px; }
+.form-field input,
+.form-field select { font-size: 14px; }
+.prefix-preview > span { font-size: 11px; }
+.prefix-preview strong { font-size: 13px; }
+.prefix-preview small { font-size: 11px; }
+.empty-state { font-size: 13px; }
+.billing-calculation > div { font-size: 14px; }
+.billing-calculation strong { font-size: 15px; }
+.billing-calculation-total strong { font-size: 19px; }
+
+.detail-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.detail-financial-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.detail-financial-content {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(150px, 1fr);
+  gap: 14px;
+}
+
+.detail-financial-risk {
+  min-width: 0;
+}
+
+.detail-metrics .metric-card {
+  min-height: 116px;
+  padding: 17px 19px 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(32, 53, 39, 0.025);
+}
+
+.detail-metrics .metric-top {
+  gap: 8px;
+  font-size: 12px;
+}
+
+.detail-metrics .metric-icon {
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
+}
+
+.detail-metrics .metric-value {
+  margin: 10px 0 4px;
+  font-size: clamp(21px, 2vw, 29px);
+  letter-spacing: -0.035em;
+}
+
+.detail-metrics .metric-card > small {
+  font-size: 11px;
+}
+
+.detail-financial-metrics .metric-card > small {
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.risk-text-red { color: #a34242 !important; }
+.risk-text-gold { color: #99783d !important; }
+.risk-text-green { color: #547955 !important; }
+.risk-text-neutral { color: #777e77 !important; }
+
+.project-risk-callout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 15px;
+  padding: 11px 14px;
+  border: 1px solid #efcaca;
+  border-radius: 8px;
+  color: #8f3934;
+  background: #fff0ef;
+  font-size: 12px;
+}
+
+.project-risk-callout > svg {
+  flex: 0 0 auto;
+}
+
+.project-risk-callout > span {
+  flex: 1;
+}
+
+.project-risk-callout button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0 4px 8px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.detail-heading {
+  gap: 18px;
+  margin-bottom: 21px;
+}
+
+.detail-heading-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.detail-heading-copy {
+  min-width: 0;
+}
+
+.detail-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 16px 0 12px;
+  border: 1px solid #dce2d9;
+  border-radius: 999px;
+  color: #405345;
+  background: #fffefa;
+  box-shadow: 0 1px 2px rgba(31, 58, 44, 0.06);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.detail-breadcrumb:hover {
+  color: var(--forest);
+  border-color: #b9c8ba;
+  background: #f2f6f1;
+}
+
+.detail-breadcrumb svg {
+  transition: transform 150ms ease;
+}
+
+.detail-breadcrumb:hover svg {
+  transform: translateX(-3px);
+}
+
+.detail-breadcrumb:focus-visible {
+  outline: 2px solid #668a6a;
+  outline-offset: 2px;
+}
+
+.detail-title-row {
+  align-items: flex-start;
+}
+
+.detail-heading h1 {
+  margin: 5px 0 3px;
+  font-size: clamp(29px, 3vw, 38px);
+  letter-spacing: -0.035em;
+}
+
+.detail-heading p {
+  margin: 0;
+}
+
+.detail-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.detail-eyebrow .eyebrow-date {
+  overflow: hidden;
+  max-width: min(45vw, 420px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-status-row {
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.project-state-pill {
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-height: 32px;
+  min-width: 0;
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 12px 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.project-state-pill::after {
+  width: 0;
+  height: 0;
+  margin-left: 1px;
+  border-top: 4px solid currentColor;
+  border-right: 3px solid transparent;
+  border-left: 3px solid transparent;
+  content: '';
+  pointer-events: none;
+}
+
+.project-state-pill select {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  appearance: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.project-state-pill select:disabled {
+  cursor: progress;
+}
+
+.project-state-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: currentColor;
+  pointer-events: none;
+}
+
+.project-state-value {
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.project-state-pill select {
+  min-width: 0;
+}
+
+.state-planning { border-color: #dce3e1; color: #677a78; background: #fffdf8; }
+.state-active,
+.state-completed { border-color: #d8e7d8; color: #547955; background: #f0f6ee; }
+.state-on-hold { border-color: #ecdcbc; color: #99783d; background: #faf4e7; }
+.state-closed { border-color: #e1e3df; color: #777e77; background: #f3f3ef; }
+
+.detail-status-row > .status-badge {
+  min-height: 32px;
+  gap: 7px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.detail-status-row > .status-badge.deadline-due-soon {
+  border-color: #d9aa5b;
+  color: #76551c;
+  background: #fff2d6;
+}
+
+.detail-status-row > .status-badge.deadline-overdue {
+  border-color: #d78780;
+  color: #8e302c;
+  background: #ffebe8;
+}
+
+.detail-status-row > .status-badge.deadline-on-track {
+  border-color: #9eb99e;
+  color: #3e6945;
+  background: #edf5e9;
+}
+
+.detail-status-row > .status-badge.deadline-none,
+.detail-status-row > .status-badge.deadline-completed {
+  border-color: #c9cec5;
+  color: #586459;
+  background: #f3f4ef;
+}
+
+.detail-actions {
+  padding-top: 31px;
+}
+
+.detail-tabs {
+  gap: 25px;
+  margin-bottom: 17px;
+}
+
+.tab {
+  min-height: 40px;
+  font-size: 14px;
+}
+
+.surface-card.detail-progress-card,
+.surface-card.receivable-card,
+.surface-card.detail-activity-card {
+  border-radius: 9px;
+  box-shadow: 0 2px 8px rgba(32, 53, 39, 0.025);
+}
+
+.detail-content-grid {
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.detail-activity-card .payment-detail-row {
+  border-bottom-color: #efeee7;
+}
+
+.detail-activity-card .payment-detail-row:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .detail-financial-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .detail-financial-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-heading-main {
+    flex-direction: column;
+    gap: 13px;
+  }
+
+  .detail-actions {
+    padding-top: 0;
+  }
+
+  .detail-tabs {
+    gap: 19px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .filter-bar {
+    flex-wrap: wrap;
+  }
+
+  .detail-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .detail-tabs .tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .payroll-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .payroll-finalize-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .payroll-finalize-buttons {
+    width: 100%;
+  }
+
+  .payroll-finalize-buttons > .button {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .detail-financial-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .detail-metrics .metric-card {
+    min-height: 105px;
+    padding: 13px;
+  }
+
+  .detail-metrics .metric-value {
+    font-size: clamp(18px, 6vw, 24px);
+  }
+
+  .project-risk-callout {
+    display: none;
+  }
+
+  .project-risk-callout > span {
+    flex-basis: calc(100% - 30px);
+  }
+
+  .project-risk-callout button {
+    margin-left: 27px;
+  }
+
+  .detail-eyebrow .eyebrow-date {
+    max-width: 55vw;
+  }
+
+  .detail-heading-main {
+    width: 100%;
+  }
+
+  .detail-status-row {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    align-items: center;
+    justify-content: start;
+    width: fit-content;
+    gap: 7px;
+  }
+
+  .detail-status-row > .status-badge {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .project-state-pill {
+    flex: 0 0 auto;
+  }
+
+  .detail-actions {
+    width: 100%;
+  }
+
+  .detail-actions > .button {
+    flex: 1;
+  }
+
+  .detail-tabs {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .brand-lockup { font-size: 17px; }
+  .nav-item { font-size: 13px; }
+  .topbar-date { font-size: 11px; }
+  .page-heading h1,
+  .portal-header h1 { font-size: 33px; }
+  .page-heading p,
+  .portal-header p { font-size: 14px; }
+  .sample-banner { font-size: 12px; }
+  .metric-top { font-size: 14px; }
+  .metric-value { font-size: 22px; }
+  .metric-card > small { font-size: 13px; }
+  .project-title-stack strong,
+  .activity-copy strong { font-size: 14px; }
+  .money-cell,
+  .progress-value,
+  .activity-amount { font-size: 13px; }
+  .page-footer { font-size: 11px; }
+  .portal-statement-lines > div { font-size: 12px; }
+}
+
+@media (max-width: 360px) {
+  .metric-value { font-size: 20px; }
+  .metric-top { font-size: 13px; }
+}
+
+.task-workspace {
+  display: grid;
+  gap: 20px;
+}
+
+.task-page-heading {
+  margin-bottom: 0;
+}
+
+.task-heading-actions {
+  flex-wrap: wrap;
+}
+
+.task-notification-center {
+  position: relative;
+}
+
+.task-notification-button {
+  position: relative;
+}
+
+.task-notification-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border: 2px solid var(--surface);
+  border-radius: 10px;
+  color: #fff;
+  background: #a8483d;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+

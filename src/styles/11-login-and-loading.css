@@ -1,0 +1,822 @@
+/* ===== Login polish ===== */
+.auth-story {
+  position: relative;
+  overflow: hidden;
+  justify-content: space-between;
+  background:
+    linear-gradient(180deg, rgba(20, 42, 33, 0.55) 0%, rgba(20, 42, 33, 0.35) 40%, rgba(16, 34, 26, 0.92) 100%),
+    url('/login-hero.jpg') center / cover no-repeat,
+    radial-gradient(120% 80% at 85% 10%, #2d5a45 0%, transparent 60%),
+    var(--forest);
+}
+
+.auth-story::before {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  content: '';
+  pointer-events: none;
+  mask-image: linear-gradient(180deg, #000 0%, transparent 75%);
+}
+
+.auth-story > * {
+  position: relative;
+}
+
+.auth-story-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fffdf7;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.auth-story-brand > span:first-child {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #fffdf7;
+}
+
+.auth-story-brand > span:first-child img {
+  width: 22px;
+  height: 22px;
+}
+
+.auth-story-brand > span:last-child > span {
+  color: var(--gold-light);
+}
+
+.auth-story-copy {
+  max-width: 460px;
+  margin: auto 0 0;
+  padding-bottom: 36px;
+}
+
+.auth-story-copy .auth-story-rule {
+  margin: 0 0 22px;
+}
+
+.auth-story-copy h2 {
+  max-width: 460px;
+  font-family: var(--display);
+  font-size: clamp(36px, 3.6vw, 52px);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.auth-story-copy p {
+  max-width: 400px;
+  margin: 0;
+  color: rgba(246, 243, 233, 0.78);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.auth-story-footer {
+  color: rgba(246, 243, 233, 0.5);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* Form */
+.auth-signin-panel {
+  width: min(100%, 420px);
+}
+
+.auth-signin-panel .auth-heading h1 {
+  font-family: var(--display);
+  font-weight: 500;
+}
+
+.auth-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.auth-label-row .auth-mode-toggle {
+  padding: 0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.auth-signin-form .auth-field > .auth-label-row {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+}
+
+.auth-signin-form .auth-field-control input {
+  height: 46px;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.auth-signin-form .auth-field-control input:focus {
+  border-color: #648467;
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(100, 132, 103, 0.14);
+}
+
+.auth-signin-form #auth-password {
+  padding-right: 42px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 6px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: #768579;
+  background: transparent;
+  cursor: pointer;
+}
+
+.auth-password-toggle:hover {
+  color: var(--forest-deep);
+  background: #eef0e8;
+}
+
+.auth-signin-form .auth-submit {
+  min-height: 48px;
+  margin-top: 6px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.auth-signin-form .auth-account-actions {
+  justify-content: center;
+}
+
+/* ===== Mobile login: brand hero + bottom sheet form ===== */
+@media (max-width: 760px) {
+  .auth-signin-screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+    background: var(--paper);
+  }
+
+  .auth-signin-screen .auth-story {
+    min-height: 0;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 28px;
+    padding: max(26px, env(safe-area-inset-top)) 24px 64px;
+  }
+
+  .auth-signin-screen .auth-story-brand {
+    font-size: 17px;
+  }
+
+  .auth-signin-screen .auth-story-brand > span:first-child {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .auth-signin-screen .auth-story-copy {
+    margin: 0;
+    padding: 0;
+  }
+
+  .auth-signin-screen .auth-story-copy .auth-story-rule {
+    width: 44px;
+    margin-bottom: 14px;
+  }
+
+  .auth-signin-screen .auth-story-copy h2 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.15;
+  }
+
+  .auth-signin-screen .auth-story-footer {
+    display: none;
+  }
+
+  .auth-signin-screen .auth-signin-content {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-height: 0;
+    margin-top: -32px;
+    padding: 30px 22px max(24px, env(safe-area-inset-bottom));
+    border-radius: 24px 24px 0 0;
+    background: var(--paper);
+    box-shadow: 0 -8px 24px rgba(16, 34, 26, 0.12);
+  }
+
+  .auth-signin-screen .auth-signin-panel {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .auth-signin-screen .auth-card-brand {
+    display: none;
+  }
+
+  .auth-signin-screen .auth-heading {
+    margin-bottom: 20px;
+    text-align: left;
+  }
+
+  .auth-signin-screen .auth-heading h1 {
+    font-size: 26px;
+  }
+
+  .auth-signin-screen .auth-signin-form .auth-field-control input {
+    height: 50px;
+    border-radius: 12px;
+    background: #fffefa;
+    font-size: 16px;
+  }
+
+  .auth-signin-screen .auth-signin-form .auth-submit {
+    min-height: 52px;
+    margin-top: 10px;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+
+  .auth-signin-screen .auth-footer {
+    margin-top: auto;
+    padding-top: 28px;
+    text-align: center;
+  }
+}
+
+/* Mobile login: pin form to top of the sheet */
+@media (max-width: 760px) {
+  .auth-signin-screen .auth-content.auth-signin-content {
+    justify-content: flex-start;
+  }
+
+  .auth-signin-screen .auth-signin-panel {
+    margin: 0;
+  }
+
+  .auth-signin-screen .auth-signin-panel .auth-heading {
+    margin: 0;
+  }
+
+  .auth-signin-screen .auth-signin-panel .auth-heading h1 {
+    margin: 0;
+    font-size: 26px;
+    text-align: left;
+  }
+
+  .auth-signin-screen .auth-signin-form {
+    margin-top: 20px;
+  }
+}
+
+/* Mobile login: hero absorbs extra height, sheet hugs the form */
+@media (max-width: 760px) {
+  .auth-signin-screen .auth-story {
+    flex: 1 1 auto;
+    min-height: 38svh;
+    justify-content: space-between;
+    padding-bottom: 60px;
+  }
+
+  .auth-signin-screen .auth-story-copy {
+    margin-top: auto;
+  }
+
+  .auth-signin-screen .auth-signin-content {
+    flex: 0 0 auto;
+    padding-bottom: max(22px, env(safe-area-inset-bottom));
+  }
+
+  .auth-signin-screen .auth-footer {
+    margin-top: 0;
+    padding-top: 22px;
+  }
+}
+
+/* ===== Mobile login v3: centred brand + card on full green ===== */
+@media (max-width: 760px) {
+  .auth-signin-screen {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100svh;
+    padding: max(28px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom));
+    background:
+      linear-gradient(180deg, rgba(20, 42, 33, 0.55) 0%, rgba(16, 34, 26, 0.9) 100%),
+      url('/login-hero.jpg') center / cover no-repeat,
+      radial-gradient(120% 70% at 80% 0%, #2d5a45 0%, transparent 60%),
+      var(--forest);
+  }
+
+  .auth-signin-screen .auth-story {
+    flex: 0 0 auto;
+    min-height: 0;
+    display: grid;
+    justify-items: center;
+    gap: 18px;
+    padding: 0 0 26px;
+    background: none;
+    text-align: center;
+  }
+
+  .auth-signin-screen .auth-story::before {
+    display: none;
+  }
+
+  .auth-signin-screen .auth-story-brand {
+    font-size: 18px;
+  }
+
+  .auth-signin-screen .auth-story-copy {
+    display: grid;
+    justify-items: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  .auth-signin-screen .auth-story-copy .auth-story-rule {
+    display: none;
+  }
+
+  .auth-signin-screen .auth-story-copy h2 {
+    max-width: 300px;
+    margin: 0;
+    color: rgba(255, 253, 247, 0.92);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .auth-signin-screen .auth-signin-content {
+    flex: 0 0 auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .auth-signin-screen .auth-signin-panel {
+    width: 100%;
+    padding: 24px 20px 22px;
+    border: 0;
+    border-radius: 20px;
+    background: #fbfaf5;
+    box-shadow: 0 18px 40px rgba(6, 18, 12, 0.35);
+  }
+
+  .auth-signin-screen .auth-signin-panel .auth-heading h1 {
+    font-size: 22px;
+  }
+
+  .auth-signin-screen .auth-signin-form {
+    margin-top: 18px;
+  }
+
+  .auth-signin-screen .auth-footer {
+    margin: 0;
+    padding-top: 20px;
+    color: rgba(246, 243, 233, 0.55);
+    text-align: center;
+  }
+
+  .auth-signin-screen .auth-footer span {
+    color: inherit;
+  }
+}
+
+/* Mobile login v3: true centring of brand block */
+@media (max-width: 760px) {
+  .auth-signin-screen > .auth-story,
+  .auth-signin-screen > .auth-content {
+    width: 100%;
+    max-width: 420px;
+    align-self: center;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .auth-signin-screen .auth-story-brand,
+  .auth-signin-screen .auth-story-copy,
+  .auth-signin-screen .auth-story-copy h2 {
+    justify-self: center;
+    margin-right: auto;
+    margin-left: auto;
+    text-align: center;
+  }
+
+  .auth-signin-screen .auth-story-copy {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* Mobile login: stop desktop space-between from shrinking the grid track */
+@media (max-width: 760px) {
+  .auth-signin-screen .auth-story,
+  .auth-signin-screen .auth-story-copy {
+    justify-content: stretch;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Mobile login: logo → card → tagline */
+@media (max-width: 760px) {
+  .auth-signin-screen > .auth-story {
+    display: contents;
+  }
+
+  .auth-signin-screen .auth-story-brand {
+    order: 1;
+    align-self: center;
+    margin: 0 0 22px;
+  }
+
+  .auth-signin-screen > .auth-content {
+    order: 2;
+  }
+
+  .auth-signin-screen .auth-story-copy {
+    order: 3;
+    width: 100%;
+    max-width: 420px;
+    align-self: center;
+    margin: 26px auto 0;
+  }
+
+  .auth-signin-screen .auth-story-copy h2 {
+    max-width: 280px;
+    color: rgba(255, 253, 247, 0.72);
+    font-size: 17px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  .auth-signin-screen .auth-story-footer {
+    display: none;
+  }
+}
+
+/* Auth loading screen: same green brand look as login */
+.workspace-loading.auth-loading {
+  gap: 8px;
+  color: #fffdf7;
+  background:
+    radial-gradient(120% 70% at 80% 0%, #2d5a45 0%, transparent 60%),
+    var(--forest);
+}
+
+.auth-loading-mark {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 10px;
+  border-radius: 14px;
+  background: #fffdf7;
+  box-shadow: 0 12px 30px rgba(6, 18, 12, 0.35);
+  animation: auth-mark-pulse 1.6s ease-in-out infinite;
+}
+
+.auth-loading-mark > img {
+  width: 32px;
+  height: 32px;
+}
+
+.workspace-loading.auth-loading .loading-brand {
+  margin-bottom: 6px;
+  color: #fffdf7;
+  letter-spacing: 0.02em;
+}
+
+.workspace-loading.auth-loading .loading-brand > span {
+  color: var(--gold-light);
+}
+
+.workspace-loading.auth-loading > strong {
+  color: rgba(255, 253, 247, 0.72);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.workspace-loading.auth-loading .loading-progress {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+@keyframes auth-mark-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-loading-mark {
+    animation: none;
+  }
+}
+
+.auth-footer {
+  font-family: var(--heading);
+  letter-spacing: 0.02em;
+}
+
+/* Blueprint grid pattern on mobile login + loading screen */
+@media (max-width: 760px) {
+  .auth-signin-screen {
+    isolation: isolate;
+  }
+
+  .auth-signin-screen::before {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    content: '';
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.5) 55%, transparent 90%);
+    mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.5) 55%, transparent 90%);
+  }
+}
+
+.workspace-loading.auth-loading {
+  isolation: isolate;
+}
+
+.workspace-loading.auth-loading::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  content: '';
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(70% 60% at 50% 45%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(70% 60% at 50% 45%, #000 0%, transparent 100%);
+}
+
+@media (max-width: 760px) {
+  .auth-signin-screen .auth-story-copy h2 {
+    max-width: 230px;
+    text-wrap: balance;
+  }
+}
+
+/* ===== Blueprint pattern: major/minor grid + floor-plan line art ===== */
+.auth-story::before {
+  background-image:
+    linear-gradient(rgba(243, 231, 200, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(243, 231, 200, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(243, 231, 200, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(243, 231, 200, 0.025) 1px, transparent 1px);
+  background-size: 64px 64px, 64px 64px, 16px 16px, 16px 16px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.6) 60%, transparent 95%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.6) 60%, transparent 95%);
+}
+
+.auth-story::after {
+  position: absolute;
+  top: 12%;
+  right: -8%;
+  width: min(78%, 560px);
+  aspect-ratio: 640 / 520;
+  background: url('/blueprint-sheet.svg') center / contain no-repeat;
+  content: '';
+  opacity: 0.12;
+  pointer-events: none;
+  transform: rotate(-4deg);
+}
+
+@media (max-width: 760px) {
+  .auth-signin-screen::before {
+    background-image:
+      linear-gradient(rgba(243, 231, 200, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(243, 231, 200, 0.07) 1px, transparent 1px),
+      linear-gradient(rgba(243, 231, 200, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(243, 231, 200, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px, 48px 48px, 12px 12px, 12px 12px;
+  }
+
+  .auth-signin-screen::after {
+    position: absolute;
+    z-index: -1;
+    top: 2%;
+    right: -18%;
+    width: 92%;
+    aspect-ratio: 640 / 520;
+    background: url('/blueprint-sheet.svg') center / contain no-repeat;
+    content: '';
+    opacity: 0.1;
+    pointer-events: none;
+    transform: rotate(-6deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-signin-screen::after {
+    top: auto;
+    right: auto;
+    bottom: -3%;
+    left: -12%;
+    width: 100%;
+    opacity: 0.09;
+    transform: rotate(5deg);
+  }
+
+  .auth-signin-screen::before {
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.35) 50%, #000 100%);
+    mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.35) 50%, #000 100%);
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-signin-screen .auth-story::after,
+  .auth-signin-screen .auth-story::before {
+    display: none;
+  }
+}
+
+/* Oversized, cropped blueprint */
+.auth-story::after {
+  top: -6%;
+  right: -55%;
+  width: 165%;
+  max-width: none;
+  opacity: 0.1;
+  transform: rotate(-6deg);
+}
+
+@media (max-width: 760px) {
+  .auth-signin-screen::after {
+    top: auto;
+    bottom: -14%;
+    left: -55%;
+    width: 210%;
+    opacity: 0.08;
+    transform: rotate(6deg);
+  }
+}
+
+.auth-story::after {
+  top: -24%;
+}
+
+/* Remove grid pattern; keep only the blueprint drawing */
+.auth-story::before,
+.workspace-loading.auth-loading::before {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .auth-signin-screen::before {
+    display: none;
+  }
+}
+
+/* ===== Drafting sheet background (replaces previous blueprint) ===== */
+.auth-story::before {
+  display: block;
+  background-image:
+    linear-gradient(rgba(243, 231, 200, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(243, 231, 200, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(243, 231, 200, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(243, 231, 200, 0.022) 1px, transparent 1px);
+  background-size: 60px 60px, 60px 60px, 12px 12px, 12px 12px;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.auth-story::after {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  aspect-ratio: auto;
+  background: url('/blueprint-sheet.svg') center / contain no-repeat;
+  opacity: 0.2;
+  transform: none;
+}
+
+@media (max-width: 760px) {
+  .auth-signin-screen::before {
+    display: block;
+    background-image:
+      linear-gradient(rgba(243, 231, 200, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(243, 231, 200, 0.06) 1px, transparent 1px),
+      linear-gradient(rgba(243, 231, 200, 0.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(243, 231, 200, 0.022) 1px, transparent 1px);
+    background-size: 48px 48px, 48px 48px, 12px 12px, 12px 12px;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .auth-signin-screen::after {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    aspect-ratio: auto;
+    background: url('/blueprint-sheet.svg') center / cover no-repeat;
+    opacity: 0.16;
+    transform: none;
+  }
+}
+
+@media (min-width: 761px) {
+  .auth-story-copy h2 {
+    max-width: 300px;
+    font-size: clamp(34px, 3.1vw, 44px);
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-signin-screen::after {
+    opacity: 0.12;
+  }
+}
+
+/* Low-key drafting sheet */
+.auth-story::after {
+  opacity: 0.1;
+}
+
+.auth-story::before {
+  opacity: 0.6;
+}
+
+@media (max-width: 760px) {
+  .auth-signin-screen::after {
+    opacity: 0.07;
+  }
+
+  .auth-signin-screen::before {
+    opacity: 0.6;
+  }
+}
+
+/* Loading screen: same low-key drafting sheet as login */
+.workspace-loading.auth-loading::before {
+  display: block;
+  opacity: 0.6;
+  background-image:
+    linear-gradient(rgba(243, 231, 200, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(243, 231, 200, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(243, 231, 200, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(243, 231, 200, 0.022) 1px, transparent 1px);
+  background-size: 60px 60px, 60px 60px, 12px 12px, 12px 12px;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.workspace-loading.auth-loading::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: url('/blueprint-sheet.svg') center / contain no-repeat;
+  content: '';
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .workspace-loading.auth-loading::before {
+    background-size: 48px 48px, 48px 48px, 12px 12px, 12px 12px;
+  }
+
+  .workspace-loading.auth-loading::after {
+    background-size: cover;
+    opacity: 0.07;
+  }
+}
+

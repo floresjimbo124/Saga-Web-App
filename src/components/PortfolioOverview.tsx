@@ -1,3 +1,4 @@
+import type { PortfolioBillingEvent } from '../data/portfolio'
 import {
   Activity,
   ArrowDownLeft,
@@ -96,6 +97,7 @@ function MobileProjectCover({ storagePath, projectName }: { storagePath: string 
 }
 
 type PortfolioOverviewProps = {
+  billingHistory?: PortfolioBillingEvent[]
   ownerName?: string
   projects: PortfolioProject[]
   payments: PortfolioPayment[]
@@ -135,6 +137,7 @@ export function PortfolioOverview({
   projects,
   payments,
   receivables,
+  billingHistory = [],
   filtered,
   currentDate,
   loadError,
@@ -184,6 +187,25 @@ export function PortfolioOverview({
     }
   })
   const sixMonthMax = Math.max(...sixMonths.map((month) => Math.max(month.cashIn, month.expenses)), 0)
+  // Running totals at the end of each of the last six months, for the KPI sparklines.
+  const monthEnds = sixMonths.map((_, index) => new Date(currentDate.getFullYear(), currentDate.getMonth() + index - 5 + 1, 1).getTime())
+  const dayOf = (value: string) => new Date(value.length === 10 ? `${value}T12:00:00` : value).getTime()
+  const billedEvents = [
+    ...billingHistory.map((event) => ({ time: dayOf(event.date), amount: event.amount })),
+    ...projects.flatMap((project) => {
+      const progressBilled = billingHistory.filter((event) => event.projectId === project.id).reduce((sum, event) => sum + event.amount, 0)
+      const approvedChangeOrders = project.changeOrders.filter((order) => order.status === 'approved' && order.contractId)
+      const changeOrderTotal = approvedChangeOrders.reduce((sum, order) => sum + order.amount, 0)
+      const downPayment = Math.max(0, project.billed - progressBilled - changeOrderTotal)
+      return [
+        ...(downPayment > 0 ? [{ time: dayOf(project.startDate ?? project.createdAt), amount: downPayment }] : []),
+        ...approvedChangeOrders.map((order) => ({ time: dayOf(order.decidedAt ?? order.createdAt), amount: order.amount })),
+      ]
+    }),
+  ]
+  const billedTrend = monthEnds.map((end) => billedEvents.filter((event) => event.time < end).reduce((sum, event) => sum + event.amount, 0))
+  const collectedRunning = monthEnds.map((end) => payments.filter((payment) => dayOf(payment.date) < end).reduce((sum, payment) => sum + payment.amount, 0))
+  const receivableTrend = billedTrend.map((value, index) => Math.max(0, value - collectedRunning[index]))
   const sixMonthCashIn = sixMonths.reduce((sum, month) => sum + month.cashIn, 0)
   const sixMonthExpenses = sixMonths.reduce((sum, month) => sum + month.expenses, 0)
   const monthReceiptCount = payments.filter((payment) => isSameMonth(payment.date, 0)).length
@@ -423,12 +445,12 @@ export function PortfolioOverview({
     </section>
     {loadError && <div className="sample-banner" role="alert"><CircleAlert size={15} /><span><strong>Could not load SAGACT data.</strong> {loadError}</span><button className="text-button" onClick={refreshWorkspace}>Retry</button></div>}
     <section className="metric-grid desktop-portfolio-metrics" aria-label="Portfolio totals">
-      <Metric icon={<FileText size={16} />} label="Total billed" value={money.format(billed)} foot="Incl. approved change orders" tone="green" />
+      <Metric trend={billedTrend} icon={<FileText size={16} />} label="Total billed" value={money.format(billed)} foot="Incl. approved change orders" tone="green" />
       <Metric trend={sixMonths.map((month) => month.cashIn)} icon={<ArrowDownLeft size={16} />} label="Collected" value={money.format(collected)} foot={`${billed ? Math.round(collected / billed * 100) : 0}% of billed`} tone="blue" />
       {ratedForecasts.length || !projects.length
         ? <Metric icon={<TrendingUp size={16} />} label="Projected profit" value={ratedForecasts.length ? money.format(projectedProfitTotal) : '—'} foot={ratedForecasts.length ? `${ratedForecasts.length} of ${projects.length} project${projects.length === 1 ? '' : 's'} rated · ${money.format(totalExpenses)} spent` : `Set budgets to rate · ${money.format(totalExpenses)} spent`} tone={ratedForecasts.length && projectedProfitTotal < 0 ? 'red' : 'green'} />
         : <button type="button" className="metric-card metric-green metric-prompt" onClick={() => openProject(projects[0].id)}><div className="metric-top"><span className="metric-icon"><TrendingUp size={16} /></span><span>Projected profit</span></div><strong className="metric-value">Set a budget <ArrowRight size={16} /></strong><small>To see profit and margin · {money.format(totalExpenses)} spent</small></button>}
-      <Metric icon={<Clock3 size={16} />} label="Receivables due" value={money.format(receivable)} foot={`${receivables.length} open item${receivables.length === 1 ? '' : 's'}${overdueItems.length ? ` · ${overdueItems.length} overdue` : ''}${retention > 0 ? ` · ${money.format(retention)} retention held` : ''}`} tone="gold" />
+      <Metric trend={receivableTrend} icon={<Clock3 size={16} />} label="Receivables due" value={money.format(receivable)} foot={`${receivables.length} open item${receivables.length === 1 ? '' : 's'}${overdueItems.length ? ` · ${overdueItems.length} overdue` : ''}${retention > 0 ? ` · ${money.format(retention)} retention held` : ''}`} tone="gold" />
     </section>
     <section className="portfolio-section" id="portfolio-projects"><div className="section-heading"><h2>Projects <span className="count-pill">{projects.length}</span></h2></div>
       {attentionCount > 0 && <div className="attention-summary" role="status"><div><CircleAlert size={16} /><strong>{attentionCount} project{attentionCount === 1 ? '' : 's'} need{attentionCount === 1 ? 's' : ''} attention</strong></div><button type="button" className="text-button compact-button" onClick={() => setHealthFilter('needs_attention')}>View projects <ArrowRight size={13} /></button></div>}

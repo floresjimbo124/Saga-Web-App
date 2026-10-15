@@ -543,8 +543,17 @@ export async function loadPortfolio() {
     }], [], [], asOfDate))
   }
 
-  return { projects, payments, receivables }
+  const billingHistory: PortfolioBillingEvent[] = (billingResult.data ?? []).map((billing) => ({
+    projectId: billing.project_id,
+    date: billing.issued_at ?? billing.created_at,
+    amount: Number(billing.amount_for_billing),
+  }))
+
+  return { projects, payments, receivables, billingHistory }
 }
+
+/** An issued progress billing, kept for month-by-month trends. */
+export type PortfolioBillingEvent = { projectId: string; date: string; amount: number }
 
 export async function updateProjectState(input: {
   projectId: string
