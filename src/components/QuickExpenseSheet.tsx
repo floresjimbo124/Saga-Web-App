@@ -169,11 +169,11 @@ export function QuickExpenseSheet({ projects, initialProjectId, onClose, onSaved
         </div>
 
         {isDesktop ? <>
-          <div className="quick-expense-date-row"><label className="form-field"><span className="quick-expense-date-label">Date{date === todayKey && <em>Today</em>}</span><input type="date" value={date} max={todayKey} onChange={(event) => setDate(event.target.value)} required /></label></div>
           <div className="quick-expense-more-fields">
+            <label className="form-field"><span className="quick-expense-date-label">Date{date === todayKey && <em>Today</em>}</span><input type="date" value={date} max={todayKey} onChange={(event) => setDate(event.target.value)} required /></label>
             <label className="form-field">Vendor<input value={vendor} onChange={(event) => setVendor(event.target.value)} maxLength={150} placeholder="Supplier or payee" /></label>
-            <label className="form-field">Note (optional)<input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="e.g. 20 bags cement" /></label>
           </div>
+          <label className="form-field">Note (optional)<input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="e.g. 20 bags cement" /></label>
         </> : <>
           <label className="form-field">Note (optional)<input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="e.g. 20 bags cement" /></label>
           <button type="button" className="quick-expense-more" onClick={() => setShowMore((open) => !open)} aria-expanded={showMore}>
