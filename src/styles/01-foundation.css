@@ -104,7 +104,6 @@ textarea:focus-visible,
   gap: 12px;
   padding: 0 3px;
   color: #fffdf7;
-  font-size: 18px;
   font-weight: 700;
   letter-spacing: 0;
 }
@@ -162,7 +161,6 @@ textarea:focus-visible,
   border-radius: 6px;
   color: #d3ded6;
   background: transparent;
-  font-size: 13px;
   text-align: left;
   cursor: pointer;
   transition: background 140ms ease, color 140ms ease;
@@ -215,13 +213,11 @@ textarea:focus-visible,
 
 .owner-profile strong {
   color: #f4f3eb;
-  font-size: 11px;
   font-weight: 600;
 }
 
 .owner-profile span {
   color: #afbeb4;
-  font-size: 11px;
 }
 
 .sign-out-button {
@@ -257,21 +253,15 @@ textarea:focus-visible,
   flex-direction: column;
   padding: 34px clamp(32px, 7vw, 92px);
   color: #f6f3e9;
-  background: var(--forest);
 }
 
 .auth-story-copy {
-  max-width: 410px;
-  margin: auto 0;
   padding: 0;
 }
 
 .auth-story-copy h2 {
-  max-width: 390px;
   margin: 0 0 16px;
   color: #fffdf7;
-  font-size: 44px;
-  font-weight: 600;
   line-height: 1.1;
 }
 
@@ -480,7 +470,6 @@ textarea:focus-visible,
   position: absolute;
   bottom: 19px;
   color: #8b938a;
-  font-family: var(--mono);
   font-size: 11px;
 }
 
@@ -580,10 +569,6 @@ textarea:focus-visible,
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
-  }
-
-  .auth-account-form .auth-field {
-    gap: 6px;
   }
 
   .auth-account-form .auth-field > span:first-child:not(.auth-field-control) {
@@ -791,7 +776,6 @@ textarea:focus-visible,
 .breadcrumbs {
   gap: 11px;
   color: #839087;
-  font-size: 11px;
 }
 
 .breadcrumbs svg {
@@ -806,7 +790,6 @@ textarea:focus-visible,
 .topbar-right {
   gap: 22px;
   color: #78857b;
-  font-size: 11px;
 }
 
 .topbar-date {
@@ -934,7 +917,6 @@ p {
   padding: 0 13px;
   border: 1px solid transparent;
   border-radius: 5px;
-  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -998,7 +980,6 @@ p {
   border-radius: 5px;
   color: #716a56;
   background: #f8f4e8;
-  font-size: 11px;
 }
 
 .sample-banner > svg {
@@ -1034,7 +1015,6 @@ p {
   align-items: center;
   gap: 8px;
   color: #788179;
-  font-size: 11px;
 }
 
 .metric-icon {
@@ -1056,7 +1036,6 @@ p {
   overflow: hidden;
   margin: 9px 0 3px;
   color: var(--forest-deep);
-  font-size: 20px;
   font-weight: 600;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -1065,7 +1044,6 @@ p {
 
 .metric-card > small {
   color: #8b9189;
-  font-size: 11px;
 }
 
 .portfolio-section {
@@ -1103,7 +1081,6 @@ p {
   border-radius: 4px;
   color: #778177;
   font-family: var(--mono);
-  font-size: 10px;
   font-weight: 500;
   vertical-align: 2px;
 }
@@ -1115,7 +1092,6 @@ p {
   border: 0;
   color: #54705d;
   background: transparent;
-  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -1239,7 +1215,6 @@ p {
   color: #92988e;
   background: #f9f7f0;
   font-family: var(--mono);
-  font-size: 11px;
   text-transform: uppercase;
 }
 
@@ -1253,7 +1228,6 @@ p {
   left: 0;
   z-index: 2;
   background: var(--surface);
-  box-shadow: 8px 0 10px -10px rgba(27, 57, 44, 0.36);
 }
 
 .project-table-head > span:first-child {
@@ -1263,7 +1237,6 @@ p {
 
 .project-row {
   width: 100%;
-  min-height: 66px;
   border: 0;
   border-bottom: 1px solid #efede5;
   color: #4b554c;
@@ -1284,7 +1257,6 @@ p {
 .project-row:hover > .project-name-cell { background: #f8f7f0; }
 
 .project-name-cell {
-  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1323,7 +1295,6 @@ p {
 .activity-copy strong {
   overflow: hidden;
   color: #304638;
-  font-size: 11px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1333,7 +1304,6 @@ p {
 .activity-copy small {
   overflow: hidden;
   color: #92978e;
-  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1341,7 +1311,6 @@ p {
 .money-cell {
   color: #4d5b4f;
   font-family: var(--mono);
-  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -1356,7 +1325,6 @@ p {
 .progress-value {
   color: #586a5c;
   font-family: var(--mono);
-  font-size: 11px;
 }
 
 .progress-track,
@@ -1377,21 +1345,14 @@ p {
 
 .status-badge {
   width: fit-content;
-  min-height: 22px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
   border: 1px solid transparent;
-  border-radius: 3px;
-  font-size: 11px;
   white-space: nowrap;
 }
 
 .status-badge > span {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
   background: currentColor;
 }
 
@@ -1431,13 +1392,11 @@ p {
   border-top: 1px solid #efede5;
   color: #91968d;
   background: #fbfaf6;
-  font-size: 11px;
 }
 
 .empty-state {
   padding: 24px 16px;
   color: #878f86;
-  font-size: 11px;
   text-align: center;
 }
 
@@ -1557,14 +1516,10 @@ p {
   border-top: 1px solid var(--line);
   color: #8b938a;
   font-family: var(--mono);
-  font-size: 11px;
 }
 
 .detail-heading {
-  align-items: stretch;
   flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
 }
 
 .detail-actions {
@@ -1574,11 +1529,6 @@ p {
   gap: 10px;
 }
 
-.detail-heading h1 {
-  margin: 5px 0 2px;
-  font-size: 29px;
-}
-
 .detail-heading p {
   color: #818980;
   font-size: 11px;
@@ -1586,19 +1536,15 @@ p {
 
 .detail-tabs {
   display: flex;
-  gap: 22px;
-  margin-bottom: 14px;
   border-bottom: 1px solid #e3e2d8;
 }
 
 .tab {
   position: relative;
-  min-height: 36px;
   padding: 0 1px;
   border: 0;
   color: #818a81;
   background: transparent;
-  font-size: 11px;
   cursor: pointer;
 }
 
@@ -1636,7 +1582,6 @@ p {
   gap: 12px;
   margin-top: 9px;
   color: #858d82;
-  font-size: 11px;
 }
 
 .progress-caption strong {
@@ -1676,12 +1621,10 @@ p {
 
 .milestone-callout small {
   color: #8b9388;
-  font-size: 11px;
 }
 
 .milestone-callout strong {
   color: #465b4a;
-  font-size: 11px;
   font-weight: 600;
 }
 

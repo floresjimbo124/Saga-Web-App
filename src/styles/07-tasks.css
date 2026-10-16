@@ -479,16 +479,10 @@
 }
 
 .task-list-heading {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
   padding: 2px 1px 4px;
 }
 
 .task-list-heading h2 {
-  margin: 0;
-  color: #314539;
-  font-size: 16px;
   font-weight: 600;
 }
 
@@ -529,8 +523,6 @@
   min-width: 0;
   padding: 10px;
   border: 1px solid #e4e7df;
-  border-radius: 5px;
-  background: #f6f7f2;
 }
 
 .task-kanban-column-heading {
@@ -543,9 +535,6 @@
 
 .task-kanban-column-heading h3 {
   margin: 0;
-  color: #405345;
-  font-size: 13px;
-  font-weight: 600;
 }
 
 .task-kanban-column-heading > span {
@@ -1480,10 +1469,6 @@ button.task-calendar-item:focus-visible {
     width: 100%;
     justify-content: flex-end;
     gap: 7px;
-  }
-
-  .task-toolbar-filters {
-    display: none;
   }
 
   .task-toolbar-filters > .task-filter-field {

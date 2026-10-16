@@ -21,7 +21,6 @@
 .calculation-note {
   margin-top: 12px;
   color: #898f85;
-  font-size: 11px;
 }
 
 .tab-content > .button {
@@ -247,7 +246,6 @@
   border-radius: 8px;
   background: #fffefa;
   box-shadow: 0 16px 55px rgba(23, 40, 30, 0.2);
-  animation: payroll-drawer-in 180ms ease-out;
 }
 
 .payroll-worker-drawer .modal-heading {
@@ -431,10 +429,8 @@
 
 .payroll-employee-row {
   display: grid;
-  grid-template-columns: minmax(145px, 1.5fr) minmax(110px, 1fr) auto auto;
   align-items: center;
   gap: 12px;
-  padding: 10px;
   border: 1px solid #e6e7df;
   border-radius: 5px;
   background: #fffefa;
@@ -1199,10 +1195,7 @@
 
 .client-sidebar-section-label {
   margin: 36px 8px 10px;
-  color: #a9b8ae;
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 

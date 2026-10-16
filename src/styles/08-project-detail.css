@@ -23,7 +23,6 @@
 
 @media (max-width: 640px) {
   .detail-heading {
-    gap: 12px;
     margin-bottom: 14px;
   }
 
@@ -147,7 +146,6 @@
 .project-detail-hero {
   width: 100%;
   min-width: 0;
-  overflow: hidden;
   border: 1px solid #e5e4da;
   border-radius: 10px;
   background: #fffefa;
@@ -378,7 +376,6 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 7px;
 }
 
 .project-deadline-status {
@@ -406,7 +403,6 @@
 
 .project-detail-progress > div:first-child strong {
   color: #355c40;
-  font-size: 13px;
 }
 
 .project-detail-progress-track {
@@ -451,26 +447,17 @@
 
 .project-detail-dates small {
   color: #8b9388;
-  font-size: 11px;
 }
 
 .project-detail-dates strong {
   overflow: hidden;
   color: #435748;
-  font-size: 12px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.project-detail-hero .detail-actions {
-  gap: 8px;
-  padding-top: 0;
-}
-
 .project-detail-hero .detail-actions > .button {
-  min-height: 38px;
-  flex: 1;
   justify-content: center;
 }
 
@@ -595,14 +582,6 @@
     width: 20px;
     height: 20px;
     flex-basis: 20px;
-  }
-
-  .project-detail-dates small {
-    font-size: 11px;
-  }
-
-  .project-detail-dates strong {
-    font-size: 11px;
   }
 
   .project-detail-hero .detail-actions > .button {

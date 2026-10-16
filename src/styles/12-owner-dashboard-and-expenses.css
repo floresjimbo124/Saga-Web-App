@@ -56,9 +56,7 @@
 }
 
 .project-deadline {
-  display: grid;
   justify-items: start;
-  gap: 3px;
 }
 
 .project-deadline-date {
@@ -115,7 +113,6 @@
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
-  height: 150px;
   padding-top: 6px;
   border-bottom: 1px solid #e6e7de;
 }

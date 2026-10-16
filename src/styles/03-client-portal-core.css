@@ -50,10 +50,8 @@
 
   .client-portal-topbar,
   .client-portal-topbar.has-project {
-    min-height: 64px;
     padding: 0 32px;
     border-bottom: 1px solid var(--line);
-    background: var(--surface);
   }
 
   .client-portal-topbar .client-portal-brand,
@@ -69,11 +67,6 @@
   .client-portal-topbar .client-portal-topbar-right,
   .client-portal-topbar.has-project .client-portal-topbar-right {
     color: #748176;
-  }
-
-  .client-portal-topbar .notification-button,
-  .client-portal-topbar.has-project .notification-button {
-    color: #738078;
   }
 
   .client-portal-topbar .notification-button > svg,
@@ -205,7 +198,6 @@
 .client-project-home-copy strong {
   overflow: hidden;
   color: #344b3b;
-  font-size: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

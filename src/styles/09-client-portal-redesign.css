@@ -58,9 +58,6 @@
 }
 
 /* Build journey timeline */
-.client-build-journey {
-  margin-bottom: 22px;
-}
 
 .client-build-journey h2 {
   margin: 0;
@@ -88,7 +85,6 @@
   bottom: 14px;
   left: 14px;
   width: 2px;
-  background: #dfe6dc;
   content: '';
 }
 
@@ -103,10 +99,8 @@
   display: grid;
   gap: 4px;
   min-width: 0;
-  padding: 12px;
   border: 1px solid #e6e7de;
   border-radius: 9px;
-  background: var(--surface);
 }
 
 .client-journey-body > small {
@@ -201,10 +195,6 @@
   position: relative;
 }
 
-.client-project-detail-hero .client-project-detail-cover {
-  min-height: 300px;
-}
-
 .client-project-detail-overlay {
   position: absolute;
   right: 0;
@@ -214,15 +204,12 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  padding: 70px 26px 22px;
   color: #fff;
-  background: linear-gradient(180deg, rgba(16, 32, 23, 0) 0%, rgba(16, 32, 23, 0.72) 100%);
 }
 
 .client-project-detail-overlay h1 {
   margin: 0;
   color: #fff;
-  font-size: 34px;
   font-weight: 600;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
 }
@@ -240,8 +227,6 @@
 .client-portal-tabs {
   position: sticky;
   z-index: 5;
-  top: 0;
-  background: var(--paper);
 }
 
 .client-portal-tabs button {
@@ -287,7 +272,6 @@
   align-content: start;
   gap: 8px;
   min-width: 0;
-  padding: 20px 22px;
 }
 
 .client-detail-summary-money {
@@ -302,7 +286,6 @@
 .client-detail-summary-figure {
   color: var(--forest-deep);
   font-size: 28px;
-  font-weight: 600;
   line-height: 1.1;
 }
 
@@ -393,17 +376,6 @@
 }
 
 @media (max-width: 680px) {
-  .client-project-detail-hero .client-project-detail-cover {
-    min-height: 220px;
-  }
-
-  .client-project-detail-overlay {
-    padding: 50px 15px 15px;
-  }
-
-  .client-project-detail-overlay h1 {
-    font-size: 24px;
-  }
 
   .client-project-detail-overlay .client-project-location {
     font-size: 12px;
@@ -472,7 +444,6 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 0;
-  padding: 16px 22px;
   border-bottom: 1px solid #efeee7;
   list-style: none;
 }
@@ -548,9 +519,6 @@
 }
 
 @media (max-width: 680px) {
-  .client-stage-stepper {
-    padding: 14px 16px;
-  }
 
   .client-stage-stepper li {
     flex-direction: column;
@@ -1201,25 +1169,20 @@
 .client-billing-summary-total {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 14px 20px;
   background: var(--forest-deep);
 }
 
 .client-billing-summary-total > span {
   display: grid;
-  gap: 2px;
 }
 
 .client-billing-summary-total small {
   color: rgba(255, 255, 255, 0.65);
-  font-size: 11px;
 }
 
 .client-billing-summary-total strong {
   color: #fff;
   font-family: var(--display);
-  font-size: 19px;
   font-weight: 500;
 }
 
@@ -1243,21 +1206,12 @@
     font-size: 13px;
   }
 
-  .client-billing-summary-total {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-    padding: 14px 16px;
-  }
-
   .client-billing-summary-total > span {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
   }
 
-  .client-billing-summary-total strong {
-    font-size: 16px;
-  }
 }
 
 /* Payment history summary */
