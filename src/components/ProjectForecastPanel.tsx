@@ -65,7 +65,7 @@ export function ProjectForecastPanel({
     <form className="forecast-form" onSubmit={(event) => { void saveForecast(event) }}>
       <label className="form-field">Total project cost budget<MoneyInput min="0" step="0.01" value={budgetInput} onChange={setBudgetInput} placeholder="0.00" required /></label>
       <label className="form-field">Estimated cost to complete<MoneyInput min="0" step="0.01" value={estimateInput} onChange={setEstimateInput} placeholder="0.00" required /></label>
-      <button className="button button-primary" type="submit" disabled={isSaving}><Save size={15} />{isSaving ? 'Saving…' : 'Save forecast'}</button>
+      <button className="button button-primary" type="submit" disabled={isSaving} aria-busy={isSaving}><Save size={15} />{isSaving ? 'Saving…' : 'Save forecast'}</button>
     </form>
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="document-success" role="status">{message}</p>}

@@ -1290,7 +1290,6 @@ button.task-calendar-item:focus-visible {
 .task-comment-actions .button {
   min-height: 32px;
   padding: 0 10px;
-  font-size: 11px;
 }
 
 .task-details-dialog .modal-actions {

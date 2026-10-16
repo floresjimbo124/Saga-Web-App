@@ -319,11 +319,11 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
         {viewingOrder.decisionNote && <p className="co-note">Client note: {viewingOrder.decisionNote}</p>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="milestone-drawer-actions">
-          <button type="button" className="button button-secondary" onClick={() => { void previewDraftPdf(viewingOrder) }} disabled={isSaving || previewingOrderId === viewingOrder.id}><Eye size={14} />{previewingOrderId === viewingOrder.id ? 'Preparing…' : 'View PDF'}</button>
+          <button type="button" className="button button-secondary" onClick={() => { void previewDraftPdf(viewingOrder) }} disabled={isSaving || previewingOrderId === viewingOrder.id} aria-busy={previewingOrderId === viewingOrder.id}><Eye size={14} />{previewingOrderId === viewingOrder.id ? 'Preparing…' : 'View PDF'}</button>
           <span />
           {viewingOrder.status === 'draft' && <>
             <button type="button" className="button button-secondary" onClick={() => { setViewingOrderId(''); openEditDialog(viewingOrder) }} disabled={isSaving}><Pencil size={14} />Edit draft</button>
-            <button type="button" className="button button-primary" onClick={() => { void submitForApproval(viewingOrder).then(() => setViewingOrderId('')) }} disabled={isSaving}><Send size={14} />{isSaving ? 'Submitting…' : 'Submit to client'}</button>
+            <button type="button" className="button button-primary" onClick={() => { void submitForApproval(viewingOrder).then(() => setViewingOrderId('')) }} disabled={isSaving} aria-busy={isSaving}><Send size={14} />{isSaving ? 'Submitting…' : 'Submit to client'}</button>
           </>}
         </div>
       </section>
@@ -355,7 +355,7 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
           </div>
           {error && <p className="form-error" role="alert">{error}</p>}
           <p className="change-order-help">Drafts do not change contract totals until the client approves them.</p>
-          <div className="modal-actions"><button type="button" className="button button-secondary" onClick={closeCreateDialog} disabled={isSaving}>Cancel</button><button type="submit" className="button button-primary" disabled={isSaving}><Plus size={15} />{isSaving ? 'Saving…' : editingOrder ? 'Save draft changes' : 'Save as draft'}</button></div>
+          <div className="modal-actions"><button type="button" className="button button-secondary" onClick={closeCreateDialog} disabled={isSaving}>Cancel</button><button type="submit" className="button button-primary" disabled={isSaving} aria-busy={isSaving}><Plus size={15} />{isSaving ? 'Saving…' : editingOrder ? 'Save draft changes' : 'Save as draft'}</button></div>
         </form>
       </section>
     </div>, document.body)}

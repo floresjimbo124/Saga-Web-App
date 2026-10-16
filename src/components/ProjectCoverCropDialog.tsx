@@ -141,7 +141,7 @@ export function ProjectCoverCropDialog({ file, saving, error, onCancel, onSave }
         {(cropError || error) && <p className="form-error" role="alert">{cropError || error}</p>}
         <div className="modal-actions">
           <button type="button" className="button button-secondary" onClick={onCancel} disabled={saving}>Cancel</button>
-          <button type="button" className="button button-primary" onClick={() => { void saveCrop() }} disabled={saving || !imageSize}>
+          <button type="button" className="button button-primary" onClick={() => { void saveCrop() }} disabled={saving || !imageSize} aria-busy={saving}>
             <Crop size={15} />{saving ? 'Saving…' : 'Save crop'}
           </button>
         </div>

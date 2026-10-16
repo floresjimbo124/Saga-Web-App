@@ -408,7 +408,7 @@ function PasswordSetupScreen({ onComplete }: { onComplete: () => void }) {
           <li className={matches ? 'is-met' : ''}><Check size={13} aria-hidden="true" />Passwords match</li>
         </ul>
         {error && <p className="auth-error" role="alert">{error}</p>}
-        <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
+        <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
           {isSubmitting ? 'Creating account…' : 'Create account'}{!isSubmitting && <ArrowRight size={16} />}
         </button>
       </form>
@@ -464,7 +464,7 @@ function PasswordRecoveryScreen({ sessionAvailable, onComplete, onCancel }: {
         <label className="auth-field"><span>New password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" required /></span></label>
         <label className="auth-field"><span>Confirm new password</span><span className="auth-field-control"><LockKeyhole size={16} aria-hidden="true" /><input type="password" autoComplete="new-password" minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder="Re-enter password" required /></span></label>
         {error && <p className="auth-error" role="alert">{error}</p>}
-        <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting}>
+        <button className="button button-primary auth-submit" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
           {isSubmitting ? 'Saving password…' : 'Set new password'}{!isSubmitting && <ArrowRight size={16} />}
         </button>
         <button className="auth-mode-toggle" type="button" onClick={onCancel}>Cancel password reset</button>

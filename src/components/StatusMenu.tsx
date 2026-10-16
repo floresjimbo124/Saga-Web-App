@@ -22,14 +22,23 @@ export function StatusMenu<T extends string>({ label, value, options, disabled, 
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
-  const [isSheet, setIsSheet] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches)
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
 
+  // The menu is rendered on <body> (so no parent can clip it) and placed under the pill.
   useEffect(() => {
-    const query = window.matchMedia('(max-width: 640px)')
-    const update = () => setIsSheet(query.matches)
-    query.addEventListener('change', update)
-    return () => query.removeEventListener('change', update)
-  }, [])
+    if (!open) return
+    const place = () => {
+      const rect = buttonRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const width = Math.min(220, window.innerWidth - 16)
+      setPosition({ top: rect.bottom + 6, left: Math.min(Math.max(8, rect.left), window.innerWidth - width - 8) })
+    }
+    place()
+    const close = () => setOpen(false)
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', close, true)
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', close, true) }
+  }, [open])
   const current = options.find((option) => option.value === value) ?? options[0]
 
   useEffect(() => {
@@ -80,7 +89,7 @@ export function StatusMenu<T extends string>({ label, value, options, disabled, 
       <span>{current.label}</span>
       <ChevronDown size={14} className="status-menu-chevron" aria-hidden="true" />
     </button>
-    {open && (() => { const menu = <div ref={popoverRef} className={`status-menu-popover${isSheet ? ' is-sheet' : ''}`} role="listbox" aria-label={label} aria-activedescendant={`${label}-${options[activeIndex].value}`}>
+    {open && (() => { const menu = <div ref={popoverRef} className="status-menu-popover is-floating" style={position ? { top: position.top, left: position.left } : { visibility: 'hidden' }} role="listbox" aria-label={label} aria-activedescendant={`${label}-${options[activeIndex].value}`}>
       <div className="status-menu-title">{label}</div>
       {options.map((option, index) => <div
         key={option.value}
@@ -96,6 +105,6 @@ export function StatusMenu<T extends string>({ label, value, options, disabled, 
         {option.value === value && <Check size={15} className="status-menu-check" aria-hidden="true" />}
       </div>)}
     </div>
-    return isSheet ? createPortal(<div className="status-menu-sheet-backdrop">{menu}</div>, document.body) : menu })()}
+    return createPortal(menu, document.body) })()}
   </div>
 }

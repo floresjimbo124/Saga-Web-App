@@ -70,7 +70,7 @@ export function MobileOwnerProfile({ name, title, email, onSignOut, onOpenActivi
               {passwordError && <p className="form-error" role="alert">{passwordError}</p>}
               <div className="modal-actions">
                 <button type="button" className="button button-secondary" onClick={closeAccountSettings} disabled={isUpdatingPassword}>Cancel</button>
-                <button type="submit" className="button button-primary" disabled={isUpdatingPassword}>{isUpdatingPassword ? 'Updating…' : 'Update password'}</button>
+                <button type="submit" className="button button-primary" disabled={isUpdatingPassword} aria-busy={isUpdatingPassword}>{isUpdatingPassword ? 'Updating…' : 'Update password'}</button>
               </div>
             </form>
           </>}

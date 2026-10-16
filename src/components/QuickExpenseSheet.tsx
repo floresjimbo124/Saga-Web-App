@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Camera, ChevronDown, ImagePlus, RefreshCw, X } from 'lucide-react'
-import { recordQuickProjectExpense, uploadExpenseReceipt, type ProjectExpenseCategory } from '../data/portfolio'
+import { discardExpenseReceipt, recordQuickProjectExpense, uploadExpenseReceipt, type ProjectExpenseCategory } from '../data/portfolio'
 import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
 import { useToast } from './toast-context'
@@ -89,15 +89,20 @@ export function QuickExpenseSheet({ projects, initialProjectId, onClose, onSaved
     try {
       const receiptStoragePath = receipt ? await uploadExpenseReceipt(projectId, receipt) : null
       const categoryLabel = quickCategories.find((item) => item.value === category)?.label ?? 'Expense'
-      await recordQuickProjectExpense({
-        projectId,
-        date,
-        category,
-        description: note.trim().length >= 2 ? note.trim() : `${categoryLabel} expense`,
-        vendor,
-        amount: parsedAmount,
-        receiptStoragePath,
-      })
+      try {
+        await recordQuickProjectExpense({
+          projectId,
+          date,
+          category,
+          description: note.trim().length >= 2 ? note.trim() : `${categoryLabel} expense`,
+          vendor,
+          amount: parsedAmount,
+          receiptStoragePath,
+        })
+      } catch (saveError) {
+        if (receiptStoragePath) await discardExpenseReceipt(receiptStoragePath)
+        throw saveError
+      }
       try {
         window.localStorage.setItem(lastProjectKey, projectId)
       } catch {
@@ -168,7 +173,7 @@ export function QuickExpenseSheet({ projects, initialProjectId, onClose, onSaved
         </div>}
 
         {error && <p className="form-error" role="alert">{error}</p>}
-        <button type="submit" className="button button-primary quick-expense-save" disabled={isSaving}>
+        <button type="submit" className="button button-primary quick-expense-save" disabled={isSaving} aria-busy={isSaving}>
           {isSaving ? <><RefreshCw size={15} />{receipt ? 'Uploading receipt…' : 'Saving…'}</> : 'Save expense'}
         </button>
       </form>

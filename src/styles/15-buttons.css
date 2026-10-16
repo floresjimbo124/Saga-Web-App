@@ -1,0 +1,125 @@
+/*
+ * Button system — the single source of truth for buttons.
+ *
+ *   .button.button-primary    main action on a screen (one per screen / dialog)
+ *   .button.button-secondary  other actions
+ *   .button.button-danger     destructive action (confirm steps)
+ *   .text-button              quiet link-style action inside cards
+ *   .icon-button              square icon-only action (close, mail, download…)
+ *
+ *   Sizes: default 40px · .button-sm / .compact-button 32px · phones: at least 44px
+ *   Shape: 8px corners everywhere (round pills are for status / filter chips only)
+ *   States: hover, press, keyboard focus ring, disabled, and aria-busy="true" (spinner)
+ *
+ * Loaded last on purpose: these rules define the default look; screen-specific
+ * overrides with higher specificity are being folded in screen by screen.
+ */
+:root {
+  --btn-radius: 8px;
+  --btn-height: 40px;
+  --btn-height-sm: 32px;
+  --btn-height-touch: 44px;
+  --btn-focus: 0 0 0 3px rgb(102 138 106 / 35%);
+  --btn-primary: #1f3a2c;
+  --btn-primary-hover: #2c5a41;
+  --btn-border: #dcded4;
+  --btn-border-hover: #b9c8ba;
+  --btn-ink: #2d4234;
+  --btn-danger: #a5463f;
+}
+
+/* ---- Base ---- */
+.button {
+  position: relative;
+  min-height: var(--btn-height);
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: var(--btn-radius);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease, transform 100ms ease;
+}
+.button svg { flex: 0 0 auto; }
+.button:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+.button:focus-visible { outline: none; box-shadow: var(--btn-focus); }
+.button:disabled, .button[aria-disabled="true"] { opacity: .55; cursor: not-allowed; transform: none; }
+
+/* ---- Variants ---- */
+.button-primary { border-color: var(--btn-primary); color: #fffdf7; background: var(--btn-primary); box-shadow: 0 1px 2px rgb(27 57 44 / 18%); }
+.button-primary:hover:not(:disabled) { border-color: var(--btn-primary-hover); background: var(--btn-primary-hover); }
+.button-primary:focus-visible { box-shadow: 0 1px 2px rgb(27 57 44 / 18%), var(--btn-focus); }
+
+.button-secondary { border-color: var(--btn-border); color: var(--btn-ink); background: #fff; }
+.button-secondary:hover:not(:disabled) { border-color: var(--btn-border-hover); background: #f6f8f3; }
+
+.button-danger { border-color: var(--btn-danger); color: #fff; background: var(--btn-danger); }
+.button-danger:hover:not(:disabled) { border-color: #8f3b35; background: #8f3b35; }
+
+/* Destructive secondary actions keep the outline look, in red */
+.button-secondary.milestone-delete-button,
+.button-secondary.is-danger { border-color: #efcdc8; color: var(--btn-danger); }
+.button-secondary.milestone-delete-button:hover:not(:disabled),
+.button-secondary.is-danger:hover:not(:disabled) { border-color: #e2aaa3; background: #fbeeec; }
+
+/* ---- Sizes ---- */
+.button.button-sm,
+.button.compact-button { min-height: var(--btn-height-sm); padding: 0 12px; font-size: 13px; gap: 6px; }
+
+/* ---- Quiet text action ---- */
+.text-button {
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: #2c5a41;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 120ms ease, color 120ms ease;
+}
+.text-button:hover:not(:disabled) { color: #1f3a2c; background: #eef3ec; }
+.text-button:focus-visible { outline: none; box-shadow: var(--btn-focus); }
+.text-button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---- Icon-only action ---- */
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--btn-radius);
+  color: #5d6b60;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.icon-button:hover:not(:disabled) { border-color: var(--btn-border); color: var(--btn-ink); background: #f6f8f3; }
+.icon-button:focus-visible { outline: none; box-shadow: var(--btn-focus); }
+.icon-button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---- Busy state: <button aria-busy="true"> shows a spinner and blocks clicks ---- */
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+.button[aria-busy="true"] { color: transparent !important; pointer-events: none; }
+.button[aria-busy="true"] > * { visibility: hidden; }
+.button[aria-busy="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 16px;
+  height: 16px;
+  margin: auto;
+  border: 2px solid currentColor;
+  border-color: #fffdf7 #fffdf7 transparent;
+  border-radius: 50%;
+  animation: btn-spin 700ms linear infinite;
+}
+.button-secondary[aria-busy="true"]::after { border-color: var(--btn-ink) var(--btn-ink) transparent; }
+
+/* ---- Touch: comfortable targets on phones ---- */
+@media (max-width: 640px) {
+  .button { min-height: var(--btn-height-touch); font-size: 14px; }
+  .button.button-sm, .button.compact-button { min-height: 36px; }
+  .icon-button { width: 40px; height: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button, .text-button, .icon-button { transition: none; }
+  .button[aria-busy="true"]::after { animation-duration: 1.6s; }
+}

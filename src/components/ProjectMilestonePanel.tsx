@@ -274,7 +274,7 @@ function MilestoneEditor({ projectId, milestone, defaultStartDate, onClose, onCh
         }} />
         {photoUrl && <a className="milestone-photo-link" href={photoUrl} target="_blank" rel="noreferrer" title="Open full size"><img className="milestone-photo-preview" src={photoUrl} alt={`${milestone?.name ?? 'Milestone'} completion`} /></a>}
         <div className="milestone-photo-actions">
-          <button className="button button-secondary" type="button" disabled={isPhotoWorking || (Boolean(milestone) && milestone?.status !== 'complete')} onClick={() => photoInput.current?.click()}>
+          <button className="button button-secondary" type="button" disabled={isPhotoWorking || (Boolean(milestone) && milestone?.status !== 'complete')} onClick={() => photoInput.current?.click()} aria-busy={isPhotoWorking}>
             {milestone?.photoStoragePath || newPhoto ? <Camera size={14} /> : <Upload size={14} />}
             {isPhotoWorking ? 'Saving photo…' : milestone?.photoStoragePath || newPhoto ? 'Change photo' : 'Attach photo'}
           </button>
@@ -292,7 +292,7 @@ function MilestoneEditor({ projectId, milestone, defaultStartDate, onClose, onCh
         {!isNew && <button className="button button-secondary milestone-delete-button" type="button" onClick={() => { void remove() }} disabled={isSaving}><Trash2 size={14} />Delete</button>}
         <span />
         {isNew && <button className="button button-secondary" type="button" disabled={isSaving} onClick={(event) => { if (event.currentTarget.form?.reportValidity()) void save(true) }}>Save & add another</button>}
-        <button className="button button-primary" type="submit" disabled={isSaving}><Save size={14} />{isSaving ? 'Saving…' : isNew ? 'Add milestone' : 'Save changes'}</button>
+        <button className="button button-primary" type="submit" disabled={isSaving} aria-busy={isSaving}><Save size={14} />{isSaving ? 'Saving…' : isNew ? 'Add milestone' : 'Save changes'}</button>
       </div>
     </form>
   </div>, document.body)

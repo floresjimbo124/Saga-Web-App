@@ -153,7 +153,7 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       {message && <p className="calculation-note" role="status">{message}</p>}
       <div className="modal-actions billing-create-actions">
         <button type="button" className="button button-secondary" onClick={saveProgress} disabled={busy || progressInput === null}>Save progress</button>
-        <button type="button" className="button button-primary" onClick={() => { void issueBilling() }} disabled={busy || !isSetupComplete}><Plus size={15} />{busy ? 'Issuing…' : 'Issue billing'}</button>
+        <button type="button" className="button button-primary" onClick={() => { void issueBilling() }} disabled={busy || !isSetupComplete} aria-busy={busy}><Plus size={15} />{busy ? 'Issuing…' : 'Issue billing'}</button>
       </div>
     </section>
   </div>, document.body)}
@@ -164,7 +164,7 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       <form onSubmit={confirmVoidBilling}>
         <label className="form-field">Reason for voiding<textarea autoFocus value={voidReason} onChange={(event) => setVoidReason(event.target.value)} placeholder="Enter the reason" minLength={3} maxLength={500} required /></label>
         {voidError && <p className="form-error" role="alert">{voidError}</p>}
-        <div className="modal-actions"><button type="button" className="button button-secondary" onClick={() => setBillingToVoid(null)} disabled={busy}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? 'Voiding…' : 'Void billing'}</button></div>
+        <div className="modal-actions"><button type="button" className="button button-secondary" onClick={() => setBillingToVoid(null)} disabled={busy}>Cancel</button><button type="submit" className="button button-primary" disabled={busy} aria-busy={busy}>{busy ? 'Voiding…' : 'Void billing'}</button></div>
       </form>
     </section>
   </div>, document.body)}

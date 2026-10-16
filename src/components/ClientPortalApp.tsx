@@ -944,7 +944,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
                   {passwordError && <p className="form-error" role="alert">{passwordError}</p>}
                   <div className="modal-actions">
                     <button type="button" className="button button-secondary" onClick={closePasswordDialog} disabled={isUpdatingPassword}>Cancel</button>
-                    <button type="submit" className="button button-primary" disabled={isUpdatingPassword}>{isUpdatingPassword ? 'Updating…' : 'Update password'}</button>
+                    <button type="submit" className="button button-primary" disabled={isUpdatingPassword} aria-busy={isUpdatingPassword}>{isUpdatingPassword ? 'Updating…' : 'Update password'}</button>
                   </div>
                 </form>
               </>}
@@ -959,7 +959,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
           <span><strong>{firstName || 'Client'}</strong><small>Client portal account</small></span>
         </div>
         {profilePhotoError && <p className="form-error" role="alert">{profilePhotoError}</p>}
-        <button className={`client-change-profile-picture${isUploadingProfilePhoto ? ' is-uploading' : ''}`} type="button" disabled={isUploadingProfilePhoto} onClick={() => profilePhotoInput.current?.click()}>
+        <button className={`client-change-profile-picture${isUploadingProfilePhoto ? ' is-uploading' : ''}`} type="button" disabled={isUploadingProfilePhoto} onClick={() => profilePhotoInput.current?.click()} aria-busy={isUploadingProfilePhoto}>
           {isUploadingProfilePhoto ? <RefreshCw size={15} /> : <ImagePlus size={15} />}
           {isUploadingProfilePhoto ? 'Uploading picture…' : 'Change profile picture'}
         </button>
@@ -1287,7 +1287,7 @@ export function ClientPortalApp({ userId, firstName }: { userId: string; firstNa
                 </div>}
                 {order.status === 'pending_approval' && <div className="client-change-order-actions">
                   <button type="button" className="button button-secondary" onClick={() => { void respondToChangeOrder(order.id, false) }} disabled={respondingToChangeOrder !== ''}>Reject</button>
-                  <button type="button" className="button button-primary" onClick={() => { void respondToChangeOrder(order.id, true) }} disabled={respondingToChangeOrder !== ''}>{respondingToChangeOrder === order.id ? 'Submitting…' : 'Approve & sign off'}</button>
+                  <button type="button" className="button button-primary" onClick={() => { void respondToChangeOrder(order.id, true) }} disabled={respondingToChangeOrder !== ''} aria-busy={respondingToChangeOrder === order.id}>{respondingToChangeOrder === order.id ? 'Submitting…' : 'Approve & sign off'}</button>
                 </div>}
               </article>
             })}</div>

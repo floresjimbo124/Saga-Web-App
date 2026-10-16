@@ -745,6 +745,15 @@ export async function uploadExpenseReceipt(projectId: string, file: File) {
   return storagePath
 }
 
+/** Removes an uploaded receipt that was never attached to an expense (e.g. the save failed). Never throws. */
+export async function discardExpenseReceipt(storagePath: string) {
+  try {
+    await requireSupabase().storage.from(receiptBucket).remove([storagePath])
+  } catch {
+    // Best effort: an orphaned receipt is harmless and only costs storage.
+  }
+}
+
 export async function createExpenseReceiptUrl(storagePath: string) {
   const { data, error } = await requireSupabase().storage.from(receiptBucket).createSignedUrl(storagePath, 3600)
   if (error) throw new Error(error.message)

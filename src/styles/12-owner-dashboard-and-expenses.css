@@ -1177,7 +1177,6 @@
   line-height: 1.5;
 }
 
-
 /* Dashboard tidy-up: even lower cards, empty-month stubs, expense prompt */
 .lower-grid.dash-lower-even { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
 .lower-grid.dash-lower-even > .surface-card { height: 100%; }

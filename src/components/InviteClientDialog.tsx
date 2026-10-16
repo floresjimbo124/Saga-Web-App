@@ -116,7 +116,7 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
         <label htmlFor="ic-email">Email address</label>
         <div className="ic-input-row">
           <span className="ic-input"><Mail size={16} aria-hidden="true" /><input id="ic-email" type="email" autoFocus autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required /></span>
-          <button type="submit" className="button button-primary" disabled={busy}><Send size={15} />{isSubmitting ? 'Sending…' : 'Send invite'}</button>
+          <button type="submit" className="button button-primary" disabled={busy} aria-busy={isSubmitting}><Send size={15} />{isSubmitting ? 'Sending…' : 'Send invite'}</button>
         </div>
         {error && <p className="form-error" role="alert">{error}</p>}
         {result && <p className="document-success" role="status">{result}</p>}
@@ -134,7 +134,7 @@ export function InviteClientDialog({ projectId, projectName, clientName, clientE
               <span className="ic-avatar" aria-hidden="true">{account.email.charAt(0).toUpperCase()}</span>
               <span className="ic-account"><strong>{account.email}</strong><small className={pending ? 'is-pending' : 'is-active'}>{pending ? 'Invitation pending' : 'Has access'}</small></span>
               <div className="ic-actions">{isConfirmingRevoke
-                ? <><span className="client-access-confirm">Remove access?</span><button type="button" className="text-button compact-button client-access-revoke-confirm" disabled={isWorking} onClick={() => { void revoke(account) }}>{isWorking ? 'Removing…' : 'Remove'}</button><button type="button" className="text-button compact-button" disabled={isWorking} onClick={() => setRevokeCandidate(null)}>Cancel</button></>
+                ? <><span className="client-access-confirm">Remove access?</span><button type="button" className="text-button compact-button client-access-revoke-confirm" disabled={isWorking} onClick={() => { void revoke(account) }} aria-busy={isWorking}>{isWorking ? 'Removing…' : 'Remove'}</button><button type="button" className="text-button compact-button" disabled={isWorking} onClick={() => setRevokeCandidate(null)}>Cancel</button></>
                 : <><button type="button" className="ic-icon-action" disabled={Boolean(workingUserId)} onClick={() => { void resend(account) }} title={pending ? 'Resend invitation' : 'Send sign-in link'} aria-label={pending ? `Resend invitation to ${account.email}` : `Send sign-in link to ${account.email}`}>{isWorking ? <RefreshCw size={15} /> : <Mail size={15} />}</button><button type="button" className="ic-icon-action is-danger" disabled={Boolean(workingUserId)} onClick={() => setRevokeCandidate(account)} title="Remove access" aria-label={`Remove access for ${account.email}`}><UserRoundX size={15} /></button></>}</div>
             </article>
           })}</div>

@@ -928,7 +928,6 @@
     flex: 1 1 0;
     justify-content: center;
     padding-inline: 8px;
-    font-size: 12px;
   }
 
   .payroll-week-row > *,
@@ -1080,7 +1079,6 @@
 .forecast-intro { margin: -5px 0 0; color: #768578; font-size: 12px; line-height: 1.5; }
 .forecast-form { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto; gap: 12px; align-items: end; padding: 16px; border: 1px solid #d9ded3; border-radius: 5px; background: #f7f8f5; }
 .forecast-form .form-field { margin: 0; }
-.forecast-form .button { min-height: 37px; }
 .forecast-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-block: 1px solid #e2e5df; }
 .forecast-summary > div { display: grid; align-content: start; gap: 7px; min-width: 0; padding: 13px 12px; border-right: 1px solid #e2e5df; }
 .forecast-summary > div:last-child { border-right: 0; }

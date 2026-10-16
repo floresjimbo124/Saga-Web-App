@@ -466,7 +466,7 @@ function App() {
             </div></div>
           </fieldset>
           {formError && <p className="form-error" role="alert">{formError}</p>}
-          <div className="modal-actions"><button type="button" className="button button-secondary" onClick={() => setShowModal(false)} disabled={isCreatingProject}>Cancel</button><button type="submit" className="button button-primary" disabled={isCreatingProject}><Plus size={15} />{isCreatingProject ? 'Creating…' : 'Create project'}</button></div>
+          <div className="modal-actions"><button type="button" className="button button-secondary" onClick={() => setShowModal(false)} disabled={isCreatingProject}>Cancel</button><button type="submit" className="button button-primary" disabled={isCreatingProject} aria-busy={isCreatingProject}><Plus size={15} />{isCreatingProject ? 'Creating…' : 'Create project'}</button></div>
         </form>
       </section>
     </div>, document.body)}

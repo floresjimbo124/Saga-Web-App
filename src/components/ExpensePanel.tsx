@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowDownLeft, ArrowUpRight, Camera, Pencil, Plus, RefreshCw, X } from 'lucide-react'
-import { createExpenseReceiptUrl, setProjectExpenseReceipt, uploadExpenseReceipt, type PortfolioExpense, type ProjectExpenseCategory } from '../data/portfolio'
+import { createExpenseReceiptUrl, discardExpenseReceipt, setProjectExpenseReceipt, uploadExpenseReceipt, type PortfolioExpense, type ProjectExpenseCategory } from '../data/portfolio'
 import { ExpenseEntryDialog } from './ExpenseEntryDialog'
 import { QuickExpenseSheet } from './QuickExpenseSheet'
 import { useToast } from './toast-context'
@@ -61,7 +61,12 @@ export function ExpenseRow({ expense, onEdit, onOpenReceipt, onReceiptChanged }:
     setRowError('')
     try {
       const path = await uploadExpenseReceipt(expense.projectId, file)
-      await setProjectExpenseReceipt(expense.id, path)
+      try {
+        await setProjectExpenseReceipt(expense.id, path)
+      } catch (attachError) {
+        await discardExpenseReceipt(path)
+        throw attachError
+      }
       showToast('Receipt attached.', 'update')
       onReceiptChanged()
     } catch (error) {

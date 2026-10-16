@@ -70,7 +70,7 @@ function EmployeeEditor({ employee, onSaved }: {
     <label className="form-field">Employee name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required /></label>
     <label className="form-field">Daily rate<MoneyInput min="0.01" step="0.01" value={dailyRate} onChange={setDailyRate} required /></label>
     <label className="payroll-active-control"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} />Active</label>
-    <button className="button button-secondary" type="submit" disabled={busy}><Save size={14} />{busy ? 'Saving…' : 'Save'}</button>
+    <button className="button button-secondary" type="submit" disabled={busy} aria-busy={busy}><Save size={14} />{busy ? 'Saving…' : 'Save'}</button>
     {error && <p className="form-error payroll-form-error" role="alert">{error}</p>}
   </form>
 }
@@ -244,12 +244,12 @@ function WeeklyPayrollRow({ employee, weekStart, dates, entry, attendance, proje
         ? <div className="payroll-edit-actions">
           <button type="button" className="button button-secondary" disabled={busy} onClick={cancelFinalizedEdit}><X size={14} />Cancel</button>
           <button type="button" className="button button-secondary" disabled={busy} onClick={onManageAdvances}><WalletCards size={14} />Manage advances</button>
-          <button type="submit" className="button button-primary" disabled={busy}><Save size={14} />{busy ? 'Saving…' : 'Save changes'}</button>
+          <button type="submit" className="button button-primary" disabled={busy} aria-busy={busy}><Save size={14} />{busy ? 'Saving…' : 'Save changes'}</button>
         </div>
         : <button type="button" className="button button-muted" disabled={busy} onClick={() => { setDraftStatus(''); setError(''); setIsEditingFinalized(true) }}><Pencil size={14} />Edit</button>
         : <div className="payroll-edit-actions">
           <button type="button" className="button button-secondary" disabled={busy} onClick={onManageAdvances}><WalletCards size={14} />Manage advances</button>
-          <button type="submit" className="button button-primary" disabled={busy}><Save size={14} />{busy ? 'Saving…' : 'Save draft now'}</button>
+          <button type="submit" className="button button-primary" disabled={busy} aria-busy={busy}><Save size={14} />{busy ? 'Saving…' : 'Save draft now'}</button>
         </div>}
     </div>
     {error && <p className="form-error payroll-form-error" role="alert">{error}</p>}
@@ -511,7 +511,7 @@ export function PayrollPanel({ projects, onChanged }: {
           <strong>{draftEntries.length > 0 ? `${draftEntries.length} saved ${draftEntries.length === 1 ? 'entry' : 'entries'} ready to finalize` : 'Nothing to finalize yet'}</strong>
           <small>{pendingDraftSaves.size > 0 ? 'Waiting for payroll changes to finish saving…' : draftEntries.length > 0 ? 'Finalizing now posts payroll and charges each assigned project.' : 'Save at least one employee’s attendance first.'}</small>
         </div>
-        <button type="button" className="button button-primary" disabled={!canFinalizeWeek || isCheckingFinalize || isConfirmingWeek || isFinalizingWeek} onClick={() => { void confirmAndFinalizeWeek() }}><BadgeCheck size={15} />{isCheckingFinalize ? 'Checking…' : isConfirmingWeek ? 'Confirming…' : isFinalizingWeek ? 'Finalizing…' : 'Finalize week'}</button>
+        <button type="button" className="button button-primary" disabled={!canFinalizeWeek || isCheckingFinalize || isConfirmingWeek || isFinalizingWeek} onClick={() => { void confirmAndFinalizeWeek() }} aria-busy={isCheckingFinalize || isConfirmingWeek || isFinalizingWeek}><BadgeCheck size={15} />{isCheckingFinalize ? 'Checking…' : isConfirmingWeek ? 'Confirming…' : isFinalizingWeek ? 'Finalizing…' : 'Finalize week'}</button>
       </footer>
       {weekFinalizeError && <p className="form-error" role="alert">{weekFinalizeError}</p>}
       {!isLoading && currentEntries.length > 0 && <div className="payroll-history-heading">
@@ -619,7 +619,7 @@ export function PayrollPanel({ projects, onChanged }: {
           <label className="form-field">Employee name<input autoFocus value={employeeName} onChange={(event) => setEmployeeName(event.target.value)} placeholder="e.g. Juan Dela Cruz" maxLength={120} required /></label>
           <label className="form-field">Daily rate<MoneyInput min="0.01" step="0.01" value={employeeRate} onChange={setEmployeeRate} placeholder="0.00" required /></label>
           {employeeError && <p className="form-error" role="alert">{employeeError}</p>}
-          <div className="modal-actions"><button type="button" className="button button-secondary" onClick={() => setIsCreatingEmployee(false)} disabled={isSavingEmployee}>Cancel</button><button className="button button-primary" type="submit" disabled={isSavingEmployee}><Plus size={15} />{isSavingEmployee ? 'Adding…' : 'Save employee'}</button></div>
+          <div className="modal-actions"><button type="button" className="button button-secondary" onClick={() => setIsCreatingEmployee(false)} disabled={isSavingEmployee}>Cancel</button><button className="button button-primary" type="submit" disabled={isSavingEmployee} aria-busy={isSavingEmployee}><Plus size={15} />{isSavingEmployee ? 'Adding…' : 'Save employee'}</button></div>
         </form>}
         {data.employees.length ? <div className="payroll-employee-list">{data.employees.map((employee) => <EmployeeEditor key={employee.id} employee={employee} onSaved={() => refresh(true)} />)}</div> : <p className="payroll-empty">No employees added yet.</p>}
       </section>
@@ -639,7 +639,7 @@ export function PayrollPanel({ projects, onChanged }: {
           {advanceError && <p className="form-error payroll-form-error" role="alert">{advanceError}</p>}
           <div className="payroll-advance-edit-actions">
             <button type="button" className="button button-secondary" onClick={() => setIsAddAdvanceOpen(false)} disabled={isSavingAdvance}>Cancel</button>
-            <button type="submit" className="button button-primary" disabled={isSavingAdvance}><Plus size={14} />{isSavingAdvance ? 'Recording…' : 'Save advance'}</button>
+            <button type="submit" className="button button-primary" disabled={isSavingAdvance} aria-busy={isSavingAdvance}><Plus size={14} />{isSavingAdvance ? 'Recording…' : 'Save advance'}</button>
           </div>
         </form>}
         <div className="payroll-advance-history-list">
@@ -654,7 +654,7 @@ export function PayrollPanel({ projects, onChanged }: {
                 {advanceEditError && <p className="form-error payroll-form-error" role="alert">{advanceEditError}</p>}
                 <div className="payroll-advance-edit-actions">
                   <button type="button" className="button button-secondary" onClick={() => { setEditingAdvanceId(null); setAdvanceEditError('') }} disabled={isSavingAdvanceEdit}><X size={14} />Cancel</button>
-                  <button type="submit" className="button button-primary" disabled={isSavingAdvanceEdit}><Save size={14} />{isSavingAdvanceEdit ? 'Saving…' : 'Save changes'}</button>
+                  <button type="submit" className="button button-primary" disabled={isSavingAdvanceEdit} aria-busy={isSavingAdvanceEdit}><Save size={14} />{isSavingAdvanceEdit ? 'Saving…' : 'Save changes'}</button>
                 </div>
               </form> : <div className="payroll-advance-record-view">
                 <span><strong>{displayDate(advance.date, fullDate)}</strong><small>{advance.note || 'No note'}</small></span>

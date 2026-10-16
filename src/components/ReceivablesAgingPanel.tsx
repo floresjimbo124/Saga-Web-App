@@ -1,6 +1,6 @@
 import { ArrowRight, Clock3 } from 'lucide-react'
 import type { ReceivableAgingBucket, ReceivableAgingItem } from '../finance/receivables-aging'
-import { formatBillingNumber } from '../lib/billing-number'
+import { receivableLabel } from '../lib/billing-number'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
 const dateFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -37,11 +37,7 @@ export function ReceivablesAgingPanel({ items, onOpenProject }: {
     <div className="card-heading-row"><div><div className="section-kicker">Billing follow-up</div><h2>Receivables aging</h2></div><div className="aging-totals"><span><small>Outstanding</small><strong>{money.format(totalOutstanding)}</strong></span><span className="aging-overdue-total"><small>Overdue</small><strong>{money.format(totalOverdue)}</strong></span></div></div>
     <div className="aging-buckets" aria-label="Outstanding amounts by age">{bucketLabels.map(({ bucket, label }) => <div className={`aging-bucket aging-${bucket.replaceAll('+', 'plus').replaceAll('-', '-')}`} key={bucket}><span>{label}</span><strong>{money.format(totals.get(bucket) ?? 0)}</strong></div>)}</div>
     {items.length ? <div className="aging-list">{items.map((item) => <button className="aging-row" type="button" key={item.id} onClick={() => onOpenProject(item.projectId)}>
-      <span className="aging-project"><strong>{item.projectName} · {item.kind === 'retention'
-        ? 'Retention release'
-        : item.kind === 'down-payment'
-          ? 'Contract down payment'
-          : `Billing #${formatBillingNumber(item.billingNumber)}`}</strong><small>{item.clientName}</small></span>
+      <span className="aging-project"><strong>{item.projectName} · {receivableLabel(item)}</strong><small>{item.clientName}</small></span>
       <span className="aging-due"><strong className={item.daysUntilDue === 0 ? 'aging-due-today' : undefined}>{dueLabel(item)}</strong><small>Due {formatDate(item.dueAt)}</small></span>
       <strong className="aging-amount">{money.format(item.outstandingAmount)}</strong>
       <ArrowRight className="aging-row-arrow" size={15} />

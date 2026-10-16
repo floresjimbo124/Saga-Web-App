@@ -1779,10 +1779,7 @@
     padding: 0;
   }
   .portfolio-page-heading .heading-actions > .button {
-    min-height: 42px;
     padding: 0 9px;
-    border-radius: 7px;
-    font-size: 11px;
   }
   .sample-banner { flex-wrap: wrap;}
   .metric-grid, .detail-metrics { gap: 8px; }

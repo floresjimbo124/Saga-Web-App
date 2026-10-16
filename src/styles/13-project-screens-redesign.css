@@ -247,7 +247,7 @@
 
 /* Project hero action buttons */
 .project-detail-hero .detail-actions { justify-content: flex-end; gap: 8px; margin-top: 4px; padding-top: 14px; border-top: 1px solid #efefe8; }
-.project-detail-hero .detail-actions > .button { flex: 0 0 auto; min-height: 36px; padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 600; gap: 7px; }
+.project-detail-hero .detail-actions > .button { flex: 0 0 auto; padding: 0 16px; gap: 7px; }
 .project-detail-hero .detail-actions > .button-secondary { border-color: #dfe3da; color: #2d4234; background: #fff; box-shadow: 0 1px 2px rgb(31 58 44 / 6%); }
 .project-detail-hero .detail-actions > .button-secondary:hover { border-color: #b9c8ba; background: #f3f6f0; }
 .project-detail-hero .detail-actions > .button svg { color: #4f7a57; }
@@ -428,9 +428,6 @@
 .project-detail-summary-row { gap: 8px; }
 .project-detail-summary-row .project-deadline-status { display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .status-menu-popover { animation: none; } }
-@media (max-width: 480px) {
-  .status-menu-popover { position: fixed; top: auto; right: 12px; bottom: 12px; left: 12px; width: auto; }
-}
 .project-detail-summary-row .project-deadline-status { border: 1px solid #dcdfd8; background: #f6f7f3; }
 .project-detail-summary-row .project-deadline-status.deadline-due-soon { border-color: #ecd9b6; background: #faf2e4; }
 .project-detail-summary-row .project-deadline-status.deadline-overdue { border-color: #efcdc8; background: #fbeeec; }
@@ -665,9 +662,57 @@ button.tk-stat > small { color: #4f7a57; font-weight: 600; }
 .auth-password-checks li.is-met svg { opacity: 1; }
 @media (max-width: 360px) { .auth-name-row { grid-template-columns: 1fr; } }
 
+/* Status menu: floating dropdown rendered on <body>, placed under the pill (desktop and phones) */
+.status-menu-popover.is-floating { position: fixed; right: auto; bottom: auto; z-index: 1200; width: min(220px, calc(100vw - 16px)); }
+@media (max-width: 640px) {
+  .status-menu-popover.is-floating .status-menu-option { min-height: 44px; }
+}
 
-/* Status menu on phones: bottom sheet rendered on <body> so no parent can clip it */
-.status-menu-sheet-backdrop { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: flex-end; padding: 12px; background: rgb(20 33 25 / 34%); animation: backdrop-in 160ms ease-out both; }
-.status-menu-popover.is-sheet { position: static; width: 100%; max-height: 70dvh; overflow-y: auto; padding: 8px; border-radius: 16px; animation: panel-in-up 220ms cubic-bezier(.2, .8, .2, 1) both; }
-.status-menu-popover.is-sheet .status-menu-option { min-height: 48px; padding: 10px 12px; }
-.status-menu-popover.is-sheet .status-menu-copy strong { font-size: 15px; }
+/* Contract setup / new project dialog on phones */
+@media (max-width: 640px) {
+  .modal-backdrop:has(.setup-dialog) {
+    z-index: 1000;
+    align-items: start;
+    padding: calc(12px + env(safe-area-inset-top)) 10px calc(12px + env(safe-area-inset-bottom));
+  }
+  .project-modal.setup-dialog {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    padding: 18px 14px 0;
+    border-radius: 14px;
+  }
+  .setup-dialog .modal-heading h2 { font-size: 20px; }
+  .setup-form { gap: 12px; }
+  .setup-group { gap: 10px; padding: 12px; }
+  .setup-group .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .setup-group input[type="date"] { width: 100%; min-width: 0; padding-right: 6px; }
+  .setup-group .form-field { min-width: 0; font-size: 13px; }
+  .setup-group .form-field input { min-width: 0; }
+  /* Payment terms: down payment and retention each take the full width */
+  .setup-group .form-row:has(.setup-segment) { grid-template-columns: minmax(0, 1fr); }
+  .setup-segment button { grid-template-columns: auto 1fr; align-items: baseline; column-gap: 8px; padding: 10px 12px; }
+  .setup-segment button small { white-space: nowrap; }
+  .setup-choice button { padding: 10px 12px; }
+  .setup-preview { padding: 8px 10px; font-size: 12.5px; }
+  .setup-dialog .modal-actions { bottom: 0; margin: 4px -14px 0; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); }
+  .setup-dialog .modal-actions > .button { flex: 1; }
+}
+
+/* Phones: contract setup / new project as a compact card */
+@media (max-width: 640px) {
+  .modal-backdrop:has(.setup-dialog) { align-items: center; padding: calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)); }
+  .project-modal.setup-dialog { max-height: min(86dvh, 720px); padding: 14px 12px 0; border-radius: 14px; }
+  .setup-dialog > .modal-heading { margin-bottom: 2px; }
+  .setup-dialog > .modal-heading .section-kicker { font-size: 10.5px; }
+  .setup-dialog > .modal-heading h2 { margin: 2px 0 0; font-size: 17px; }
+  .setup-form { gap: 10px; }
+  .setup-group { gap: 8px; padding: 10px; border-radius: 10px; }
+  .setup-group legend { font-size: 11px; }
+  .setup-group .form-field { gap: 4px; font-size: 12px; }
+  .setup-group .form-field input { min-height: 38px; padding: 0 10px; font-size: 16px; }
+  .setup-segment button, .setup-choice button { padding: 8px 10px; }
+  .setup-segment button strong, .setup-choice button strong { font-size: 13px; }
+  .setup-segment button small, .setup-choice button small { font-size: 11px; }
+  .setup-preview { padding: 6px 10px; font-size: 12px; }
+  .setup-dialog .modal-actions { margin: 2px -12px 0; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+}

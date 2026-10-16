@@ -3,6 +3,7 @@ import type { ProjectMilestone } from '../data/project-milestones'
 import { calculateCostPace } from '../finance/cost-pace'
 import type { ReceivableAgingItem } from '../finance/receivables-aging'
 import type { BillingReadiness } from '../data/insights'
+import { receivableLabel } from '../lib/billing-number'
 
 type Tone = 'good' | 'warn' | 'bad' | 'muted'
 
@@ -69,7 +70,7 @@ export function ProjectPulse({ progress, startDate, deadline, isClosed, mileston
   const overdue = milestones.filter((milestone) => milestone.plannedDate && milestone.plannedDate < todayKey && milestone.completionPercent < 100 && milestone.status !== 'complete')
   const todos: { key: string; tone: Tone; text: string; action: string; tab: PulseTab }[] = []
   if (overdue.length) todos.push({ key: 'overdue', tone: 'bad', text: `${overdue.length} milestone${overdue.length === 1 ? ' is' : 's are'} past the end date`, action: 'Review', tab: 'Milestones' })
-  const billingLabel = (item: ReceivableAgingItem) => item.kind === 'down-payment' ? 'Down payment' : item.kind === 'change-order' ? 'Change order' : item.kind === 'retention' ? 'Retention' : `Billing #${String(item.billingNumber).padStart(3, '0')}`
+  const billingLabel = (item: ReceivableAgingItem) => receivableLabel(item)
   const open = receivables.filter((item) => item.outstandingAmount > 0)
   const overdueBillings = open.filter((item) => item.daysOverdue > 0).sort((left, right) => right.daysOverdue - left.daysOverdue)
   const dueSoon = open.filter((item) => item.daysOverdue <= 0 && item.daysUntilDue !== null && item.daysUntilDue <= 7)

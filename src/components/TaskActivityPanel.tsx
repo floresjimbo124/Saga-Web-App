@@ -135,7 +135,7 @@ export function TaskActivityPanel({ taskId, currentUserId, staffNames }: {
       />
       <div className="task-comment-actions">
         <small>{comment.length}/2,000</small>
-        <button type="submit" className="button button-primary" disabled={isPosting || !comment.trim()}>
+        <button type="submit" className="button button-primary" disabled={isPosting || !comment.trim()} aria-busy={isPosting}>
           <Send size={14} />{isPosting ? 'Posting…' : 'Comment'}
         </button>
       </div>

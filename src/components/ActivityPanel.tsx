@@ -170,6 +170,6 @@ export function ActivityPanel({ onOpenProject }: { onOpenProject: (projectId: st
           })}</ol>
         </section>)}</div>}
 
-    {!isLoading && hasMore && visible.length > 0 && <div className="act-more"><button type="button" className="button button-secondary" disabled={isLoadingMore} onClick={() => { void loadMore() }}>{isLoadingMore ? 'Loading…' : 'Load older activity'}</button></div>}
+    {!isLoading && hasMore && visible.length > 0 && <div className="act-more"><button type="button" className="button button-secondary" disabled={isLoadingMore} onClick={() => { void loadMore() }} aria-busy={isLoadingMore}>{isLoadingMore ? 'Loading…' : 'Load older activity'}</button></div>}
   </div>
 }

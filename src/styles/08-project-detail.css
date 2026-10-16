@@ -587,7 +587,6 @@
   .project-detail-hero .detail-actions > .button {
     min-width: 0;
     padding: 0 8px;
-    font-size: 11px;
   }
 }
 
@@ -835,3 +834,27 @@
 
 }
 
+/* Next milestone card (opens the Milestones tab) */
+.next-milestone { display: grid; grid-template-columns: 36px minmax(0, 1fr) 16px; align-items: center; gap: 12px; width: 100%; margin-top: 14px; padding: 12px 14px; border: 1px solid #e6e8e1; border-radius: 10px; color: inherit; background: #fff; font: inherit; text-align: left; cursor: pointer; transition: border-color 120ms ease, background 120ms ease; }
+.next-milestone:hover { border-color: #c9d1c6; background: #fafbf7; }
+.next-milestone:focus-visible { outline: 2px solid #668a6a; outline-offset: 2px; }
+.next-milestone-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--nm-ink); background: var(--nm-soft); }
+.next-milestone.is-calm, .next-milestone.is-done { --nm-ink: #2c5a41; --nm-soft: #e3ede1; --nm-bar: #4f7a57; }
+.next-milestone.is-soon { --nm-ink: #8f5d1f; --nm-soft: #f6e8d3; --nm-bar: #c4873a; }
+.next-milestone.is-late { --nm-ink: #a5463f; --nm-soft: #fbeeec; --nm-bar: #b8574f; }
+.next-milestone-copy { display: grid; gap: 3px; min-width: 0; }
+.next-milestone-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.next-milestone-top small, .next-milestone.is-done small { color: #8a958b; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.next-milestone-top em { color: var(--nm-ink); font-size: 12px; font-style: normal; font-weight: 600; white-space: nowrap; }
+.next-milestone-copy strong { overflow: hidden; color: #1f3a2c; font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.next-milestone-progress { display: flex; align-items: center; gap: 8px; }
+.next-milestone-progress > span { flex: 1; height: 6px; overflow: hidden; border-radius: 999px; background: #eef1ec; }
+.next-milestone-progress i { display: block; height: 100%; border-radius: inherit; background: var(--nm-bar); transform-origin: left center; animation: bar-fill 700ms cubic-bezier(.2, .8, .2, 1) both; }
+.next-milestone-progress b { min-width: 34px; color: #5d6b60; font-size: 12px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.next-milestone-chevron { color: #a3ada4; transition: transform 150ms ease; }
+.next-milestone:hover .next-milestone-chevron { transform: translateX(2px); }
+@media (max-width: 480px) {
+  .next-milestone { gap: 10px; padding: 10px 12px; }
+  .next-milestone-top { flex-wrap: wrap; row-gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .next-milestone-progress i { animation: none; } }

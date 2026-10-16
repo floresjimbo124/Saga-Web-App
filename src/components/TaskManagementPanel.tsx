@@ -734,7 +734,7 @@ function TaskEditorDialog({ task, projects, staff, today, onClose, onSave }: {
           <label className="form-field">Priority<select value={priority} onChange={(event) => setPriority(event.target.value as TaskPriority)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
         </div>
         {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose} disabled={isSaving}>Cancel</button><button type="submit" className="button button-primary" disabled={isSaving || !projects.length || !staff.length}><Plus size={15} />{isSaving ? 'Saving…' : task ? 'Save changes' : 'Create task'}</button></div>
+        <div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose} disabled={isSaving}>Cancel</button><button type="submit" className="button button-primary" disabled={isSaving || !projects.length || !staff.length} aria-busy={isSaving}><Plus size={15} />{isSaving ? 'Saving…' : task ? 'Save changes' : 'Create task'}</button></div>
       </form>
     </section>
   </div>, document.body)
@@ -846,7 +846,7 @@ function TeamDialog({ staff, onClose, onChanged }: {
         <div className="form-row"><label className="form-field">Full name<input autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} placeholder="e.g. Juan Dela Cruz" required /></label><label className="form-field">Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required /></label></div>
         {error && <p className="form-error" role="alert">{error}</p>}
         {result && <p className="document-success" role="status">{result}</p>}
-        <div className="tm-form-actions"><button type="submit" className="button button-primary" disabled={busy}><Send size={15} />{isSubmitting ? 'Sending…' : 'Send invite'}</button></div>
+        <div className="tm-form-actions"><button type="submit" className="button button-primary" disabled={busy} aria-busy={isSubmitting}><Send size={15} />{isSubmitting ? 'Sending…' : 'Send invite'}</button></div>
       </form> : <div className="tm-complete"><CheckCircle2 size={18} /><span><strong>All three roles are filled.</strong> Use ✉ to resend an invite or sign-in link.</span>{error && <p className="form-error" role="alert">{error}</p>}{result && <p className="document-success" role="status">{result}</p>}</div>}
     </section>
   </div>, document.body)

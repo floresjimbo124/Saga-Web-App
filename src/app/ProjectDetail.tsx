@@ -156,7 +156,30 @@ export function ProjectDetail({ project, tab, setTab, payments, receivables, onB
     {(profitRisk.level === 'high' || profitRisk.level === 'critical') && <div className={`project-risk-callout risk-${profitRisk.level}`} role="status"><CircleAlert size={17} /><span><strong>Profit risk: {profitRisk.label}.</strong> {profitRisk.detail}.</span><button type="button" onClick={() => setTab('Forecast')}>Review forecast <ArrowRight size={14} /></button></div>}
     {tab === 'Overview' && <>
       <ProjectPulse progress={project.progress} startDate={project.startDate ?? project.createdAt} deadline={project.deadline} isClosed={project.status === 'completed' || project.status === 'closed'} milestones={project.milestones} costBudget={project.costBudget} recordedCosts={project.outflow} outstanding={due} pendingChangeOrders={project.changeOrders.filter((order) => order.status === 'pending_approval').length} receivables={receivables} readiness={billingReadiness} onOpenTab={setTab} />
-      <section className="surface-card detail-progress-card"><div className="card-heading-row"><h2>Project health</h2><ProgressRing value={project.progress} /></div><div className="detail-progress-track"><span style={{ width: `${project.progress}%` }} /></div><div className="progress-caption"><span>Work accomplished</span><strong>{money.format(finance.earnedToDate)} earned</strong></div><div className="milestone-callout"><span className="milestone-icon"><CalendarDays size={16} /></span><span><small>Next milestone</small><strong>{project.milestone}</strong></span><ChevronRight size={16} /></div></section>
+      <section className="surface-card detail-progress-card"><div className="card-heading-row"><h2>Project health</h2><ProgressRing value={project.progress} /></div><div className="detail-progress-track"><span style={{ width: `${project.progress}%` }} /></div><div className="progress-caption"><span>Work accomplished</span><strong>{money.format(finance.earnedToDate)} earned</strong></div>{(() => {
+        const todayKey = new Date().toLocaleDateString('en-CA')
+        const next = [...project.milestones]
+          .filter((milestone) => milestone.completionPercent < 100 && milestone.status !== 'complete')
+          .sort((left, right) => (left.plannedDate ?? '9999').localeCompare(right.plannedDate ?? '9999'))[0]
+        if (!next) return <button type="button" className="next-milestone is-done" onClick={() => setTab('Milestones')} aria-label="Open milestones">
+          <span className="next-milestone-icon"><Check size={16} /></span>
+          <span className="next-milestone-copy"><small>Milestones</small><strong>{project.milestones.length ? 'All milestones complete' : 'No milestones yet — add the first one'}</strong></span>
+          <ChevronRight size={16} className="next-milestone-chevron" />
+        </button>
+        const days = next.plannedDate ? Math.round((new Date(`${next.plannedDate}T00:00:00`).getTime() - new Date(`${todayKey}T00:00:00`).getTime()) / 86_400_000) : null
+        const tone = days === null ? 'calm' : days < 0 ? 'late' : days <= 3 ? 'soon' : 'calm'
+        const due = days === null ? 'No target date' : days < 0 ? `${Math.abs(days)} day${days === -1 ? '' : 's'} overdue` : days === 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : `In ${days} days`
+        const percent = Math.round(next.completionPercent)
+        return <button type="button" className={`next-milestone is-${tone}`} onClick={() => setTab('Milestones')} aria-label={`Open milestones. Next milestone: ${next.name}, ${due}, ${percent}% complete`}>
+          <span className="next-milestone-icon"><CalendarDays size={16} /></span>
+          <span className="next-milestone-copy">
+            <span className="next-milestone-top"><small>Next milestone</small><em>{due}{next.plannedDate ? ` · ${shortDate(next.plannedDate)}` : ''}</em></span>
+            <strong>{next.name}</strong>
+            <span className="next-milestone-progress"><span><i style={{ width: `${percent}%` }} /></span><b>{percent}%</b></span>
+          </span>
+          <ChevronRight size={16} className="next-milestone-chevron" />
+        </button>
+      })()}</section>
       <ProjectProfitCard contractValue={finance.contractValue} recordedCosts={project.outflow} costBudget={project.costBudget} estimatedCostToComplete={project.estimatedCostToComplete} progressPercent={project.progress} onOpenForecast={() => setTab('Forecast')} onOpenExpenses={() => setTab('Expenses')} />
       <section className="detail-financial-section fin-section" aria-labelledby="detail-financial-heading">
         <div className="detail-financial-heading"><h2 id="detail-financial-heading">Financial overview</h2></div>
