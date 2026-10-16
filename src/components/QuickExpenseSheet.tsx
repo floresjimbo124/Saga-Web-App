@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Camera, ChevronDown, ImagePlus, RefreshCw, X } from 'lucide-react'
 import { discardExpenseReceipt, recordQuickProjectExpense, uploadExpenseReceipt, type ProjectExpenseCategory } from '../data/portfolio'
+import { SelectMenu } from './SelectMenu'
 import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
 import { useToast } from './toast-context'
@@ -140,12 +141,17 @@ export function QuickExpenseSheet({ projects, initialProjectId, onClose, onSaved
           <MoneyInput min="0.01" step="0.01" value={amount} onChange={setAmount} placeholder="0.00" required inputMode="decimal" autoFocus />
         </label>
 
-        <fieldset className="quick-expense-categories">
-          <legend>Category</legend>
-          <div>
-            {quickCategories.map((item) => <button type="button" key={item.value} className={category === item.value ? 'is-selected' : ''} aria-pressed={category === item.value} onClick={() => setCategory(item.value)}>{item.label}</button>)}
-          </div>
-        </fieldset>
+        {isDesktop && <div className="quick-expense-more-fields">
+            <label className="form-field"><span className="quick-expense-date-label">Date{date === todayKey && <em>Today</em>}</span><input type="date" value={date} max={todayKey} onChange={(event) => setDate(event.target.value)} required /></label>
+            <label className="form-field">Vendor<input value={vendor} onChange={(event) => setVendor(event.target.value)} maxLength={150} placeholder="Supplier or payee" /></label>
+          </div>}
+
+        <div className="form-field quick-expense-category">
+          <label htmlFor="quick-expense-category">Category</label>
+          <SelectMenu id="quick-expense-category" label="Category" value={category} options={quickCategories} onChange={setCategory} />
+        </div>
+
+        {isDesktop && <label className="form-field">Note (optional)<input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="e.g. 20 bags cement" /></label>}
 
         {!projectFixed && <label className="form-field">Project
           <select value={projectId} onChange={(event) => setProjectId(event.target.value)} required>
@@ -170,13 +176,7 @@ export function QuickExpenseSheet({ projects, initialProjectId, onClose, onSaved
           {!receiptPreview && <small>Optional — expenses without a receipt are flagged for follow-up.</small>}
         </div>
 
-        {isDesktop ? <>
-          <div className="quick-expense-more-fields">
-            <label className="form-field"><span className="quick-expense-date-label">Date{date === todayKey && <em>Today</em>}</span><input type="date" value={date} max={todayKey} onChange={(event) => setDate(event.target.value)} required /></label>
-            <label className="form-field">Vendor<input value={vendor} onChange={(event) => setVendor(event.target.value)} maxLength={150} placeholder="Supplier or payee" /></label>
-          </div>
-          <label className="form-field">Note (optional)<input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="e.g. 20 bags cement" /></label>
-        </> : <>
+        {!isDesktop && <>
           <label className="form-field">Note (optional)<input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="e.g. 20 bags cement" /></label>
           <button type="button" className="quick-expense-more" onClick={() => setShowMore((open) => !open)} aria-expanded={showMore}>
             More details <ChevronDown size={14} />
