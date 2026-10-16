@@ -716,3 +716,9 @@ button.tk-stat > small { color: #4f7a57; font-weight: 600; }
   .setup-preview { padding: 6px 10px; font-size: 12px; }
   .setup-dialog .modal-actions { margin: 2px -12px 0; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
 }
+
+/* Expense register: scroll inside the card (about 6 rows visible) */
+.ex-register { max-height: 380px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #c9d1c6 transparent; }
+.ex-register::-webkit-scrollbar { width: 8px; }
+.ex-register::-webkit-scrollbar-thumb { border-radius: 999px; background: #c9d1c6; }
+@media (max-width: 640px) { .ex-register { max-height: 60vh; } }
