@@ -169,6 +169,10 @@ export function PortfolioOverview({
   ownerName = '',
 }: PortfolioOverviewProps) {
   const greetingHour = currentDate.getHours()
+  const nextDeadline = projects
+    .filter((project) => project.deadline && project.status !== 'completed' && project.status !== 'closed' && project.deadline >= currentDate.toLocaleDateString('en-CA'))
+    .sort((left, right) => left.deadline!.localeCompare(right.deadline!))[0]
+  const nextDeadlineLabel = nextDeadline?.deadline ? new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' }).format(new Date(`${nextDeadline.deadline}T12:00:00`)) : ''
   const greetingText = greetingHour < 12 ? 'Good morning' : greetingHour < 18 ? 'Good afternoon' : 'Good evening'
   const isSameMonth = (date: string, offset: number) => {
     const value = new Date(date.length === 10 ? `${date}T12:00:00` : date)
@@ -377,7 +381,7 @@ export function PortfolioOverview({
 
   return <>
     <section className="page-heading portfolio-page-heading">
-      <div className="portfolio-welcome"><h1>{greetingText}{ownerName ? `, ${ownerName}` : ''}</h1><p>{activeCount} active project{activeCount === 1 ? '' : 's'} · {money.format(receivable)} to collect{pendingApprovals.length ? ` · ${pendingApprovals.length} change order${pendingApprovals.length === 1 ? '' : 's'} awaiting approval` : ''}</p></div>
+      <div className="portfolio-welcome"><h1>{greetingText}{ownerName ? `, ${ownerName}` : ''}</h1><p>{activeCount} active project{activeCount === 1 ? '' : 's'}{nextDeadlineLabel ? ` · next deadline ${nextDeadlineLabel}` : ''}{pendingApprovals.length ? ` · ${pendingApprovals.length} change order${pendingApprovals.length === 1 ? '' : 's'} awaiting approval` : ''}</p></div>
       <div className="heading-actions"><button className="button button-secondary dashboard-expense-button" onClick={() => setShowDashboardExpense(true)} disabled={!projects.length || isLoading}><Plus size={17} />Add new expense</button><button className="button button-primary" onClick={() => setShowModal(true)}><Plus size={17} />New project</button></div>
     </section>
     {actionItems.length > 0 && <section className="dashboard-action-pills" aria-label="Needs your attention">
@@ -446,7 +450,7 @@ export function PortfolioOverview({
     {loadError && <div className="sample-banner" role="alert"><CircleAlert size={15} /><span><strong>Could not load SAGACT data.</strong> {loadError}</span><button className="text-button" onClick={refreshWorkspace}>Retry</button></div>}
     <section className="metric-grid desktop-portfolio-metrics" aria-label="Portfolio totals">
       <Metric trend={billedTrend} icon={<FileText size={16} />} label="Total billed" value={money.format(billed)} foot="Incl. approved change orders" tone="green" />
-      <Metric trend={sixMonths.map((month) => month.cashIn)} icon={<ArrowDownLeft size={16} />} label="Collected" value={money.format(collected)} foot={`${billed ? Math.round(collected / billed * 100) : 0}% of billed`} tone="blue" />
+      <Metric trend={collectedRunning} icon={<ArrowDownLeft size={16} />} label="Collected" value={money.format(collected)} foot={collected > billed ? `+${money.format(collected - billed)} paid in advance` : billed ? `${Math.round(collected / billed * 100)}% of billed` : 'Nothing billed yet'} tone="blue" />
       {ratedForecasts.length || !projects.length
         ? <Metric icon={<TrendingUp size={16} />} label="Projected profit" value={ratedForecasts.length ? money.format(projectedProfitTotal) : '—'} foot={ratedForecasts.length ? `${ratedForecasts.length} of ${projects.length} project${projects.length === 1 ? '' : 's'} rated · ${money.format(totalExpenses)} spent` : `Set budgets to rate · ${money.format(totalExpenses)} spent`} tone={ratedForecasts.length && projectedProfitTotal < 0 ? 'red' : 'green'} />
         : <button type="button" className="metric-card metric-green metric-prompt" onClick={() => openProject(projects[0].id)}><div className="metric-top"><span className="metric-icon"><TrendingUp size={16} /></span><span>Projected profit</span></div><strong className="metric-value">Set a budget <ArrowRight size={16} /></strong><small>To see profit and margin · {money.format(totalExpenses)} spent</small></button>}
@@ -484,7 +488,7 @@ export function PortfolioOverview({
             <span className="project-name-cell"><span className={`project-avatar avatar-${project.prefix.toLowerCase()}`}>{project.name.slice(0, 1)}</span><span className="project-title-stack"><strong>{project.name}</strong><small>{project.client} · {money.format(project.contract)}</small></span></span>
             <span className="money-cell project-contract">{money.format(project.contract)}</span>
             <span className="progress-cell project-progress"><span className="progress-value">{project.progress}%</span><span className="progress-track"><span style={{ width: `${project.progress}%` }} /></span></span>
-            <span className={`project-billed project-billing-cell${project.collected > project.billed ? ' is-over' : ''}`}><span><strong>{money.format(project.collected)}</strong><small>of {money.format(project.billed)}</small></span>{project.collected > project.billed && <small className="project-billing-advance">+{money.format(project.collected - project.billed)} advance</small>}<span className="project-billing-track"><span style={{ width: `${collectedPercent}%` }} /></span></span>
+            <span className={`project-billed project-billing-cell${project.collected > project.billed ? ' is-over' : ''}`} title={project.collected > project.billed ? `+${money.format(project.collected - project.billed)} paid in advance of billing` : undefined}><span><strong>{money.format(project.collected)}</strong><small>of {money.format(project.billed)}</small></span><span className="project-billing-track"><span style={{ width: `${collectedPercent}%` }} /></span></span>
             <span className="project-risk"><ProfitRiskBadge risk={profitRisk} />{profitRisk.projectedMarginPercent !== null && <small className="project-risk-margin">{Math.round(profitRisk.projectedMarginPercent)}%</small>}</span>
             <span className="project-status"><StatusBadge status={project.status} />{project.healthStatus === 'needs_attention' && <small className="project-attention">Needs attention</small>}</span>
             <span className="project-deadline"><ProjectDeadlineBadge deadline={deadlineStatus} />{project.deadline && deadlineStatus.level !== 'completed' && <small className="project-deadline-date">{shortDeadline(project.deadline)}</small>}</span>
@@ -493,18 +497,18 @@ export function PortfolioOverview({
         }) : <div className="empty-state">{projects.length ? 'No projects match those filters.' : 'No projects in this workspace yet. Create one to get started.'}</div>}
         <div className="table-footer"><span>Showing {filtered.length} of {projects.length} projects</span></div></div>
     </section>
-    <section className="lower-grid"><div className="surface-card cashflow-card">
-        <div className="card-heading-row"><div><div className="section-kicker">Last 6 months</div><h2>Cash in vs expenses</h2></div></div>
+    <section className="lower-grid dash-lower-even"><div className="surface-card cashflow-card">
+        <div className="card-heading-row"><div><div className="section-kicker">Last 6 months</div><h2>{sixMonthExpenses > 0 ? 'Cash in vs expenses' : 'Cash in'}</h2></div></div>
         <div className="cashflow-summary">
           <span><small>This month</small><strong>{money.format(monthCashIn)}</strong><em>{monthReceiptCount} receipt{monthReceiptCount === 1 ? '' : 's'}</em></span>
           <span><small>6-month cash in</small><strong>{money.format(sixMonthCashIn)}</strong></span>
-          <span><small>6-month expenses</small>{sixMonthExpenses > 0 ? <strong className="is-expense">{money.format(sixMonthExpenses)}</strong> : <strong className="is-muted">None logged</strong>}</span>
+          <span><small>6-month expenses</small>{sixMonthExpenses > 0 ? <strong className="is-expense">{money.format(sixMonthExpenses)}</strong> : <button type="button" className="cashflow-log-expense" onClick={() => setShowDashboardExpense(true)} disabled={!projects.length}>Log expenses →</button>}</span>
         </div>
         {sixMonthMax > 0 ? <div className="six-month-chart" role="img" aria-label="Cash in and expenses for the last six months">
           {sixMonths.map((month) => <div className={`six-month-col${month.isCurrent ? ' is-current' : ''}`} key={month.key} title={`${month.label}: ${money.format(month.cashIn)} in · ${money.format(month.expenses)} expenses`}>
             <div className="six-month-bars">
-              <span className="bar-in" style={{ height: `${month.cashIn ? Math.max(3, month.cashIn / sixMonthMax * 100) : 0}%` }} />
-              <span className="bar-out" style={{ height: `${month.expenses ? Math.max(3, month.expenses / sixMonthMax * 100) : 0}%` }} />
+              <span className={`bar-in${month.cashIn ? '' : ' is-empty'}`} style={{ height: `${month.cashIn ? Math.max(3, month.cashIn / sixMonthMax * 100) : 3}%` }} />
+              {sixMonthExpenses > 0 && <span className="bar-out" style={{ height: `${month.expenses ? Math.max(3, month.expenses / sixMonthMax * 100) : 0}%` }} />}
             </div>
             <small>{month.label}</small>
           </div>)}
