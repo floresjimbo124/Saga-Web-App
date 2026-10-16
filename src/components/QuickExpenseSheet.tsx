@@ -13,6 +13,7 @@ const quickCategories: { value: ProjectExpenseCategory; label: string }[] = [
   { value: 'equipment', label: 'Equipment' },
   { value: 'transport', label: 'Transport' },
   { value: 'hauling', label: 'Hauling' },
+  { value: 'food_drinks', label: 'Food & drinks' },
   { value: 'permits', label: 'Permits' },
   { value: 'rent', label: 'Rent' },
   { value: 'operational_expenses', label: 'Operations' },

@@ -8,7 +8,7 @@ import type { PaymentType } from '../lib/payment-type'
 
 export type ProjectStatus = 'planning' | 'active' | 'on_hold' | 'completed' | 'closed'
 export type ProjectHealthStatus = 'on_track' | 'needs_attention'
-export type ProjectExpenseCategory = 'materials' | 'labor' | 'operational_expenses' | 'payroll' | 'sub_contract' | 'rent' | 'equipment' | 'transport' | 'hauling' | 'permits' | 'other'
+export type ProjectExpenseCategory = 'materials' | 'labor' | 'operational_expenses' | 'payroll' | 'sub_contract' | 'rent' | 'equipment' | 'transport' | 'hauling' | 'food_drinks' | 'permits' | 'other'
 export type ProjectChangeOrderStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'void'
 
 export type ProjectChangeOrder = {
