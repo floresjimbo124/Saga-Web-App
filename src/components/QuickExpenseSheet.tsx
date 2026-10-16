@@ -46,6 +46,14 @@ export function QuickExpenseSheet({ projects, initialProjectId, onClose, onSaved
   const [category, setCategory] = useState<ProjectExpenseCategory>('materials')
   const [note, setNote] = useState('')
   const [vendor, setVendor] = useState('')
+  const todayKey = new Date().toLocaleDateString('en-CA')
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 641px)').matches)
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 641px)')
+    const update = () => setIsDesktop(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
   const [date, setDate] = useState(todayLocal)
   const [showMore, setShowMore] = useState(false)
   const [receipt, setReceipt] = useState<File | null>(null)
@@ -164,11 +172,11 @@ export function QuickExpenseSheet({ projects, initialProjectId, onClose, onSaved
           <input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="e.g. 20 bags cement" />
         </label>
 
-        <button type="button" className="quick-expense-more" onClick={() => setShowMore((open) => !open)} aria-expanded={showMore}>
+        {!isDesktop && <button type="button" className="quick-expense-more" onClick={() => setShowMore((open) => !open)} aria-expanded={showMore}>
           More details <ChevronDown size={14} />
-        </button>
-        {showMore && <div className="quick-expense-more-fields">
-          <label className="form-field">Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label>
+        </button>}
+        {(isDesktop || showMore) && <div className="quick-expense-more-fields">
+          <label className="form-field"><span className="quick-expense-date-label">Date{date === todayKey && <em>Today</em>}</span><input type="date" value={date} max={todayKey} onChange={(event) => setDate(event.target.value)} required /></label>
           <label className="form-field">Vendor<input value={vendor} onChange={(event) => setVendor(event.target.value)} maxLength={150} placeholder="Supplier or payee" /></label>
         </div>}
 

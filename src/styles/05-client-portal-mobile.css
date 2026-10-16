@@ -670,7 +670,7 @@
   }
 
   .client-portal-tabs {
-    position: sticky;
+    position: static;
     z-index: 5;
     display: flex;
     gap: 4px;

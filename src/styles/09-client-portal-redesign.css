@@ -223,9 +223,9 @@
   font-size: 13px;
 }
 
-/* Sticky tabs with badges */
+/* Tabs with badges (they stay in place under the cover and scroll with the page) */
 .client-portal-tabs {
-  position: sticky;
+  position: static;
   z-index: 5;
 }
 
