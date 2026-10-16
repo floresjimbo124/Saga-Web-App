@@ -26,6 +26,7 @@ const categories: { value: ProjectExpenseCategory; label: string }[] = [
   { value: 'rent', label: 'Rent' },
   { value: 'equipment', label: 'Equipment' },
   { value: 'transport', label: 'Transport' },
+  { value: 'hauling', label: 'Hauling' },
   { value: 'permits', label: 'Permits' },
   { value: 'other', label: 'Other' },
 ]
