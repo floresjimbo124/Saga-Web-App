@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
 
 export type StatusMenuOption<T extends string> = {
@@ -20,12 +21,22 @@ export function StatusMenu<T extends string>({ label, value, options, disabled, 
   const [activeIndex, setActiveIndex] = useState(0)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const [isSheet, setIsSheet] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 640px)')
+    const update = () => setIsSheet(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
   const current = options.find((option) => option.value === value) ?? options[0]
 
   useEffect(() => {
     if (!open) return
     const onPointer = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+      const target = event.target as Node
+      if (!rootRef.current?.contains(target) && !popoverRef.current?.contains(target)) setOpen(false)
     }
     window.addEventListener('pointerdown', onPointer)
     return () => window.removeEventListener('pointerdown', onPointer)
@@ -69,7 +80,7 @@ export function StatusMenu<T extends string>({ label, value, options, disabled, 
       <span>{current.label}</span>
       <ChevronDown size={14} className="status-menu-chevron" aria-hidden="true" />
     </button>
-    {open && <div className="status-menu-popover" role="listbox" aria-label={label} aria-activedescendant={`${label}-${options[activeIndex].value}`}>
+    {open && (() => { const menu = <div ref={popoverRef} className={`status-menu-popover${isSheet ? ' is-sheet' : ''}`} role="listbox" aria-label={label} aria-activedescendant={`${label}-${options[activeIndex].value}`}>
       <div className="status-menu-title">{label}</div>
       {options.map((option, index) => <div
         key={option.value}
@@ -84,6 +95,7 @@ export function StatusMenu<T extends string>({ label, value, options, disabled, 
         <span className="status-menu-copy"><strong>{option.label}</strong></span>
         {option.value === value && <Check size={15} className="status-menu-check" aria-hidden="true" />}
       </div>)}
-    </div>}
+    </div>
+    return isSheet ? createPortal(<div className="status-menu-sheet-backdrop">{menu}</div>, document.body) : menu })()}
   </div>
 }
