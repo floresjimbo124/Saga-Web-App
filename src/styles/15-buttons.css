@@ -141,3 +141,9 @@
   .select-menu-option { min-height: 44px; font-size: 15px; }
 }
 @media (prefers-reduced-motion: reduce) { .select-menu-list { animation: none; } }
+
+/* Lock the page behind any open pop-up (dialogs, drawers, sheets) */
+html { scrollbar-gutter: stable; }
+html:has(.modal-backdrop), html:has(.modal-backdrop) body,
+html:has(.client-photo-lightbox), html:has(.client-photo-lightbox) body { overflow: hidden; overscroll-behavior: none; }
+.modal-backdrop, .client-photo-lightbox { overscroll-behavior: contain; }
