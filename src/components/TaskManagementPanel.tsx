@@ -862,7 +862,7 @@ function TeamDialog({ staff, projects, onClose, onChanged }: {
                 <button type="button" className="ic-icon-action is-danger" disabled={busy} onClick={() => { void revoke(member) }} title="Remove access" aria-label={`Remove access for ${member.name}`}><UserRoundX size={15} /></button>
               </span>
               : <button type="button" className={`tm-pick${isSelected ? ' is-selected' : ''}`} onClick={() => setTitle(role)} aria-pressed={isSelected}>{isSelected ? 'Selected' : 'Invite'}</button>}
-            {member && role !== 'architect' && <div className="tm-access" role="group" aria-label={`Projects ${member.name} can open`}>
+            {member && <div className="tm-access" role="group" aria-label={`Projects ${member.name} can open`}>
               <span className="tm-access-label">Project access</span>
               {projects.length ? projects.map((project) => {
                 const hasAccess = projectAccess.some((row) => row.userId === member.userId && row.projectId === project.id)
