@@ -105,9 +105,31 @@ export async function loadClientErrors(limit = 20): Promise<ClientErrorEntry[]> 
 const reported = new Set<string>()
 
 /** Records an unexpected browser error for the owner to review. Never throws. */
+const isLocalPreview = () => typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+
+/** A screen file from an older deploy that no longer exists (the tab was open during a deploy). */
+export function isStaleBundleError(message: string) {
+  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Unable to preload CSS/i.test(message)
+}
+
+const staleReloadKey = 'sagact:stale-bundle-reload'
+
+/** Reload once to pick up the new deploy; never loop. Returns true when a reload was started. */
+export function reloadForNewDeploy() {
+  try {
+    const last = Number(window.sessionStorage.getItem(staleReloadKey) ?? 0)
+    if (Date.now() - last < 60_000) return false
+    window.sessionStorage.setItem(staleReloadKey, String(Date.now()))
+  } catch {
+    // Storage unavailable: still reload once.
+  }
+  window.location.reload()
+  return true
+}
+
 export async function reportClientError(message: string, stack?: string) {
   try {
-    if (!supabase) return
+    if (!supabase || isLocalPreview()) return
     const key = message.slice(0, 200)
     if (reported.has(key) || reported.size > 20) return
     reported.add(key)
@@ -126,11 +148,17 @@ export async function reportClientError(message: string, stack?: string) {
 
 export function installClientErrorReporting() {
   if (typeof window === 'undefined') return
+  // After a deploy, open tabs may ask for screen files that no longer exist: reload once instead of crashing.
+  window.addEventListener('vite:preloadError', (event) => {
+    if (reloadForNewDeploy()) event.preventDefault()
+  })
   window.addEventListener('error', (event) => {
     void reportClientError(event.message || String(event.error), event.error instanceof Error ? event.error.stack : undefined)
   })
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason
+    const text = reason instanceof Error ? reason.message : String(reason)
+    if (isStaleBundleError(text) && reloadForNewDeploy()) return
     void reportClientError(reason instanceof Error ? reason.message : String(reason), reason instanceof Error ? reason.stack : undefined)
   })
 }

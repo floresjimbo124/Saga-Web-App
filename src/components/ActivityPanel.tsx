@@ -145,7 +145,7 @@ export function ActivityPanel({ onOpenProject }: { onOpenProject: (projectId: st
 
     {errors.length > 0 && <section className="act-errors" aria-label="Recent app errors">
       <div className="act-errors-head"><AlertTriangle size={16} aria-hidden="true" /><strong>{errors.length} recent app error{errors.length === 1 ? '' : 's'}</strong><span>Reported automatically from users’ browsers</span></div>
-      <ul>{errors.slice(0, 5).map((error) => <li key={error.id}><span>{error.message}</span><small>{shortDate.format(new Date(error.occurredAt))} · {timeFormat.format(new Date(error.occurredAt))}{error.pageUrl ? ` · ${new URL(error.pageUrl, window.location.origin).pathname}` : ''}</small></li>)}</ul>
+      <ul>{errors.slice(0, 5).map((error) => <li key={error.id}><span>{error.message}</span><small>{shortDate.format(new Date(error.occurredAt))} · {timeFormat.format(new Date(error.occurredAt))}{error.pageUrl ? ` · ${/\/\/(localhost|127\.0\.0\.1)/.test(error.pageUrl) ? 'Local preview' : 'Live app'} · ${new URL(error.pageUrl, window.location.origin).pathname}` : ''}</small></li>)}</ul>
     </section>}
 
     {loadError && <p className="form-error" role="alert">{loadError} <button type="button" className="text-button" onClick={() => { void load() }}>Retry</button></p>}
