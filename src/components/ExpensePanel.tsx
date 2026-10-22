@@ -5,6 +5,7 @@ import { createExpenseReceiptUrl, discardExpenseReceipt, setProjectExpenseReceip
 import { ExpenseEntryDialog } from './ExpenseEntryDialog'
 import { QuickExpenseSheet } from './QuickExpenseSheet'
 import { useToast } from './toast-context'
+import { useProjectCanEdit } from '../app/project-permissions'
 import { CountUp, EmptyArt } from './Motion'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2 })
@@ -51,6 +52,7 @@ export function ExpenseRow({ expense, onEdit, onOpenReceipt, onReceiptChanged }:
   onReceiptChanged: () => void
 }) {
   const { showToast } = useToast()
+  const canEdit = useProjectCanEdit()
   const [isUploading, setIsUploading] = useState(false)
   const [rowError, setRowError] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
@@ -87,7 +89,7 @@ export function ExpenseRow({ expense, onEdit, onOpenReceipt, onReceiptChanged }:
     <input ref={fileInput} type="file" accept="image/*" hidden onChange={(event) => { void attachReceipt(event.target.files?.[0]); event.target.value = '' }} />
     <span className="activity-copy"><strong>{expense.description}{!expense.receiptStoragePath && !isPayroll && <span className="expense-no-receipt">No receipt</span>}</strong><small>{formatExpenseDate(expense.date)} · {category}{expense.vendor ? ` · ${expense.vendor}` : ''}</small>{rowError && <small className="form-error" role="alert">{rowError}</small>}</span>
     <strong className="activity-amount expense-amount">− {money.format(expense.amount)}</strong>
-    {!isPayroll && <button type="button" className="icon-button expense-edit-button" onClick={() => onEdit(expense)} aria-label={`Edit expense: ${expense.description}`} title="Edit expense"><Pencil size={14} /></button>}
+    {canEdit && !isPayroll && <button type="button" className="icon-button expense-edit-button" onClick={() => onEdit(expense)} aria-label={`Edit expense: ${expense.description}`} title="Edit expense"><Pencil size={14} /></button>}
   </div>
 }
 

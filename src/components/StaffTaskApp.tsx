@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
-import { ClipboardList, LogOut, WalletCards } from 'lucide-react'
+import { Suspense, lazy, useEffect, useState } from 'react'
+import { SkeletonRows } from './Motion'
+import { ClipboardList, LogOut, WalletCards, FolderKanban } from 'lucide-react'
 import { TaskManagementPanel } from './TaskManagementPanel'
 import { TaskCommentNotificationBell } from './TaskCommentNotificationBell'
 import { supabase } from '../lib/supabase'
 import { loadPayrollProjectOptions, type PayrollProjectOption } from '../data/payroll'
 import { PayrollPanel } from './PayrollPanel'
 import { readStaffNavigation, saveStaffNavigation } from '../auth/staff-navigation'
+
+const StaffProjects = lazy(() => import('../app/StaffProjects').then((module) => ({ default: module.StaffProjects })))
 
 const roleLabels: Record<string, string> = {
   liaison_officer: 'Liaison officer',
@@ -21,8 +24,9 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
   const name = displayName.trim() || 'Team member'
   const firstName = name.split(/\s+/)[0]
   const canManagePayroll = staffTitle === 'liaison_officer'
-  const [view, setView] = useState<'tasks' | 'payroll'>(() =>
-    readStaffNavigation(window.sessionStorage, userId, canManagePayroll),
+  const canViewProjects = staffTitle === 'liaison_officer' || staffTitle === 'engineer'
+  const [view, setView] = useState<'tasks' | 'payroll' | 'projects'>(() =>
+    readStaffNavigation(window.sessionStorage, userId, canManagePayroll, canViewProjects),
   )
   const [payrollProjects, setPayrollProjects] = useState<PayrollProjectOption[]>([])
   const [payrollProjectsError, setPayrollProjectsError] = useState('')
@@ -74,6 +78,7 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
       <div className="brand-lockup"><span className="brand-mark"><img src="/sagact-mark.svg" alt="" /></span><span>SAGACT<span className="brand-period">.</span></span></div>
       <nav className="primary-nav" aria-label="Main navigation">
         <button className={`nav-item ${view === 'tasks' ? 'is-active' : ''}`} type="button" aria-current={view === 'tasks' ? 'page' : undefined} onClick={() => setView('tasks')}><ClipboardList size={17} /><span>My tasks</span></button>
+        {canViewProjects && <button className={`nav-item ${view === 'projects' ? 'is-active' : ''}`} type="button" aria-current={view === 'projects' ? 'page' : undefined} onClick={() => setView('projects')}><FolderKanban size={17} /><span>Projects</span></button>}
         {canManagePayroll && <button className={`nav-item ${view === 'payroll' ? 'is-active' : ''}`} type="button" aria-current={view === 'payroll' ? 'page' : undefined} onClick={() => setView('payroll')}><WalletCards size={17} /><span>Payroll</span></button>}
       </nav>
       <div className="sidebar-bottom">
@@ -86,7 +91,7 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
     </aside>
     <div className="app-main">
       <header className="topbar">
-        <div className="breadcrumbs"><span>SAGACT</span><span className="staff-breadcrumb-separator">›</span><strong>{view === 'payroll' ? 'Payroll' : 'My tasks'}</strong></div>
+        <div className="breadcrumbs"><span>SAGACT</span><span className="staff-breadcrumb-separator">›</span><strong>{view === 'payroll' ? 'Payroll' : view === 'projects' ? 'Projects' : 'My tasks'}</strong></div>
         <div className="staff-app-header-actions">
           <TaskCommentNotificationBell onOpenTask={openTaskCommentNotification} />
           <button className="button button-secondary staff-mobile-sign-out" type="button" onClick={() => { void supabase?.auth.signOut() }}>
@@ -95,7 +100,9 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
         </div>
       </header>
       <main className="page-content">
-        {view === 'payroll' && canManagePayroll
+        {view === 'projects' && canViewProjects
+          ? <Suspense fallback={<SkeletonRows rows={3} label="Loading projects" />}><StaffProjects /></Suspense>
+          : view === 'payroll' && canManagePayroll
           ? <div className="payroll-page">
             {payrollProjectsError
               ? <p className="task-error" role="alert">{payrollProjectsError} <button type="button" className="text-button" onClick={retryPayrollAccess}>Retry</button></p>

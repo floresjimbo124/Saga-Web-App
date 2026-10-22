@@ -18,6 +18,7 @@ import { formatPaymentType } from '../lib/payment-type'
 import { formatChangeOrderNumber } from '../lib/change-order-number'
 import { formatBillingNumber } from '../lib/billing-number'
 import { Metric } from '../components/ProjectStatusBadges'
+import { useProjectCanEdit } from './project-permissions'
 import { projectDetailTabs, money, projectStatusMenuOptions, projectHealthMenuOptions, shortDate, projectDate, financeForProject, retentionDueForProject, type Project, type Payment, type ProjectDetailTab } from './project-shared'
 
 const BillingPanel = lazy(() => import('../components/BillingPanel').then((module) => ({ default: module.BillingPanel })))
@@ -27,6 +28,7 @@ const ProjectForecastPanel = lazy(() => import('../components/ProjectForecastPan
 const ProjectMilestonePanel = lazy(() => import('../components/ProjectMilestonePanel').then((module) => ({ default: module.ProjectMilestonePanel })))
 
 export function ProjectDetail({ project, tab, setTab, payments, receivables, onBack, onSetup, onChanged, onProjectStateChange }: { project: Project; tab: ProjectDetailTab; setTab: (tab: ProjectDetailTab) => void; payments: Payment[]; receivables: ReceivableAgingItem[]; onBack: () => void; onSetup: () => void; onChanged: () => void; onProjectStateChange: (projectId: string, status: ProjectStatus, healthStatus: ProjectHealthStatus) => Promise<void> }) {
+  const canEdit = useProjectCanEdit()
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [paymentToEdit, setPaymentToEdit] = useState<Payment | null>(null)
   const [showInviteClient, setShowInviteClient] = useState(false)
@@ -128,14 +130,14 @@ export function ProjectDetail({ project, tab, setTab, payments, receivables, onB
       <strong className="detail-mobile-title">Project Details</strong>
     </div>
     <div className="project-detail-hero">
-      <ProjectDetailCover projectId={project.id} storagePath={project.coverPhotoStoragePath} projectName={project.name} onChanged={onChanged} />
+      <ProjectDetailCover projectId={project.id} storagePath={project.coverPhotoStoragePath} projectName={project.name} onChanged={onChanged} readOnly={!canEdit} />
       <div className="project-detail-hero-body">
         <div className="project-detail-title-row">
           <div><h1>{project.name}</h1><p><span>{project.location}</span>{project.location && project.client ? <span aria-hidden="true"> · </span> : null}<span>{project.client}</span></p></div>
         </div>
         <div className="project-detail-summary-row">
-          <StatusMenu label="Project status" value={project.status} disabled={isSavingProjectState} options={projectStatusMenuOptions} onChange={(next) => { void saveProjectState(next, project.healthStatus) }} />
-          <StatusMenu label="Project health" value={project.healthStatus} disabled={isSavingProjectState} options={projectHealthMenuOptions} onChange={(next) => { void saveProjectState(project.status, next) }} />
+          <StatusMenu label="Project status" value={project.status} disabled={isSavingProjectState || !canEdit} options={projectStatusMenuOptions} onChange={(next) => { void saveProjectState(next, project.healthStatus) }} />
+          <StatusMenu label="Project health" value={project.healthStatus} disabled={isSavingProjectState || !canEdit} options={projectHealthMenuOptions} onChange={(next) => { void saveProjectState(project.status, next) }} />
           <span className={`project-deadline-status deadline-${deadlineStatus.level}`} title={deadlineStatus.detail}>{deadlineBadgeText}</span>
         </div>
         <div className="project-detail-progress">
@@ -146,7 +148,7 @@ export function ProjectDetail({ project, tab, setTab, payments, receivables, onB
           <span><CalendarDays size={13} /><span><small>Started</small><strong>{projectDate(project.startDate ?? project.createdAt)}</strong></span></span>
           <span><CalendarDays size={13} /><span><small>Target date</small><strong>{project.deadline ? projectDate(project.deadline) : 'Not set'}</strong></span></span>
         </div>
-        <div className="detail-actions">{project.clientId && <button className="button button-secondary" onClick={() => setShowInviteClient(true)}><UserPlus size={15} />Invite client</button>}{project.isSetupComplete ? <button className="button button-secondary" onClick={onSetup}><FileText size={15} />Edit contract</button> : <button className="button button-primary" onClick={onSetup}><FileText size={15} />Set up contract</button>}</div>
+        {canEdit && <div className="detail-actions">{project.clientId && <button className="button button-secondary" onClick={() => setShowInviteClient(true)}><UserPlus size={15} />Invite client</button>}{project.isSetupComplete ? <button className="button button-secondary" onClick={onSetup}><FileText size={15} />Edit contract</button> : <button className="button button-primary" onClick={onSetup}><FileText size={15} />Set up contract</button>}</div>}
       </div>
     </div>
   </section>
@@ -247,7 +249,7 @@ export function ProjectDetail({ project, tab, setTab, payments, receivables, onB
           <span className="activity-copy"><strong>{payment.payer}</strong><small>{shortDate(payment.date)} · {payment.billingAllocations.length ? `${payment.billingAllocations.map((allocation) => `Billing #${formatBillingNumber(allocation.billingNumber)} (${money.format(allocation.amount)})`).join(', ')} · ${formatPaymentType(payment.paymentType)}` : formatPaymentType(payment.paymentType)}{changeOrderLabel ? ` · ${changeOrderLabel}` : ''} · {payment.reference}</small></span>
           <strong className="activity-amount">{money.format(payment.amount)}</strong>
           <span className="pay-actions">
-            <button type="button" className="pay-action" aria-label={`Edit payment ${payment.receiptNumber ?? ''}`} title="Edit payment" onClick={() => { setShowPaymentDialog(false); setPaymentToEdit(payment) }}><Pencil size={14} /><span>Edit</span></button>
+            {canEdit && <button type="button" className="pay-action" aria-label={`Edit payment ${payment.receiptNumber ?? ''}`} title="Edit payment" onClick={() => { setShowPaymentDialog(false); setPaymentToEdit(payment) }}><Pencil size={14} /><span>Edit</span></button>}
             {payment.receiptNumber && <button type="button" className="pay-action" aria-label={`View acknowledgement receipt ${payment.receiptNumber}`} title="View receipt" onClick={() => { void viewAcknowledgementReceipt(payment) }}><Eye size={14} /><span>Receipt</span></button>}
             {payment.receiptNumber && <button type="button" className="pay-action is-icon" aria-label={`Download acknowledgement receipt ${payment.receiptNumber}`} title="Download receipt PDF" onClick={() => { void downloadAcknowledgementReceipt(payment) }}><Download size={14} /></button>}
           </span>

@@ -722,3 +722,35 @@ button.tk-stat > small { color: #4f7a57; font-weight: 600; }
 .ex-register::-webkit-scrollbar { width: 8px; }
 .ex-register::-webkit-scrollbar-thumb { border-radius: 999px; background: #c9d1c6; }
 @media (max-width: 640px) { .ex-register { max-height: 60vh; } }
+
+/* Staff project access: owner assigns projects in Manage staff */
+.tm-role { grid-template-columns: 40px minmax(0, 1fr) auto; }
+.tm-access { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 10px; border-top: 1px dashed #e2e5df; }
+.tm-access-label { margin-right: 4px; color: #405345; font-size: 12px; font-weight: 600; }
+.tm-access-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 0 10px; border: 1px solid #d9ded3; border-radius: 999px; color: #5d6b60; background: #fff; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.tm-access-chip:hover:not(:disabled) { border-color: #2c5a41; }
+.tm-access-chip.is-on { border-color: #2c5a41; color: #fff; background: #2c5a41; }
+.tm-access-chip:disabled { opacity: .6; cursor: progress; }
+.tm-access-hint { flex-basis: 100%; color: #8a958b; font-size: 11.5px; }
+
+/* Staff Projects page */
+.staff-projects { display: grid; gap: 16px; }
+.staff-project-list { display: grid; overflow: hidden; border: 1px solid #e6e8e1; border-radius: 12px; background: #fff; }
+.staff-project-card { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto 16px; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border: 0; border-bottom: 1px solid #f1f2ec; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.staff-project-card:last-child { border-bottom: 0; }
+.staff-project-card:hover { background: #fafbf7; }
+.staff-project-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; color: #2c5a41; background: #e3ede1; }
+.staff-project-copy { display: grid; gap: 3px; min-width: 0; }
+.staff-project-copy strong { color: #1f3a2c; font-size: 15px; font-weight: 600; }
+.staff-project-copy small { overflow: hidden; color: #8a958b; font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.staff-project-progress { display: flex; align-items: center; gap: 8px; max-width: 320px; }
+.staff-project-progress > span { flex: 1; height: 6px; overflow: hidden; border-radius: 999px; background: #eef1ec; }
+.staff-project-progress i { display: block; height: 100%; border-radius: inherit; background: #4f7a57; }
+.staff-project-progress b { color: #5d6b60; font-size: 12px; font-weight: 600; }
+.staff-project-deadline { display: inline-flex; align-items: center; gap: 6px; color: #5d6b60; font-size: 12.5px; white-space: nowrap; }
+.staff-project-chevron { color: #a3ada4; }
+.staff-project-note { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid #e3ede1; border-radius: 10px; color: #3f6a48; background: #f1f6ef; font-size: 13px; }
+@media (max-width: 640px) {
+  .staff-project-card { grid-template-columns: 36px minmax(0, 1fr) 16px; }
+  .staff-project-deadline { grid-column: 2; grid-row: 2; }
+}

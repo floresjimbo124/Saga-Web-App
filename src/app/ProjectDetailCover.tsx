@@ -5,7 +5,7 @@ import { ProjectCoverCropDialog } from '../components/ProjectCoverCropDialog'
 import { useToast } from '../components/toast-context'
 
 
-export function ProjectDetailCover({ projectId, projectName, storagePath, onChanged }: { projectId: string; projectName: string; storagePath: string | null; onChanged: () => void }) {
+export function ProjectDetailCover({ projectId, projectName, storagePath, onChanged, readOnly = false }: { projectId: string; projectName: string; storagePath: string | null; onChanged: () => void; readOnly?: boolean }) {
   const { showToast } = useToast()
   const [loadedPhoto, setLoadedPhoto] = useState<{ storagePath: string; url: string } | null>(null)
   const [error, setError] = useState('')
@@ -100,10 +100,10 @@ export function ProjectDetailCover({ projectId, projectName, storagePath, onChan
             <path d="M90 214h160M90 210v8M250 210v8M262 40v150M256 40h12" />
           </g>
         </svg>
-        <span className="cover-blueprint-copy"><Camera size={18} /><strong>Add a project photo</strong><span>JPG, PNG, or WebP · Up to 10 MB</span></span>
+        {!readOnly && <span className="cover-blueprint-copy"><Camera size={18} /><strong>Add a project photo</strong><span>JPG, PNG, or WebP · Up to 10 MB</span></span>}
       </div>}
-    {photoUrl && <button type="button" className="project-detail-cover-adjust" aria-label="Adjust project photo crop" title="Adjust photo crop" disabled={isWorking} onClick={() => { void adjustCover() }}><Crop size={14} />Adjust crop</button>}
-    <label className="project-detail-cover-upload">
+    {!readOnly && photoUrl && <button type="button" className="project-detail-cover-adjust" aria-label="Adjust project photo crop" title="Adjust photo crop" disabled={isWorking} onClick={() => { void adjustCover() }}><Crop size={14} />Adjust crop</button>}
+    {!readOnly && <label className="project-detail-cover-upload">
       <Camera size={14} />{isWorking ? 'Saving…' : storagePath ? 'Change photo' : 'Upload photo'}
       <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" aria-label={`Upload cover photo for ${projectName}`} disabled={isWorking} onChange={(event) => {
         const file = event.currentTarget.files?.[0]
@@ -117,7 +117,7 @@ export function ProjectDetailCover({ projectId, projectName, storagePath, onChan
           event.currentTarget.value = ''
         }
       }} />
-    </label>
+    </label>}
     {storagePath && <button type="button" className="project-detail-cover-remove" aria-label="Remove project cover photo" title="Remove project cover photo" disabled={isWorking} onClick={() => { void removeCover() }}><Trash2 size={14} /></button>}
     {error && <p className="project-detail-cover-error" role="alert">{error}</p>}
     {cropFile && <ProjectCoverCropDialog file={cropFile} saving={isWorking} error={error} onCancel={() => { if (!isWorking) { setCropFile(null); setError('') } }} onSave={(file) => { void uploadCover(file) }} />}

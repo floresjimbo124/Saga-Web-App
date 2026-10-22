@@ -7,6 +7,7 @@ import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
 import { formatChangeOrderNumber } from '../lib/change-order-number'
 import { useToast } from './toast-context'
+import { useProjectCanEdit } from '../app/project-permissions'
 import { CountUp, EmptyArt } from './Motion'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 2 })
@@ -91,6 +92,7 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
   onChanged: () => void
 }) {
   const { showToast } = useToast()
+  const canEdit = useProjectCanEdit()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingOrder, setEditingOrder] = useState<ProjectChangeOrder | null>(null)
   const [previewingOrderId, setPreviewingOrderId] = useState('')
@@ -321,7 +323,7 @@ export function ProjectChangeOrderPanel({ projectId, projectPrefix, projectName,
         <div className="milestone-drawer-actions">
           <button type="button" className="button button-secondary" onClick={() => { void previewDraftPdf(viewingOrder) }} disabled={isSaving || previewingOrderId === viewingOrder.id} aria-busy={previewingOrderId === viewingOrder.id}><Eye size={14} />{previewingOrderId === viewingOrder.id ? 'Preparing…' : 'View PDF'}</button>
           <span />
-          {viewingOrder.status === 'draft' && <>
+          {canEdit && viewingOrder.status === 'draft' && <>
             <button type="button" className="button button-secondary" onClick={() => { setViewingOrderId(''); openEditDialog(viewingOrder) }} disabled={isSaving}><Pencil size={14} />Edit draft</button>
             <button type="button" className="button button-primary" onClick={() => { void submitForApproval(viewingOrder).then(() => setViewingOrderId('')) }} disabled={isSaving} aria-busy={isSaving}><Send size={14} />{isSaving ? 'Submitting…' : 'Submit to client'}</button>
           </>}

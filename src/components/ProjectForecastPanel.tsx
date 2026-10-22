@@ -5,6 +5,7 @@ import { calculateProfitRisk } from '../finance/profit-risk'
 import { MoneyInput } from './MoneyInput'
 import { parseMoneyInput } from '../lib/money-input'
 import { useToast } from './toast-context'
+import { useProjectCanEdit } from '../app/project-permissions'
 
 const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 })
 
@@ -24,6 +25,7 @@ export function ProjectForecastPanel({
   onChanged: () => void
 }) {
   const { showToast } = useToast()
+  const canEdit = useProjectCanEdit()
   const [budgetInput, setBudgetInput] = useState(costBudget === null ? '' : String(costBudget))
   const [estimateInput, setEstimateInput] = useState(estimatedCostToComplete === null ? '' : String(estimatedCostToComplete))
   const [error, setError] = useState('')
@@ -63,9 +65,9 @@ export function ProjectForecastPanel({
     <div className="card-heading-row"><h2>Project profit forecast</h2><span className={`status-badge profit-risk-${forecast.level}`}><span />{forecast.label}</span></div>
     <p className="forecast-intro">Set the planned total cost and estimate the cost still needed to finish. Forecast profit uses approved contract value and recorded project expenses.</p>
     <form className="forecast-form" onSubmit={(event) => { void saveForecast(event) }}>
-      <label className="form-field">Total project cost budget<MoneyInput min="0" step="0.01" value={budgetInput} onChange={setBudgetInput} placeholder="0.00" required /></label>
-      <label className="form-field">Estimated cost to complete<MoneyInput min="0" step="0.01" value={estimateInput} onChange={setEstimateInput} placeholder="0.00" required /></label>
-      <button className="button button-primary" type="submit" disabled={isSaving} aria-busy={isSaving}><Save size={15} />{isSaving ? 'Saving…' : 'Save forecast'}</button>
+      <label className="form-field">Total project cost budget<MoneyInput disabled={!canEdit} min="0" step="0.01" value={budgetInput} onChange={setBudgetInput} placeholder="0.00" required /></label>
+      <label className="form-field">Estimated cost to complete<MoneyInput disabled={!canEdit} min="0" step="0.01" value={estimateInput} onChange={setEstimateInput} placeholder="0.00" required /></label>
+      {canEdit && <button className="button button-primary" type="submit" disabled={isSaving} aria-busy={isSaving}><Save size={15} />{isSaving ? 'Saving…' : 'Save forecast'}</button>}
     </form>
     {error && <p className="form-error" role="alert">{error}</p>}
     {message && <p className="document-success" role="status">{message}</p>}

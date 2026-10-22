@@ -76,20 +76,14 @@ export async function uploadProjectMilestonePhoto(projectId: string, milestoneId
   })
   if (uploadError) throw new Error(uploadError.message)
 
-  const { data, error } = await client.from('project_milestones')
-    .update({ photo_storage_path: storagePath })
-    .eq('organization_id', SAGACT_ORGANIZATION_ID)
-    .eq('project_id', projectId)
-    .eq('id', milestoneId)
-    .eq('status', 'complete')
-    .select('id')
-    .maybeSingle()
-  if (error || !data) {
+  // Owners may attach or replace; assigned staff may only add a photo where none exists (enforced in the database).
+  const { error } = await client.rpc('attach_project_milestone_photo', { p_milestone_id: milestoneId, p_storage_path: storagePath })
+  if (error) {
     const { error: cleanupError } = await client.storage.from(photoBucket).remove([storagePath])
     if (cleanupError) {
       throw new Error(`Could not attach the photo to this completed milestone. The uploaded file also could not be cleaned up: ${cleanupError.message}`)
     }
-    throw new Error(error?.message ?? 'Save the milestone as complete before attaching a photo.')
+    throw new Error(error.message || 'Save the milestone as complete before attaching a photo.')
   }
   if (previousStoragePath) {
     const { error: cleanupError } = await client.storage.from(photoBucket).remove([previousStoragePath])

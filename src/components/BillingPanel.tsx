@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useProjectCanEdit } from '../app/project-permissions'
 import { useBillingReadiness } from '../data/insights'
 import { createPortal } from 'react-dom'
 import { Download, Eye, Plus, X } from 'lucide-react'
@@ -31,6 +32,7 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
   onChanged: () => void
 }) {
   const { showToast } = useToast()
+  const canEdit = useProjectCanEdit()
   const [billings, setBillings] = useState<ProjectBilling[]>([])
   const readiness = useBillingReadiness(projectId, `${progress}:${billings.length}:${billings.filter((billing) => billing.status === 'issued').length}`)
   const showReadiness = !contractId && readiness !== null
@@ -146,13 +148,13 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
         <span>Billable ceiling<strong>{money.format(ceiling)}</strong></span>
       </div>
       <div className="form-row billing-create-fields">
-        <label className="form-field">Work completed (%)<input type="number" min="0" max="100" step="0.01" value={progressInput ?? String(progress)} onChange={(event) => setProgressInput(event.target.value)} /></label>
+        <label className="form-field">Work completed (%)<input type="number" disabled={!canEdit} min="0" max="100" step="0.01" value={progressInput ?? String(progress)} onChange={(event) => setProgressInput(event.target.value)} /></label>
         <label className="form-field">Due date (optional)<input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
       {message && <p className="calculation-note" role="status">{message}</p>}
       <div className="modal-actions billing-create-actions">
-        <button type="button" className="button button-secondary" onClick={saveProgress} disabled={busy || progressInput === null}>Save progress</button>
+        {canEdit && <button type="button" className="button button-secondary" onClick={saveProgress} disabled={busy || progressInput === null}>Save progress</button>}
         <button type="button" className="button button-primary" onClick={() => { void issueBilling() }} disabled={busy || !isSetupComplete} aria-busy={busy}><Plus size={15} />{busy ? 'Issuing…' : 'Issue billing'}</button>
       </div>
     </section>
@@ -196,7 +198,7 @@ export function BillingPanel({ projectId, contractId, projectName, clientName, l
       <span className="billing-row-actions">
       {billing.status === 'issued' && <button type="button" className="text-button compact-button" onClick={() => { void openBillingPdf({ projectName, clientName, location, billingNumber: billing.billingNumber, amount: billing.amount, progressPercent: billing.progressPercent, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }).catch(() => setError('Could not preview the billing PDF.')) }}><Eye size={14} />View</button>}
       {billing.status === 'issued' && <button type="button" className="text-button compact-button" aria-label={`Download billing ${formatBillingNumber(billing.billingNumber)}`} title="Download billing PDF" onClick={() => { void downloadBillingPdf({ projectName, clientName, location, billingNumber: billing.billingNumber, amount: billing.amount, progressPercent: billing.progressPercent, issuedAt: billing.issuedAt ?? new Date().toISOString(), dueAt: billing.dueAt }).catch(() => setError('Could not download the billing PDF.')) }}><Download size={14} /></button>}
-      {billing.status === 'issued' && <button type="button" className="text-button compact-button" onClick={() => { setVoidReason(''); setVoidError(''); setBillingToVoid(billing) }} disabled={busy}>Void</button>}
+      {canEdit && billing.status === 'issued' && <button type="button" className="text-button compact-button" onClick={() => { setVoidReason(''); setVoidError(''); setBillingToVoid(billing) }} disabled={busy}>Void</button>}
       </span>
     </div>)}
     </div> : <div className="empty-state">No billings issued yet.</div>}

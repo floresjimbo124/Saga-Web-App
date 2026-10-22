@@ -14,6 +14,7 @@ import {
   type SaveProjectMilestoneInput,
 } from '../data/project-milestones'
 import { useToast } from './toast-context'
+import { useProjectCanEdit } from '../app/project-permissions'
 
 const statusOptions: { value: ProjectMilestoneStatus; label: string }[] = [
   { value: 'pending', label: 'Upcoming' },
@@ -84,6 +85,8 @@ function MilestoneEditor({ projectId, milestone, defaultStartDate, onClose, onCh
 }) {
   const { showToast } = useToast()
   const isNew = milestone === null
+  const canEdit = useProjectCanEdit()
+  const locked = !canEdit && !isNew
   const [name, setName] = useState(milestone?.name ?? '')
   const [startDate, setStartDate] = useState(milestone ? milestone.startDate ?? '' : defaultStartDate)
   const [plannedDate, setPlannedDate] = useState(milestone?.plannedDate ?? '')
@@ -232,38 +235,38 @@ function MilestoneEditor({ projectId, milestone, defaultStartDate, onClose, onCh
   return createPortal(<div className="modal-backdrop payroll-drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !isSaving) onClose() }}>
     <form className="project-modal payroll-worker-drawer milestone-drawer" role="dialog" aria-modal="true" aria-labelledby="milestone-drawer-title" onSubmit={onSubmit}>
       <div className="modal-heading">
-        <div><div className="section-kicker">{isNew ? 'New milestone' : 'Edit milestone'}</div><h2 id="milestone-drawer-title">{isNew ? 'Add a milestone' : milestone.name}</h2></div>
+        <div><div className="section-kicker">{isNew ? 'New milestone' : locked ? 'Milestone' : 'Edit milestone'}</div><h2 id="milestone-drawer-title">{isNew ? 'Add a milestone' : milestone.name}</h2></div>
         <button className="icon-button" type="button" onClick={onClose} aria-label="Close" disabled={isSaving}><X size={18} /></button>
       </div>
 
-      <label className="form-field">Milestone name<input ref={nameInput} value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Second floor slab" maxLength={120} required autoFocus={isNew} /></label>
+      <label className="form-field">Milestone name<input disabled={locked} ref={nameInput} value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Second floor slab" maxLength={120} required autoFocus={isNew} /></label>
 
       <div className="milestone-drawer-dates">
-        <label className="form-field">Start date<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
-        <label className="form-field">End date / target<input type="date" value={plannedDate} min={startDate || undefined} onChange={(event) => setPlannedDate(event.target.value)} /></label>
+        <label className="form-field">Start date<input disabled={locked} type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
+        <label className="form-field">End date / target<input disabled={locked} type="date" value={plannedDate} min={startDate || undefined} onChange={(event) => setPlannedDate(event.target.value)} /></label>
       </div>
       <div className="milestone-duration-chips" role="group" aria-label="Set end date from start date">
         <span>Duration</span>
         {durationShortcuts.map((shortcut) => {
           const end = startDate ? shortcut.end(startDate) : ''
-          return <button key={shortcut.label} type="button" className={`gantt-chip${end && end === plannedDate ? ' is-selected' : ''}`} disabled={!startDate} onClick={() => setPlannedDate(end)}>{shortcut.label}</button>
+          return <button key={shortcut.label} type="button" className={`gantt-chip${end && end === plannedDate ? ' is-selected' : ''}`} disabled={!startDate || locked} onClick={() => setPlannedDate(end)}>{shortcut.label}</button>
         })}
       </div>
 
       <div className="milestone-progress-field">
         <label htmlFor="milestone-percent">Completion</label>
         <div className="milestone-progress-inputs">
-          <input type="range" min="0" max="100" step="1" value={percentValue} onChange={(event) => setCompletionPercent(event.target.value)} aria-label="Completion slider" />
-          <span className="milestone-percent-box"><input id="milestone-percent" type="number" inputMode="decimal" min="0" max="100" step="0.01" value={completionPercent} onChange={(event) => { const next = event.target.value; if (/^d{0,3}(.d{0,2})?$/.test(next)) setCompletionPercent(next) }} onBlur={() => setCompletionPercent(String(percentValue))} placeholder="0.00" required />%</span>
+          <input disabled={locked} type="range" min="0" max="100" step="1" value={percentValue} onChange={(event) => setCompletionPercent(event.target.value)} aria-label="Completion slider" />
+          <span className="milestone-percent-box"><input disabled={locked} id="milestone-percent" type="number" inputMode="decimal" min="0" max="100" step="0.01" value={completionPercent} onChange={(event) => { const next = event.target.value; if (/^d{0,3}(.d{0,2})?$/.test(next)) setCompletionPercent(next) }} onBlur={() => setCompletionPercent(String(percentValue))} placeholder="0.00" required />%</span>
         </div>
         <small className="milestone-percent-hint">Type an exact value with up to 2 decimals, e.g. 42.75</small>
         <div className="milestone-status-line">
           <span className={`milestone-status-pill is-${status}`}>{statusLabel}</span>
-          <label className="milestone-blocked-toggle"><input type="checkbox" checked={blocked} onChange={(event) => setBlocked(event.target.checked)} />Mark as blocked</label>
+          <label className="milestone-blocked-toggle"><input disabled={locked} type="checkbox" checked={blocked} onChange={(event) => setBlocked(event.target.checked)} />Mark as blocked</label>
         </div>
       </div>
 
-      {isComplete && <label className="form-field">Completed on<input type="date" value={actualDate || plannedDate || todayLocal()} onChange={(event) => setActualDate(event.target.value)} /></label>}
+      {isComplete && <label className="form-field">Completed on<input disabled={locked} type="date" value={actualDate || plannedDate || todayLocal()} onChange={(event) => setActualDate(event.target.value)} /></label>}
 
       {isComplete && <div className="milestone-photo-control">
         <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" aria-label="Attach a completion photo" hidden onChange={(event) => {
@@ -274,25 +277,25 @@ function MilestoneEditor({ projectId, milestone, defaultStartDate, onClose, onCh
         }} />
         {photoUrl && <a className="milestone-photo-link" href={photoUrl} target="_blank" rel="noreferrer" title="Open full size"><img className="milestone-photo-preview" src={photoUrl} alt={`${milestone?.name ?? 'Milestone'} completion`} /></a>}
         <div className="milestone-photo-actions">
-          <button className="button button-secondary" type="button" disabled={isPhotoWorking || (Boolean(milestone) && milestone?.status !== 'complete')} onClick={() => photoInput.current?.click()} aria-busy={isPhotoWorking}>
+          {!(locked && (milestone?.photoStoragePath || newPhoto)) && <button className="button button-secondary" type="button" disabled={isPhotoWorking || (Boolean(milestone) && milestone?.status !== 'complete')} onClick={() => photoInput.current?.click()} aria-busy={isPhotoWorking}>
             {milestone?.photoStoragePath || newPhoto ? <Camera size={14} /> : <Upload size={14} />}
             {isPhotoWorking ? 'Saving photo…' : milestone?.photoStoragePath || newPhoto ? 'Change photo' : 'Attach photo'}
-          </button>
-          {milestone?.photoStoragePath && <button className="button button-secondary" type="button" disabled={isPhotoWorking} onClick={() => { void removePhoto() }}><Trash2 size={14} />Remove photo</button>}
+          </button>}
+          {!locked && milestone?.photoStoragePath && <button className="button button-secondary" type="button" disabled={isPhotoWorking} onClick={() => { void removePhoto() }}><Trash2 size={14} />Remove photo</button>}
           {newPhoto && <span className="milestone-photo-name">{newPhoto.name}</span>}
         </div>
         <small className="milestone-photo-note">{milestone && milestone.status !== 'complete' ? 'Save this milestone as complete first, then attach a photo.' : 'JPG, PNG, or WebP · 10 MB max. Shared with the client automatically.'}</small>
         {photoError && <p className="form-error" role="alert">{photoError}</p>}
       </div>}
 
-      <label className="milestone-client-visible"><input type="checkbox" checked={clientVisible} onChange={(event) => setClientVisible(event.target.checked)} /><span>{clientVisible ? <Eye size={14} /> : <EyeOff size={14} />}Show in client portal</span></label>
+      <label className="milestone-client-visible"><input disabled={locked} type="checkbox" checked={clientVisible} onChange={(event) => setClientVisible(event.target.checked)} /><span>{clientVisible ? <Eye size={14} /> : <EyeOff size={14} />}Show in client portal</span></label>
 
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="milestone-drawer-actions">
-        {!isNew && <button className="button button-secondary milestone-delete-button" type="button" onClick={() => { void remove() }} disabled={isSaving}><Trash2 size={14} />Delete</button>}
+        {!isNew && !locked && <button className="button button-secondary milestone-delete-button" type="button" onClick={() => { void remove() }} disabled={isSaving}><Trash2 size={14} />Delete</button>}
         <span />
         {isNew && <button className="button button-secondary" type="button" disabled={isSaving} onClick={(event) => { if (event.currentTarget.form?.reportValidity()) void save(true) }}>Save & add another</button>}
-        <button className="button button-primary" type="submit" disabled={isSaving} aria-busy={isSaving}><Save size={14} />{isSaving ? 'Saving…' : isNew ? 'Add milestone' : 'Save changes'}</button>
+        {!locked && <button className="button button-primary" type="submit" disabled={isSaving} aria-busy={isSaving}><Save size={14} />{isSaving ? 'Saving…' : isNew ? 'Add milestone' : 'Save changes'}</button>}
       </div>
     </form>
   </div>, document.body)

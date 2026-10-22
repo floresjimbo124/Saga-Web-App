@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
+  rpc: vi.fn(),
   upload: vi.fn(),
   remove: vi.fn(),
   createSignedUrl: vi.fn(),
@@ -10,6 +11,7 @@ vi.mock('../lib/supabase', () => ({
   SAGACT_ORGANIZATION_ID: 'org-sagact',
   supabase: {
     from: mocks.from,
+    rpc: mocks.rpc,
     storage: { from: () => ({
       upload: mocks.upload,
       remove: mocks.remove,
@@ -49,6 +51,7 @@ beforeEach(() => {
   calls.length = 0
   mocks.from.mockImplementation(() => queryFor(null, { id: 'milestone-1' }))
   mocks.upload.mockResolvedValue({ error: null })
+  mocks.rpc.mockResolvedValue({ data: null, error: null })
   mocks.remove.mockResolvedValue({ error: null })
   mocks.createSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://example.com/photo.jpg' }, error: null })
 })
@@ -140,11 +143,10 @@ describe('project milestone data access', () => {
       contentType: 'image/jpeg',
       upsert: false,
     })
-    expect(calls).toContainEqual({
-      method: 'update',
-      args: [{ photo_storage_path: expect.stringMatching(/^org-sagact\/project-1\/milestones\/milestone-1\/.+\.jpg$/) }],
+    expect(mocks.rpc).toHaveBeenCalledWith('attach_project_milestone_photo', {
+      p_milestone_id: 'milestone-1',
+      p_storage_path: expect.stringMatching(/^org-sagact\/project-1\/milestones\/milestone-1\/.+\.jpg$/),
     })
-    expect(calls).toContainEqual({ method: 'eq', args: ['status', 'complete'] })
   })
 
   it('removes a photo reference before deleting the stored image', async () => {

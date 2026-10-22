@@ -11,6 +11,7 @@ import {
   type ProjectDocument,
 } from '../data/project-documents'
 import { useToast } from './toast-context'
+import { useProjectCanEdit } from '../app/project-permissions'
 
 const documentTypes = [
   { value: 'contract', label: 'Contract' },
@@ -28,6 +29,7 @@ function formatDate(value: string) {
 
 export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
   const { showToast } = useToast()
+  const canEdit = useProjectCanEdit()
   const [documents, setDocuments] = useState<ProjectDocument[]>([])
   const [documentType, setDocumentType] = useState('other')
   const [isLoading, setIsLoading] = useState(true)
@@ -153,8 +155,8 @@ export function ProjectDocumentPanel({ projectId }: { projectId: string }) {
       return <article className="document-row" key={document.id}>
         <span className="activity-icon"><FileText size={16} /></span>
         <span className="document-copy"><strong>{document.fileName}</strong><small>{documentTypes.find((item) => item.value === document.documentType)?.label ?? document.documentType.replaceAll('_', ' ')} · added {formatDate(document.createdAt)}</small></span>
-        <label className="document-visibility"><input type="checkbox" checked={document.clientVisible} disabled={isWorking} onChange={() => { void toggleVisibility(document) }} /><Share2 size={14} /><span>{document.clientVisible ? 'Shared' : 'Private'}</span></label>
-        <div className="document-actions"><button className="text-button compact-button document-view-button" type="button" aria-label={`View ${document.fileName}`} title="View document" disabled={isWorking} onClick={() => { void openDocument(document) }}>{isWorking ? <RefreshCw size={15} /> : <Eye size={15} />}<span>View</span></button><button className="icon-button document-delete-button" type="button" aria-label={`Delete ${document.fileName}`} title="Delete document" disabled={isWorking} onClick={() => { setError(''); setPendingDelete(document) }}><Trash2 size={15} /></button></div>
+        <label className="document-visibility"><input type="checkbox" checked={document.clientVisible} disabled={isWorking || !canEdit} onChange={() => { void toggleVisibility(document) }} /><Share2 size={14} /><span>{document.clientVisible ? 'Shared' : 'Private'}</span></label>
+        <div className="document-actions"><button className="text-button compact-button document-view-button" type="button" aria-label={`View ${document.fileName}`} title="View document" disabled={isWorking} onClick={() => { void openDocument(document) }}>{isWorking ? <RefreshCw size={15} /> : <Eye size={15} />}<span>View</span></button>{canEdit && <button className="icon-button document-delete-button" type="button" aria-label={`Delete ${document.fileName}`} title="Delete document" disabled={isWorking} onClick={() => { setError(''); setPendingDelete(document) }}><Trash2 size={15} /></button>}</div>
       </article>
     })}</div> : <div className="pr-empty"><EmptyArt kind="folder" /><strong>No documents yet</strong><p>Upload plans, permits and contracts to keep them with this project.</p></div>}
     </section>

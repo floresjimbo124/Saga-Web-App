@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  CalendarDays, ChevronLeft, ChevronRight, CircleAlert, Columns3, Filter, Mail, MessageCircle, Pencil,
+  CalendarDays, Check, ChevronLeft, ChevronRight, CircleAlert, Columns3, Filter, Mail, MessageCircle, Pencil,
   Plus, RefreshCw, Trash2, UserRoundPlus, Users, X, CheckCircle2, ClipboardCheck, HardHat, Ruler, Send, UserRoundX,
 } from 'lucide-react'
 import { TaskActivityPanel } from './TaskActivityPanel'
@@ -16,6 +16,7 @@ import { SAGACT_ORGANIZATION_ID, supabase } from '../lib/supabase'
 import { inviteStaffMember, loadStaffMembers, resendStaffInvitation, revokeStaffAccess, type StaffAccount } from '../data/staff-invitations'
 import { getPhilippineHoliday } from '../data/philippine-holidays'
 import { useToast } from './toast-context'
+import { loadProjectStaffAccess, setProjectStaffAccess, type ProjectStaffAccess } from '../data/staff-access'
 
 type ProjectOption = { id: string; name: string }
 type StatusFilter = 'all' | TaskStatus
@@ -313,6 +314,7 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
     />}
     {showTeamDialog && <TeamDialog
       staff={staff}
+      projects={projects}
       onClose={() => setShowTeamDialog(false)}
       onChanged={refresh}
     />}
@@ -740,12 +742,35 @@ function TaskEditorDialog({ task, projects, staff, today, onClose, onSave }: {
   </div>, document.body)
 }
 
-function TeamDialog({ staff, onClose, onChanged }: {
+function TeamDialog({ staff, projects, onClose, onChanged }: {
   staff: StaffAccount[]
+  projects: ProjectOption[]
   onClose: () => void
   onChanged: () => void
 }) {
   const { showToast } = useToast()
+  const [projectAccess, setProjectAccess] = useState<ProjectStaffAccess[]>([])
+  const [savingAccessFor, setSavingAccessFor] = useState('')
+  useEffect(() => {
+    let active = true
+    loadProjectStaffAccess().then((rows) => { if (active) setProjectAccess(rows) }).catch(() => undefined)
+    return () => { active = false }
+  }, [])
+  const toggleProjectAccess = async (member: StaffAccount, projectId: string) => {
+    const current = projectAccess.filter((row) => row.userId === member.userId).map((row) => row.projectId)
+    const next = current.includes(projectId) ? current.filter((id) => id !== projectId) : [...current, projectId]
+    setSavingAccessFor(member.userId)
+    try {
+      await setProjectStaffAccess(member.userId, next)
+      setProjectAccess((rows) => [...rows.filter((row) => row.userId !== member.userId), ...next.map((id) => ({ projectId: id, userId: member.userId }))])
+      const projectName = projects.find((project) => project.id === projectId)?.name ?? 'project'
+      showToast(current.includes(projectId) ? `${member.name} can no longer open ${projectName}.` : `${member.name} can now open ${projectName}.`, 'update')
+    } catch (accessError) {
+      showToast(accessError instanceof Error ? accessError.message : 'Could not change project access.', 'update')
+    } finally {
+      setSavingAccessFor('')
+    }
+  }
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const freeTitles = (['liaison_officer', 'engineer', 'architect'] as StaffTitle[])
@@ -837,6 +862,14 @@ function TeamDialog({ staff, onClose, onChanged }: {
                 <button type="button" className="ic-icon-action is-danger" disabled={busy} onClick={() => { void revoke(member) }} title="Remove access" aria-label={`Remove access for ${member.name}`}><UserRoundX size={15} /></button>
               </span>
               : <button type="button" className={`tm-pick${isSelected ? ' is-selected' : ''}`} onClick={() => setTitle(role)} aria-pressed={isSelected}>{isSelected ? 'Selected' : 'Invite'}</button>}
+            {member && role !== 'architect' && <div className="tm-access" role="group" aria-label={`Projects ${member.name} can open`}>
+              <span className="tm-access-label">Project access</span>
+              {projects.length ? projects.map((project) => {
+                const hasAccess = projectAccess.some((row) => row.userId === member.userId && row.projectId === project.id)
+                return <button type="button" key={project.id} className={`tm-access-chip${hasAccess ? ' is-on' : ''}`} aria-pressed={hasAccess} disabled={savingAccessFor === member.userId} onClick={() => { void toggleProjectAccess(member, project.id) }}>{hasAccess && <Check size={13} aria-hidden="true" />}{project.name}</button>
+              }) : <small>No projects yet</small>}
+              <small className="tm-access-hint">Can view and add. Can't edit or delete.</small>
+            </div>}
           </div>
         })}
       </section>

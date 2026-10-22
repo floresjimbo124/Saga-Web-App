@@ -1,4 +1,4 @@
-export type StaffNavigationView = 'tasks' | 'payroll'
+export type StaffNavigationView = 'tasks' | 'payroll' | 'projects'
 
 const staffNavigationStoragePrefix = 'sagact:staff-navigation:v1:'
 
@@ -10,11 +10,13 @@ export function readStaffNavigation(
   storage: Pick<Storage, 'getItem'>,
   userId: string,
   canManagePayroll: boolean,
+  canViewProjects = false,
 ): StaffNavigationView {
   try {
-    return canManagePayroll && storage.getItem(staffNavigationStorageKey(userId)) === 'payroll'
-      ? 'payroll'
-      : 'tasks'
+    const saved = storage.getItem(staffNavigationStorageKey(userId))
+    if (canManagePayroll && saved === 'payroll') return 'payroll'
+    if (canViewProjects && saved === 'projects') return 'projects'
+    return 'tasks'
   } catch (error) {
     console.warn('Could not restore the saved staff page.', error)
     return 'tasks'
