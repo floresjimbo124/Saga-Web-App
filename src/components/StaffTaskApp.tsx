@@ -23,7 +23,7 @@ export function StaffTaskApp({ userId, displayName, staffTitle }: {
 }) {
   const name = displayName.trim() || 'Team member'
   const firstName = name.split(/\s+/)[0]
-  const canManagePayroll = staffTitle === 'liaison_officer'
+  const canManagePayroll = staffTitle === 'liaison_officer' || staffTitle === 'engineer'
   const canViewProjects = staffTitle === 'liaison_officer' || staffTitle === 'engineer' || staffTitle === 'architect'
   const [view, setView] = useState<'tasks' | 'payroll' | 'projects'>(() =>
     readStaffNavigation(window.sessionStorage, userId, canManagePayroll, canViewProjects),
