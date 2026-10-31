@@ -51,13 +51,13 @@ export function ExpenseRow({ expense, onEdit, onOpenReceipt, onReceiptChanged }:
   onOpenReceipt: (url: string) => void
   onReceiptChanged: () => void
 }) {
-  const { showToast } = useToast()
+  const { showToast, confirmToast } = useToast()
   const canEdit = useProjectCanEdit()
   const [isUploading, setIsUploading] = useState(false)
   const [rowError, setRowError] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const removeExpense = async () => {
-    if (!window.confirm(`Delete "${expense.description}" (${money.format(expense.amount)})? This cannot be undone.`)) return
+    if (!(await confirmToast(`Delete "${expense.description}" (${money.format(expense.amount)})? This cannot be undone.`))) return
     setIsDeleting(true)
     setRowError('')
     try {

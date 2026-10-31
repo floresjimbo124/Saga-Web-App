@@ -67,7 +67,7 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
   notificationTaskId?: string
   onNotificationTaskClosed?: () => void
 }) {
-  const { showToast } = useToast()
+  const { showToast, confirmToast } = useToast()
   const [tasks, setTasks] = useState<ProjectTask[]>([])
   const [staff, setStaff] = useState<StaffAccount[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -232,7 +232,7 @@ export function TaskManagementPanel({ isOwner, currentUserId, projects = [], not
   }
 
   const removeTask = async (task: ProjectTask) => {
-    if (!window.confirm(`Delete "${task.title}"? This cannot be undone.`)) return
+    if (!(await confirmToast(`Delete "${task.title}"? This cannot be undone.`))) return
     setWorkingTaskId(task.id)
     setError('')
     try {
@@ -748,7 +748,7 @@ function TeamDialog({ staff, projects, onClose, onChanged }: {
   onClose: () => void
   onChanged: () => void
 }) {
-  const { showToast } = useToast()
+  const { showToast, confirmToast } = useToast()
   const [projectAccess, setProjectAccess] = useState<ProjectStaffAccess[]>([])
   const [savingAccessFor, setSavingAccessFor] = useState('')
   useEffect(() => {
@@ -820,7 +820,7 @@ function TeamDialog({ staff, projects, onClose, onChanged }: {
   }
 
   const revoke = async (member: StaffAccount) => {
-    if (!window.confirm(`Revoke workspace access for ${member.name} (${member.email})? Their account will remain, but they will no longer be able to access staff tasks.`)) return
+    if (!(await confirmToast(`Revoke workspace access for ${member.name} (${member.email})? Their account will remain, but they will no longer be able to access staff tasks.`))) return
     setWorkingUserId(member.userId)
     setError('')
     setResult('')

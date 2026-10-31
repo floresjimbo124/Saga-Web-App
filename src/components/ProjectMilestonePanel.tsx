@@ -83,7 +83,7 @@ function MilestoneEditor({ projectId, milestone, defaultStartDate, onClose, onCh
   onClose: () => void
   onChanged: () => void
 }) {
-  const { showToast } = useToast()
+  const { showToast, confirmToast } = useToast()
   const isNew = milestone === null
   const canEdit = useProjectCanEdit()
   const locked = !canEdit && !isNew
@@ -213,7 +213,7 @@ function MilestoneEditor({ projectId, milestone, defaultStartDate, onClose, onCh
   }
 
   const remove = async () => {
-    if (!milestone || !window.confirm(`Delete the "${milestone.name}" milestone?`)) return
+    if (!milestone || !(await confirmToast(`Delete the "${milestone.name}" milestone?`))) return
     setError('')
     setIsSaving(true)
     try {
