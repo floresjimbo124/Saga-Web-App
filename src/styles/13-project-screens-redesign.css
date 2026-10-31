@@ -754,3 +754,8 @@ button.tk-stat > small { color: #4f7a57; font-weight: 600; }
   .staff-project-card { grid-template-columns: 36px minmax(0, 1fr) 16px; }
   .staff-project-deadline { grid-column: 2; grid-row: 2; }
 }
+
+/* Expense row actions */
+.expense-row-actions { display: inline-flex; align-items: center; gap: 2px; }
+.expense-delete-button:hover:not(:disabled) { border-color: #efcdc8; color: #a5463f; background: #fbeeec; }
+.expense-delete-button { flex: 0 0 auto; width: 30px; height: 30px; }

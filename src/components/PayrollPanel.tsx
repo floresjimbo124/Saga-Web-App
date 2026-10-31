@@ -222,7 +222,7 @@ function WeeklyPayrollRow({ employee, weekStart, dates, entry, attendance, proje
     <label className="form-field payroll-project-field">Assign cost to project
       <select value={projectId} disabled={!isEditable || busy} onChange={(event) => setProjectId(event.target.value)}>
         <option value="">Company-wide / unassigned</option>
-        {projects.filter((project) => project.status === 'active').map((project) => <option value={project.id} key={project.id}>{project.name}</option>)}
+        {projects.filter((project) => (project.status !== 'completed' && project.status !== 'closed') || project.id === projectId).map((project) => <option value={project.id} key={project.id}>{project.name}</option>)}
       </select>
     </label>
     <div className="form-field payroll-deduction-field">

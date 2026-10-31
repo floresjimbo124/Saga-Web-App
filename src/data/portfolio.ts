@@ -769,6 +769,12 @@ export async function setProjectExpenseReceipt(expenseId: string, storagePath: s
   throwIfError(error)
 }
 
+export async function deleteProjectExpense(expenseId: string) {
+  const { data, error } = await requireSupabase().rpc('delete_project_expense', { p_expense_id: expenseId })
+  throwIfError(error)
+  if (typeof data === 'string' && data) await discardExpenseReceipt(data)
+}
+
 export async function recordQuickProjectExpense(input: {
   projectId: string
   date: string

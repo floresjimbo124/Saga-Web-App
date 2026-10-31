@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowDownLeft, ArrowUpRight, Camera, Pencil, Plus, RefreshCw, X } from 'lucide-react'
-import { createExpenseReceiptUrl, discardExpenseReceipt, setProjectExpenseReceipt, uploadExpenseReceipt, type PortfolioExpense, type ProjectExpenseCategory } from '../data/portfolio'
+import { ArrowDownLeft, ArrowUpRight, Camera, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
+import { createExpenseReceiptUrl, deleteProjectExpense, discardExpenseReceipt, setProjectExpenseReceipt, uploadExpenseReceipt, type PortfolioExpense, type ProjectExpenseCategory } from '../data/portfolio'
 import { ExpenseEntryDialog } from './ExpenseEntryDialog'
 import { QuickExpenseSheet } from './QuickExpenseSheet'
 import { useToast } from './toast-context'
@@ -55,6 +55,20 @@ export function ExpenseRow({ expense, onEdit, onOpenReceipt, onReceiptChanged }:
   const canEdit = useProjectCanEdit()
   const [isUploading, setIsUploading] = useState(false)
   const [rowError, setRowError] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const removeExpense = async () => {
+    if (!window.confirm(`Delete "${expense.description}" (${money.format(expense.amount)})? This cannot be undone.`)) return
+    setIsDeleting(true)
+    setRowError('')
+    try {
+      await deleteProjectExpense(expense.id)
+      showToast('Expense deleted.', 'delete')
+      onReceiptChanged()
+    } catch (error) {
+      setRowError(error instanceof Error ? error.message : 'Could not delete this expense.')
+      setIsDeleting(false)
+    }
+  }
   const fileInput = useRef<HTMLInputElement>(null)
   const category = expenseCategories.find((item) => item.value === expense.category)?.label ?? 'Other'
   const isPayroll = expense.id.startsWith('payroll') || expense.category === 'payroll'
@@ -89,7 +103,7 @@ export function ExpenseRow({ expense, onEdit, onOpenReceipt, onReceiptChanged }:
     <input ref={fileInput} type="file" accept="image/*" hidden onChange={(event) => { void attachReceipt(event.target.files?.[0]); event.target.value = '' }} />
     <span className="activity-copy"><strong>{expense.description}{!expense.receiptStoragePath && !isPayroll && <span className="expense-no-receipt">No receipt</span>}</strong><small>{formatExpenseDate(expense.date)} · {category}{expense.vendor ? ` · ${expense.vendor}` : ''}</small>{rowError && <small className="form-error" role="alert">{rowError}</small>}</span>
     <strong className="activity-amount expense-amount">− {money.format(expense.amount)}</strong>
-    {canEdit && !isPayroll && <button type="button" className="icon-button expense-edit-button" onClick={() => onEdit(expense)} aria-label={`Edit expense: ${expense.description}`} title="Edit expense"><Pencil size={14} /></button>}
+    {canEdit && !isPayroll && <span className="expense-row-actions"><button type="button" className="icon-button expense-edit-button" onClick={() => onEdit(expense)} aria-label={`Edit expense: ${expense.description}`} title="Edit expense"><Pencil size={14} /></button><button type="button" className="icon-button expense-delete-button" disabled={isDeleting} onClick={() => { void removeExpense() }} aria-label={`Delete expense: ${expense.description}`} title="Delete expense"><Trash2 size={14} /></button></span>}
   </div>
 }
 
